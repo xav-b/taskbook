@@ -1,7 +1,7 @@
 {
   "name": "taskbook",
   "productName": "Taskbook",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Tasks, boards & notes for the command-line habitat",
   "repository": "klaussinani/taskbook",
   "license": "MIT",
@@ -11,15 +11,13 @@
     "url": "https://klaussinani.github.io"
   },
   "bin": {
-    "tb": "cli.js"
+    "tb": "src/cli.js"
   },
   "engines": {
     "node": ">=6"
   },
   "files": [
-    "src",
-    "cli.js",
-    "index.js"
+    "src"
   ],
   "keywords": [
     "task",
@@ -46,11 +44,19 @@
   "dependencies": {
     "chalk": "^2.4.1",
     "clipboardy": "^1.2.3",
+    "commander": "^11.0.0",
     "meow": "^5.0.0",
     "signale": "1.4.0",
     "update-notifier": "^2.5.0"
   },
   "devDependencies": {
+    "eslint": "^8.50.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-formatter-pretty": "^5.0.0",
+    "eslint-plugin-import": "^2.28.1",
+    "eslint-plugin-prettier": "^5.0.0",
+    "prettier": "^3.0.3",
     "xo": "*"
   },
   "xo": {

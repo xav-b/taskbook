@@ -1,11 +1,12 @@
-'use strict';
-const Item = require('./item');
+const Item = require('./item')
 
 class Note extends Item {
   constructor(options = {}) {
-    super(options);
-    this._isTask = false;
+    super(options)
+
+    this._isTask = false
+    this._type = 'note'
   }
 }
 
-module.exports = Note;
+module.exports = Note
