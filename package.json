@@ -47,6 +47,7 @@
     "commander": "^11.0.0",
     "meow": "^5.0.0",
     "signale": "1.4.0",
+    "tmp": "^0.2.1",
     "update-notifier": "^2.5.0"
   },
   "devDependencies": {

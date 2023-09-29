@@ -1,10 +1,19 @@
 const clipboardy = require('clipboardy')
+var tmp = require('tmp')
+const fs = require('fs')
+const childProcess = require('child_process')
 
 const Task = require('./task')
 const Note = require('./note')
 const EventNote = require('./event')
 const Storage = require('./storage')
 const render = require('./render')
+
+const _isPriorityOpt = (x) => ['p:1', 'p:2', 'p:3'].indexOf(x) > -1
+
+const _arrayify = (x) => (Array.isArray(x) ? x : [x])
+
+const _removeDuplicates = (x) => [...new Set(_arrayify(x))]
 
 class Taskbook {
   constructor() {
@@ -19,20 +28,12 @@ class Taskbook {
     return this._storage.get()
   }
 
-  _arrayify(x) {
-    return Array.isArray(x) ? x : [x]
-  }
-
   _save(data) {
     this._storage.set(data)
   }
 
   _saveArchive(data) {
     this._storage.setArchive(data)
-  }
-
-  _removeDuplicates(x) {
-    return [...new Set(this._arrayify(x))]
   }
 
   _generateID(data = this._data) {
@@ -47,7 +48,7 @@ class Taskbook {
       process.exit(1)
     }
 
-    inputIDs = this._removeDuplicates(inputIDs)
+    inputIDs = _removeDuplicates(inputIDs)
 
     inputIDs.forEach((id) => {
       if (existingIDs.indexOf(Number(id)) === -1) {
@@ -57,10 +58,6 @@ class Taskbook {
     })
 
     return inputIDs
-  }
-
-  _isPriorityOpt(x) {
-    return ['p:1', 'p:2', 'p:3'].indexOf(x) > -1
   }
 
   _getBoards() {
@@ -91,7 +88,7 @@ class Taskbook {
   }
 
   _getPriority(desc) {
-    const opt = desc.find((x) => this._isPriorityOpt(x))
+    const opt = desc.find((x) => _isPriorityOpt(x))
     return opt ? opt[opt.length - 1] : 1
   }
 
@@ -107,7 +104,7 @@ class Taskbook {
     const priority = this._getPriority(input)
 
     input.forEach((x) => {
-      if (!this._isPriorityOpt(x)) {
+      if (!_isPriorityOpt(x)) {
         return x.startsWith('@') && x.length > 1 ? boards.push(x) : desc.push(x)
       }
     })
@@ -478,7 +475,7 @@ class Taskbook {
 
       return boards.push(`@${x}`)
     })
-      ;[boards, attributes] = [boards, attributes].map((x) => this._removeDuplicates(x))
+    ;[boards, attributes] = [boards, attributes].map((x) => _removeDuplicates(x))
 
     const data = this._filterByAttributes(attributes)
 
@@ -513,7 +510,7 @@ class Taskbook {
       process.exit(1)
     }
 
-    boards = this._removeDuplicates(boards)
+    boards = _removeDuplicates(boards)
 
     const { _data } = this
     _data[id].boards = boards
@@ -593,6 +590,38 @@ class Taskbook {
     }
 
     this.deleteItems(ids)
+  }
+
+  comment(itemId) {
+    // TODO: _validateIDs
+    // TODO: there should be a config
+    const editor = process.env.EDITOR || 'vi'
+
+    const { _data } = this
+
+    // TODO: if comment exists already, initialise editor with that
+    const tmpFile = tmp.fileSync({ mode: 0o644, prefix: 'taskbook-', postfix: '.md' })
+
+    let initContent = `# ID ${itemId} - ${_data[itemId].description}
+
+> write content here...
+`
+    if (_data[itemId].comment)
+      // initialise the file with the existing comment
+      initContent = Buffer.from(_data[itemId].comment, 'base64').toString('ascii')
+    fs.writeFileSync(tmpFile.fd, initContent)
+
+    const child = childProcess.spawnSync(editor, [`${tmpFile.name}`], { stdio: 'inherit' })
+    // TODO: handle child error
+    const comment = fs.readFileSync(tmpFile.name, 'utf8').trim()
+
+    const encoded = Buffer.from(comment).toString('base64')
+
+    _data[itemId].comment = encoded
+
+    this._save(_data)
+
+    render.successEdit(itemId)
   }
 }
 

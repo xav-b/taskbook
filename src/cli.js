@@ -69,6 +69,13 @@ program
   .action((description) => taskbook.createTask(description))
 
 program
+  .command('comment')
+  .alias('m') // for more?
+  .description('Comment on an item')
+  .argument('item')
+  .action((item) => taskbook.comment(item))
+
+program
   .command('delete')
   .alias('d')
   .description('Delete items')

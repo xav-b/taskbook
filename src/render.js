@@ -67,6 +67,10 @@ class Render {
     return item.isStarred ? yellow('★') : ''
   }
 
+  _getCommentHint(item) {
+    return item.comment ? blue('✎') : ''
+  }
+
   _buildTitle(key, items) {
     const title =
       key === new Date().toDateString() ? `${underline(key)} ${grey('[Today]')}` : underline(key)
@@ -114,12 +118,16 @@ class Render {
     const { _type, isComplete, inProgress } = item
     const age = this._getAge(item._timestamp)
     const star = this._getStar(item)
+    const comment = this._getCommentHint(item)
 
     const prefix = this._buildPrefix(item)
     const message = this._buildMessage(item)
-    const suffix = age.length === 0 ? star : `${age} ${star}`
+    const suffix = []
+    if (age.length === 0) suffix.push(age)
+    if (star) suffix.push(star)
+    if (comment) suffix.push(comment)
 
-    const msgObj = { prefix, message, suffix }
+    const msgObj = { prefix, message, suffix: suffix.join(' ') }
 
     if (_type === 'task')
       return isComplete ? success(msgObj) : inProgress ? wait(msgObj) : pending(msgObj)
