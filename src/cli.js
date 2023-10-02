@@ -70,10 +70,16 @@ program
 
 program
   .command('comment')
-  .alias('m') // for more?
+  .alias('z')
   .description('Comment on an item')
   .argument('item')
   .action((item) => taskbook.comment(item))
+
+program
+  .command('focus')
+  .description('Start working on a task')
+  .argument('task')
+  .action((task) => taskbook.focus(task))
 
 program
   .command('delete')

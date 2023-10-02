@@ -45,6 +45,8 @@
     "chalk": "^2.4.1",
     "clipboardy": "^1.2.3",
     "commander": "^11.0.0",
+    "marked": "^9.0.3",
+    "marked-terminal": "^6.0.0",
     "meow": "^5.0.0",
     "signale": "1.4.0",
     "tmp": "^0.2.1",

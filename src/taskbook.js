@@ -1,13 +1,22 @@
-const clipboardy = require('clipboardy')
-var tmp = require('tmp')
 const fs = require('fs')
 const childProcess = require('child_process')
+const clipboardy = require('clipboardy')
+const chalk = require('chalk')
+const tmp = require('tmp')
+const { marked } = require('marked')
+const { markedTerminal } = require('marked-terminal')
 
 const Task = require('./task')
 const Note = require('./note')
 const EventNote = require('./event')
 const Storage = require('./storage')
 const render = require('./render')
+
+marked.use(
+  markedTerminal({
+    firstHeading: chalk.magenta.bold,
+  })
+)
 
 const _isPriorityOpt = (x) => ['p:1', 'p:2', 'p:3'].indexOf(x) > -1
 
@@ -475,7 +484,7 @@ class Taskbook {
 
       return boards.push(`@${x}`)
     })
-    ;[boards, attributes] = [boards, attributes].map((x) => _removeDuplicates(x))
+      ;[boards, attributes] = [boards, attributes].map((x) => _removeDuplicates(x))
 
     const data = this._filterByAttributes(attributes)
 
@@ -590,6 +599,23 @@ class Taskbook {
     }
 
     this.deleteItems(ids)
+  }
+
+  focus(taskId) {
+    const { _data } = this
+    const task = _data[taskId]
+
+    const boards = task.boards.join(' • ')
+
+    render._displayTitle(boards, [task])
+    render._displayItemByBoard(task)
+
+    if (task.comment) {
+      const decoded = Buffer.from(task.comment, 'base64').toString('ascii')
+      console.log('\n' + marked.parse('---'))
+      console.log(marked.parse(decoded))
+      console.log(marked.parse('---\n'))
+    }
   }
 
   comment(itemId) {
