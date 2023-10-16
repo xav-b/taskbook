@@ -5,12 +5,17 @@ const config = require('./config')
 signale.config({ displayLabel: false })
 
 // have no idea why `signal.config` doesn't work so we create a new custom logger
-const { event } = new signale.Signale({
+const { event, goal } = new signale.Signale({
   displayLabel: false,
   types: {
     event: {
       badge: '⏲',
       color: 'blue',
+      label: '',
+    },
+    goal: {
+      badge: '🎯',
+      color: 'yellow',
       label: '',
     },
   },
@@ -19,6 +24,7 @@ const { event } = new signale.Signale({
 const { await: wait, error, log, note, pending, success } = signale
 const { blue, green, grey, magenta, red, underline, yellow } = chalk
 
+// TODO: config
 const priorities = { 2: 'yellow', 3: 'red' }
 
 class Render {
@@ -82,6 +88,7 @@ class Render {
     const prefix = []
 
     const { _id } = item
+
     prefix.push(' '.repeat(4 - String(_id).length))
     prefix.push(grey(`${_id}.`))
 
@@ -115,7 +122,7 @@ class Render {
   }
 
   _displayItemByBoard(item) {
-    const { _type, isComplete, inProgress } = item
+    const { _type, isComplete, inProgress, tags } = item
     const age = this._getAge(item._timestamp)
     const star = this._getStar(item)
     const comment = this._getCommentHint(item)
@@ -126,6 +133,7 @@ class Render {
     if (age.length === 0) suffix.push(age)
     if (star) suffix.push(star)
     if (comment) suffix.push(comment)
+    if (tags?.length > 0) suffix.push(grey(tags.join(' ')))
 
     const msgObj = { prefix, message, suffix: suffix.join(' ') }
 
@@ -133,6 +141,11 @@ class Render {
       return isComplete ? success(msgObj) : inProgress ? wait(msgObj) : pending(msgObj)
 
     if (_type === 'note') return note(msgObj)
+
+    if (_type === 'goal') {
+      msgObj.message = `${chalk.blue('goal')}: ${message}`
+      return isComplete ? success(msgObj) : inProgress ? wait(msgObj) : goal(msgObj)
+    }
 
     if (_type === 'event') {
       msgObj.message = `${chalk.blue(item.schedule)} ${message}`
@@ -170,7 +183,7 @@ class Render {
     throw new Error(`item of type ${_type} is not supported`)
   }
 
-  displayByBoard(data) {
+  displayByBoard(data, displayTasks = true) {
     Object.keys(data).forEach((board) => {
       if (this._isBoardComplete(data[board]) && !this._configuration.displayCompleteTasks) {
         return
@@ -178,6 +191,7 @@ class Render {
 
       this._displayTitle(board, data[board])
       data[board].forEach((item) => {
+        if (!displayTasks) return
         if (item._isTask && item.isComplete && !this._configuration.displayCompleteTasks) {
           return
         }
@@ -341,7 +355,7 @@ class Render {
 
   successEdit(id) {
     const [prefix, suffix] = ['\n', grey(id)]
-    const message = 'Updated description of item:'
+    const message = 'Edited item:'
     success({ prefix, message, suffix })
   }
 

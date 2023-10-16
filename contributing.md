@@ -2,21 +2,29 @@
 
 Thank you for taking the time to contribute to Taskbook!
 
-Please note that this project is released with a [Contributor Code of Conduct](code-of-conduct.md). By participating in this project you agree to abide by its terms.
+Please note that this project is released with a [Contributor Code of
+Conduct](code-of-conduct.md). By participating in this project you agree to
+abide by its terms.
 
 ## How to contribute
 
 ### Improve documentation
 
-Typo corrections, error fixes, better explanations, more examples etc. Open an issue regarding anything that you think it could be improved! You can use the [`docs` label](https://github.com/klaussinani/taskbook/labels/docs) to find out what others have suggested!
+Typo corrections, error fixes, better explanations, more examples etc. Open an
+issue regarding anything that you think it could be improved! You can use the
+[`docs` label](https://github.com/klaussinani/taskbook/labels/docs) to find out
+what others have suggested!
 
 ### Improve issues
 
-Sometimes reported issues lack information, are not reproducible, or are even plain invalid. Help us out to make them easier to resolve. Handling issues takes a lot of time that we could rather spend on fixing bugs and adding features.
+Sometimes reported issues lack information, are not reproducible, or are even
+plain invalid. Help us out to make them easier to resolve. Handling issues takes
+a lot of time that we could rather spend on fixing bugs and adding features.
 
 ### Give feedback on issues
 
-We're always looking for more opinions on discussions in the issue tracker. It's a good opportunity to influence the future direction of the project.
+We're always looking for more opinions on discussions in the issue tracker. It's
+a good opportunity to influence the future direction of the project.
 
 The [`question` label](https://github.com/klaussinani/taskbook/labels/question) is a good place to find ongoing discussions.
 
@@ -33,7 +41,6 @@ You may find an issue is assigned, or has the [`assigned` label](https://github.
 
 ### Say hi
 
-Come over and say hi anytime you feel like on [Gitter](https://gitter.im/klaussinani/taskbook).
 
 ### Translating Documentation
 

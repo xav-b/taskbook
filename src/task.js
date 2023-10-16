@@ -3,6 +3,7 @@ const Item = require('./item')
 class Task extends Item {
   constructor(options = {}) {
     super(options)
+
     this._isTask = true
     this._type = 'task'
 

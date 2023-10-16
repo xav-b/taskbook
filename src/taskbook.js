@@ -7,6 +7,7 @@ const { marked } = require('marked')
 const { markedTerminal } = require('marked-terminal')
 
 const Task = require('./task')
+const Goal = require('./goal')
 const Note = require('./note')
 const EventNote = require('./event')
 const Storage = require('./storage')
@@ -18,11 +19,19 @@ marked.use(
   })
 )
 
+// TODO: let `@` and `+` be customised?
 const _isPriorityOpt = (x) => ['p:1', 'p:2', 'p:3'].indexOf(x) > -1
+const _isBoardOpt = (x) => x.startsWith('@')
+const _isTagOpt = (x) => x.startsWith('+')
 
 const _arrayify = (x) => (Array.isArray(x) ? x : [x])
 
 const _removeDuplicates = (x) => [...new Set(_arrayify(x))]
+
+function _getPriority(desc) {
+  const opt = desc.find((x) => _isPriorityOpt(x))
+  return opt ? opt[opt.length - 1] : 1
+}
 
 class Taskbook {
   constructor() {
@@ -80,6 +89,18 @@ class Taskbook {
     return boards
   }
 
+  _getTags() {
+    const { _data } = this
+    const tags = []
+
+    Object.keys(_data).forEach((id) => {
+      // TODO: once migration is completed, make tags field mandatory
+      if (_data[id].tags) tags.push(..._data[id].tags.filter((x) => tags.indexOf(x) === -1))
+    })
+
+    return tags
+  }
+
   _getDates(data = this._data) {
     const dates = []
 
@@ -96,13 +117,12 @@ class Taskbook {
     return Object.keys(data).map((id) => parseInt(id, 10))
   }
 
-  _getPriority(desc) {
-    const opt = desc.find((x) => _isPriorityOpt(x))
-    return opt ? opt[opt.length - 1] : 1
-  }
-
+  /**
+   * Main parsing entry point - extract the actual description
+   * nd the specific objets like boards and priorities.
+   */
   _getOptions(input) {
-    const [boards, desc] = [[], []]
+    const [boards, tags, desc] = [[], [], []]
 
     if (input.length === 0) {
       render.missingDesc()
@@ -110,21 +130,32 @@ class Taskbook {
     }
 
     const id = this._generateID()
-    const priority = this._getPriority(input)
+    const priority = _getPriority(input)
 
     input.forEach((x) => {
-      if (!_isPriorityOpt(x)) {
-        return x.startsWith('@') && x.length > 1 ? boards.push(x) : desc.push(x)
+      // priorities: already processed
+      if (_isPriorityOpt(x)) {
+        // priorities were already processed
+      } else if (_isBoardOpt(x)) {
+        return boards.push(x)
+      } else if (_isTagOpt(x)) {
+        return tags.push(x)
+      } else if (x.length > 1) {
+        return desc.push(x)
       }
+
+      // make linter happy
+      return null
     })
 
     const description = desc.join(' ')
 
     if (boards.length === 0) {
+      // TODO: use config.DEFAULT_BOARD
       boards.push('My Board')
     }
 
-    return { boards, description, id, priority }
+    return { boards, tags, description, id, priority }
   }
 
   _getStats() {
@@ -266,7 +297,7 @@ class Taskbook {
     // FIXME: list them in order it was given
     Object.keys(data).forEach((id) => {
       boards.forEach((board) => {
-        if (data[id].boards.includes(board)) {
+        if (data[id].boards.includes(board) || data[id].tags?.includes(board)) {
           if (Array.isArray(grouped[board])) {
             return grouped[board].push(data[id])
           }
@@ -325,9 +356,25 @@ class Taskbook {
     this._save(_data)
   }
 
+  tagItem(itemid, tags) {
+    tags = tags.map((each) => {
+      if (!each.startsWith('+')) return `+${each}`
+      return each
+    })
+
+    const { _data } = this
+
+    // TODO: remove potential duplicates
+    tags = tags.concat(_data[itemid].tags || [])
+
+    _data[itemid].tags = tags
+    this._save(_data)
+    render.successEdit(itemid)
+  }
+
   createNote(desc) {
-    const { id, description, boards } = this._getOptions(desc)
-    const note = new Note({ id, description, boards })
+    const { id, description, tags, boards } = this._getOptions(desc)
+    const note = new Note({ id, description, tags, boards })
     const { _data } = this
     _data[id] = note
     this._save(_data)
@@ -336,8 +383,8 @@ class Taskbook {
 
   createEvent(schedule, desc, duration) {
     const boards = ['@calendar']
-    const { id, description } = this._getOptions(desc)
-    const event = new EventNote({ id, description, boards, schedule, duration })
+    const { id, description, tags } = this._getOptions(desc)
+    const event = new EventNote({ id, description, boards, tags, schedule, duration })
     const { _data } = this
     _data[id] = event
     this._save(_data)
@@ -393,12 +440,47 @@ class Taskbook {
   }
 
   createTask(desc) {
-    const { boards, description, id, priority } = this._getOptions(desc)
-    const task = new Task({ id, description, boards, priority })
+    const { boards, tags, description, id, priority } = this._getOptions(desc)
+    const task = new Task({ id, description, boards, tags, priority })
     const { _data } = this
     _data[id] = task
     this._save(_data)
     render.successCreate(task)
+  }
+
+  createGoal(desc) {
+    const { id, description, priority, tags } = this._getOptions(desc)
+    // we don't parse goals but instead assign it right away to the predefined `goals` one.
+    const boards = ['@goals']
+
+    const goal = new Goal({ id, description, boards, priority, tags })
+    const { _data } = this
+    _data[id] = goal
+    this._save(_data)
+
+    render.successCreate(goal)
+  }
+
+  linkToGoal(goalID, taskIDs) {
+    const { _data } = this
+    // camel-case it
+    const goalTag = `+${_data[goalID].description.replace(' ', '')}`
+    // alternative: const goalBoard = `@goal-${goalID}`
+
+    taskIDs.forEach((taskID) => {
+      // TODO: check if not there already
+      _data[taskID].tags.push(goalTag)
+      _data[taskID].isStarred = true
+    })
+
+    // we use a start to indicate this is linked to a goal
+    // FIXME: this.starItems(taskIDs) won't save it
+    render.markStarred(taskIDs)
+
+    this._save(_data)
+
+    // TODO: use a more sepcific rendering
+    render.successMove(taskIDs.join(', '), [goalTag])
   }
 
   deleteItems(ids) {
@@ -431,7 +513,7 @@ class Taskbook {
   }
 
   editDescription(input) {
-    const targets = input.filter((x) => x.startsWith('@'))
+    const targets = input.filter(_isBoardOpt)
 
     if (targets.length === 0) {
       render.missingID()
@@ -474,26 +556,38 @@ class Taskbook {
   }
 
   listByAttributes(terms) {
-    let [boards, attributes] = [[], []]
+    let [boards, tags, attributes] = [[], [], []]
+    const showTasks = terms.length > 0
     const storedBoards = this._getBoards()
+    const storedTags = this._getTags()
 
+    // effectively `showTasks` has been already decided so:
+    // - nothing was passed: we show the boards
+    // - `all` was passed: we show all boards AND their tasks
+    // - attributes were passed: we filter as expected
+    if (terms.includes('all')) terms = []
+
+    // parse boards and tags
     terms.forEach((x) => {
-      if (storedBoards.indexOf(`@${x}`) === -1) {
-        return x === 'myboard' ? boards.push('My Board') : attributes.push(x)
+      if (storedBoards.indexOf(`@${x}`) >= 0) {
+        return boards.push(`@${x}`)
+      }
+      if (storedTags.indexOf(`+${x}`) >= 0) {
+        return tags.push(`+${x}`)
       }
 
-      return boards.push(`@${x}`)
+      return x === 'myboard' ? boards.push('My Board') : attributes.push(x)
     })
-      ;[boards, attributes] = [boards, attributes].map((x) => _removeDuplicates(x))
+    ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => _removeDuplicates(x))
 
     const data = this._filterByAttributes(attributes)
 
-    render.displayByBoard(this._groupByBoard(data, boards))
+    render.displayByBoard(this._groupByBoard(data, boards.concat(tags)), showTasks)
   }
 
   moveBoards(input) {
     let boards = []
-    const targets = input.filter((x) => x.startsWith('@'))
+    const targets = input.filter(_isBoardOpt)
 
     if (targets.length === 0) {
       render.missingID()
@@ -563,7 +657,7 @@ class Taskbook {
       process.exit(1)
     }
 
-    const targets = input.filter((x) => x.startsWith('@'))
+    const targets = input.filter(_isBoardOpt)
 
     if (targets.length === 0) {
       render.missingID()
@@ -605,14 +699,20 @@ class Taskbook {
     const { _data } = this
     const task = _data[taskId]
 
-    const boards = task.boards.join(' • ')
-
-    render._displayTitle(boards, [task])
-    render._displayItemByBoard(task)
+    if (task._type === 'goal') {
+      const goalBoard = `@${task.description.replace(' ', '')}`
+      const subtasks = Object.values(_data).filter((t) => t.boards.includes(goalBoard))
+      render._displayTitle(task.description, subtasks)
+      subtasks.forEach((t) => render._displayItemByBoard(t))
+    } else {
+      const boards = task.boards.join(' • ')
+      render._displayTitle(boards, [task])
+      render._displayItemByBoard(task)
+    }
 
     if (task.comment) {
       const decoded = Buffer.from(task.comment, 'base64').toString('ascii')
-      console.log('\n' + marked.parse('---'))
+      console.log(`\n${marked.parse('---')}`)
       console.log(marked.parse(decoded))
       console.log(marked.parse('---\n'))
     }

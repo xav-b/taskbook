@@ -1,44 +1,43 @@
-'use strict';
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const pkg = require('../package.json');
+const fs = require('fs')
+const os = require('os')
+const path = require('path')
+const pkg = require('../package.json')
 
-const {join} = path;
-const {default: defaultConfig} = pkg.configuration;
+const { join } = path
+const { default: defaultConfig } = pkg.configuration
 
 class Config {
   constructor() {
-    this._configFile = join(os.homedir(), '.taskbook.json');
+    this._configFile = join(os.homedir(), '.taskbook.json')
 
-    this._ensureConfigFile();
+    this._ensureConfigFile()
   }
 
   _ensureConfigFile() {
     if (fs.existsSync(this._configFile)) {
-      return;
+      return
     }
 
-    const data = JSON.stringify(defaultConfig, null, 4);
-    fs.writeFileSync(this._configFile, data, 'utf8');
+    const data = JSON.stringify(defaultConfig, null, 4)
+    fs.writeFileSync(this._configFile, data, 'utf8')
   }
 
   _formatTaskbookDir(path) {
-    return join(os.homedir(), path.replace(/^~/g, ''));
+    return join(os.homedir(), path.replace(/^~/g, ''))
   }
 
   get() {
-    let config = {};
+    let config = {}
 
-    const content = fs.readFileSync(this._configFile, 'utf8');
-    config = JSON.parse(content);
+    const content = fs.readFileSync(this._configFile, 'utf8')
+    config = JSON.parse(content)
 
     if (config.taskbookDirectory.startsWith('~')) {
-      config.taskbookDirectory = this._formatTaskbookDir(config.taskbookDirectory);
+      config.taskbookDirectory = this._formatTaskbookDir(config.taskbookDirectory)
     }
 
-    return Object.assign({}, defaultConfig, config);
+    return { ...defaultConfig, ...config }
   }
 }
 
-module.exports = new Config();
+module.exports = new Config()

@@ -18,16 +18,37 @@
 
 ## Description
 
-By utilizing a simple and minimal usage syntax, that requires a flat learning curve, taskbook enables you to effectively manage your tasks and notes across multiple boards from within your terminal. All data are written atomically to the storage in order to prevent corruptions, and are never shared with anyone or anything. Deleted items are automatically archived and can be inspected or restored at any moment.
+By utilizing a simple and minimal usage syntax, that requires a flat learning
+curve, taskbook enables you to effectively manage your tasks and notes across
+multiple boards from within your terminal. All data are written atomically to
+the storage in order to prevent corruptions, and are never shared with anyone or
+anything. Deleted items are automatically archived and can be inspected or
+restored at any moment.
 
-Read this document in:
-[简体中文](https://github.com/klaussinani/taskbook/blob/master/docs/readme.ZH.md), [Русский](https://github.com/klaussinani/taskbook/blob/master/docs/readme.RU.md), [Français](https://github.com/klaussinani/taskbook/blob/master/docs/readme.FR.md), [Deutsch](https://github.com/klaussinani/taskbook/blob/master/docs/readme.GER.md), [Portuguese](https://github.com/klaussinani/taskbook/blob/master/docs/readme.PT-BR.md), [日本語](https://github.com/klaussinani/taskbook/blob/master/docs/readme.JP.md), [한국어](https://github.com/klaussinani/taskbook/blob/master/docs/readme.KR.md), [Spanish](https://github.com/klaussinani/taskbook/blob/master/docs/readme.ES.md), [Bulgarian](https://github.com/klaussinani/taskbook/blob/master/docs/readme.BG.md).
+You can now support the development process through [GitHub
+Sponsors](https://github.com/sponsors/klaussinani).
 
-You can now support the development process through [GitHub Sponsors](https://github.com/sponsors/klaussinani).
+Visit the [contributing guidelines](https://github.com/klaussinani/taskbook/blob/master/contributing.md#translating-documentation)
+to learn more on how to translate this document into more languages.
 
-Visit the [contributing guidelines](https://github.com/klaussinani/taskbook/blob/master/contributing.md#translating-documentation) to learn more on how to translate this document into more languages.
+## About the fork
 
-Come over to [Gitter](https://gitter.im/klaussinani/taskbook) or [Twitter](https://twitter.com/klaussinani) to share your thoughts on the project.
+Some boring context: I've been using [Sunsama](https://www.sunsama.com/) for my day-to-day task management
+and I think it's an amzing product. But it's also packed with features I don't use,
+making their price point less relevant to me. In an effort to detox my digital clutter,
+I moved away from it and settled on [Taskbook]() as my minimal replacement. But as great
+as it is, it missed critical features for **my own workflow**.
+- Task markdown notes
+- Goals linking
+- Replacing commands flags by positional arguments
+- And more...
+
+Why not contributing to the original project? Well there are pull requests and issues for most
+of what I wanted, but the project has been inactive for a year or so, ignoring them.
+Also, I decided to strike a balance between the simplicity they promote, but
+some of the workflow steps I came to integrate on my day to day.
+
+So here you go, a very opinionated fork.
 
 ## Highlights
 
@@ -63,26 +84,8 @@ View highlights in a [taskbook board](https://raw.githubusercontent.com/klaussin
 
 ## Install
 
-### Yarn
-
-```bash
-yarn global add taskbook
-```
-
-### NPM
-
-```bash
-npm install --global taskbook
-```
-
-### Snapcraft
-
-```bash
-snap install taskbook
-snap alias taskbook tb # set alias
-```
-
-**Note:** Due to the snap's strictly confined nature, both the storage & configuration files will be saved under the [`$SNAP_USER_DATA`](https://docs.snapcraft.io/reference/env) environment variable instead of the generic `$HOME` one.
+- `yarn global add taskbook`
+- `npm install --global taskbook`
 
 ## Usage
 
@@ -366,10 +369,10 @@ For more info on how to contribute to the project, please read the [contributing
 
 - [signale](https://github.com/klaussinani/signale) - Highly configurable logging utility
 - [qoa](https://github.com/klaussinani/qoa) - Minimal interactive command-line prompts
-- [hyperocean](https://github.com/klaussinani/hyperocean) - Deep oceanic blue Hyper terminal theme
 
 ## Team
 
+Credits due to original creators:
 - Klaus Sinani [(@klaussinani)](https://github.com/klaussinani)
 - Mario Sinani [(@mariosinani)](https://github.com/mariosinani)
 

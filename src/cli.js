@@ -8,7 +8,6 @@ const taskbook = require('./taskbook')
 
 const program = new Command()
 
-// TODO: (from bujo) support event, like we support notes (different ascii char)
 // TODO: group commands logically together
 program
   .name(pkg.name)
@@ -76,6 +75,34 @@ program
   .action((item) => taskbook.comment(item))
 
 program
+  .command('tag')
+  .description('Add a tag to an item')
+  .argument('itemid')
+  .argument('<tags...>')
+  .action((itemid, tags) => {
+    taskbook.tagItem(itemid, tags)
+  })
+
+program
+  .command('goal')
+  .alias('g')
+  .description('Create a new goal')
+  .argument('<description...>')
+  .action((description) => taskbook.createGoal(description))
+
+program
+  .command('toward')
+  .description('Link tasks to a goal')
+  .argument('goal')
+  .argument('<tasks...>')
+  .action((goal, tasks) =>
+    taskbook.linkToGoal(
+      goal,
+      tasks.map((x) => parseInt(x.trim(), 10))
+    )
+  )
+
+program
   .command('focus')
   .description('Start working on a task')
   .argument('task')
@@ -98,6 +125,8 @@ program
 // TODO: only allow one task
 program
   .command('begin')
+  .alias('start')
+  .alias('pause')
   .alias('b')
   .description('Start/pause task')
   .argument('<tasks...>')

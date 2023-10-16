@@ -12,6 +12,7 @@ class Item {
     this.comment = null
     this.isStarred = options.isStarred || false
     this.boards = options.boards || []
+    this.tags = options.tags || []
   }
 }
 
