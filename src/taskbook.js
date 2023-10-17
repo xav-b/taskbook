@@ -101,12 +101,22 @@ class Taskbook {
     return tags
   }
 
+  /**
+   * Compile list of task dates,
+   * which are the timestamp the task was completed
+   * (or the note and event was created?)
+   */
   _getDates(data = this._data) {
     const dates = []
 
     Object.keys(data).forEach((id) => {
-      if (dates.indexOf(data[id]._date) === -1) {
-        dates.push(data[id]._date)
+      // for migration purpose, as `_updatedAt should always be set`
+      let dt = new Date().toDateString()
+      if (dt._updatedAt) dt = new Date(data[id]._updatedAt).toDateString()
+
+      // avoid duplicates
+      if (dates.indexOf(dt) === -1) {
+        dates.push(dt)
       }
     })
 
@@ -407,36 +417,63 @@ class Taskbook {
     ids = this._validateIDs(ids)
     const { _data } = this
     const [checked, unchecked] = [[], []]
+    const now = new Date()
 
     ids.forEach((id) => {
       if (_data[id]._isTask) {
         _data[id].inProgress = false
         _data[id].isComplete = !_data[id].isComplete
+
+        if (_data[id].isComplete) {
+          // update time spent - of course if `tb begin` was not used we could do
+          // now - _createdAt. But it's almost certain to be innacurate, so I would
+          // rather assume one has to first begin a task to enable time tracking
+          if (_data[id]._startedAt) _data[id]._duration += now - _data[id]._startedAt
+          _data[id]._updatedAt = now.getTime()
+          _data[id]._startedAt = null
+        } else {
+          // been unchecked, not done
+          _data[id]._updatedAt = null
+        }
+
         return _data[id].isComplete ? checked.push(id) : unchecked.push(id)
       }
+      // else invalid item id
     })
 
     this._save(_data)
+
     render.markComplete(checked)
     render.markIncomplete(unchecked)
   }
 
-  beginTasks(ids) {
-    ids = this._validateIDs(ids)
+  beginTask(id) {
+    ;[id] = this._validateIDs([id])
     const { _data } = this
     const [started, paused] = [[], []]
 
-    ids.forEach((id) => {
-      if (_data[id]._isTask) {
-        _data[id].isComplete = false
-        _data[id].inProgress = !_data[id].inProgress
-        return _data[id].inProgress ? started.push(id) : paused.push(id)
+    if (_data[id]._isTask) {
+      _data[id].isComplete = false
+      _data[id].inProgress = !_data[id].inProgress
+
+      const now = new Date()
+      if (_data[id].inProgress) {
+        started.push(id)
+        // record start time, no change on duration
+        _data[id]._startedAt = now.getTime()
+      } else {
+        paused.push(id)
+        // update duration
+        _data[id]._duration += now.getTime() - _data[id]._startedAt
+        _data[id]._startedAt = null
       }
-    })
+    }
+    // TODO: else render error
 
     this._save(_data)
-    render.markStarted(started)
-    render.markPaused(paused)
+
+    if (started.length > 0) render.markStarted(started)
+    if (paused.length > 0) render.markPaused(paused)
   }
 
   createTask(desc) {
@@ -578,7 +615,7 @@ class Taskbook {
 
       return x === 'myboard' ? boards.push('My Board') : attributes.push(x)
     })
-    ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => _removeDuplicates(x))
+      ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => _removeDuplicates(x))
 
     const data = this._filterByAttributes(attributes)
 
@@ -586,27 +623,12 @@ class Taskbook {
   }
 
   moveBoards(input) {
-    let boards = []
-    const targets = input.filter(_isBoardOpt)
+    const { _data } = this
+    let [ids, boards] = [[], []]
 
-    if (targets.length === 0) {
-      render.missingID()
-      process.exit(1)
-    }
-
-    if (targets.length > 1) {
-      render.invalidIDsNumber()
-      process.exit(1)
-    }
-
-    const [target] = targets
-    const id = this._validateIDs(target.replace('@', ''))
-
-    input
-      .filter((x) => x !== target)
-      .forEach((x) => {
-        boards.push(x === 'myboard' ? 'My Board' : `@${x}`)
-      })
+    input.filter(_isBoardOpt).forEach((x) => {
+      boards.push(x === 'myboard' ? 'My Board' : x)
+    })
 
     if (boards.length === 0) {
       render.missingBoards()
@@ -615,10 +637,25 @@ class Taskbook {
 
     boards = _removeDuplicates(boards)
 
-    const { _data } = this
-    _data[id].boards = boards
+    input
+      .filter((x) => !_isBoardOpt(x))
+      .forEach((x) => {
+        ids.push(x)
+      })
+
+    if (ids.length === 0) {
+      render.missingID()
+      process.exit(1)
+    }
+
+    ids = this._validateIDs(ids)
+
+    ids.forEach((id) => {
+      _data[id].boards = boards
+      render.successMove(id, boards)
+    })
+
     this._save(_data)
-    render.successMove(id, boards)
   }
 
   restoreItems(ids) {

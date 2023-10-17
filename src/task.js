@@ -6,6 +6,9 @@ class Task extends Item {
 
     this._isTask = true
     this._type = 'task'
+    // also track how long it took to complete it
+    this._duration = 0
+    this._startedAt = null
 
     this.isComplete = options.isComplete || false
     this.inProgress = options.inProgress || false

@@ -27,6 +27,18 @@ const { blue, green, grey, magenta, red, underline, yellow } = chalk
 // TODO: config
 const priorities = { 2: 'yellow', 3: 'red' }
 
+// TODO: move that to utils or something
+function sortByPriorities(t1, t2) {
+  // `1` is the dafault and lowest priority
+  const priority1 = parseInt(t1.priority || '1', 10)
+  const priority2 = parseInt(t2.priority || '1', 10)
+
+  // we want to have top priorities first, down to lowest
+  // so here the highest priority should come as "lower"
+  // than the lowest ones
+  return priority2 - priority1
+}
+
 class Render {
   get _configuration() {
     return config.get()
@@ -123,7 +135,7 @@ class Render {
 
   _displayItemByBoard(item) {
     const { _type, isComplete, inProgress, tags } = item
-    const age = this._getAge(item._timestamp)
+    const age = this._getAge(item._createdAt)
     const star = this._getStar(item)
     const comment = this._getCommentHint(item)
 
@@ -190,7 +202,9 @@ class Render {
       }
 
       this._displayTitle(board, data[board])
-      data[board].forEach((item) => {
+
+      // TODO: allow other sorting strategies (default by id)
+      data[board].sort(sortByPriorities).forEach((item) => {
         if (!displayTasks) return
         if (item._isTask && item.isComplete && !this._configuration.displayCompleteTasks) {
           return
@@ -208,6 +222,7 @@ class Render {
       }
 
       this._displayTitle(date, data[date])
+
       data[date].forEach((item) => {
         if (item._isTask && item.isComplete && !this._configuration.displayCompleteTasks) {
           return
@@ -386,9 +401,8 @@ class Render {
 
   successCopyToClipboard(ids) {
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
-    const message = `Copied the ${
-      ids.length > 1 ? 'descriptions of items' : 'description of item'
-    }:`
+    const message = `Copied the ${ids.length > 1 ? 'descriptions of items' : 'description of item'
+      }:`
     success({ prefix, message, suffix })
   }
 }

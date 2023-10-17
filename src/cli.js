@@ -129,8 +129,8 @@ program
   .alias('pause')
   .alias('b')
   .description('Start/pause task')
-  .argument('<tasks...>')
-  .action((tasks) => taskbook.beginTasks(tasks))
+  .argument('task')
+  .action((task) => taskbook.beginTask(task))
 
 program
   .command('star')
@@ -188,9 +188,8 @@ program
   .command('move')
   .alias('m')
   .description('Move item between boards')
-  .argument('task')
-  .argument('<boards...>')
-  .action((task, boards) => taskbook.moveBoards([`@${task}`].concat(boards)))
+  .argument('<input...>')
+  .action((input) => taskbook.moveBoards(input))
 
 program
   .command('clear')

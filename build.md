@@ -7,7 +7,6 @@
 
 - Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
   that automatically to today todo
-- Support task scheduling (should show up by themselves on the right day). 
 - `begin` and `focus` could track time
 - Use estimates to compute unreasonable timeline (in the footer)
 - log of everything that had been done (with auto timing)
@@ -17,16 +16,10 @@
 
 ### Fix behaviors
 
-- `tb move` should behave like `tb task`, marking boards with `@` and allowing as many ids as we want
-- Order boards view by priorities
-
-- [Show timeline ordered by checked date](https://github.com/klaudiosinani/taskbook/issues/158) (this [should be supported](https://github.com/klaudiosinani/taskbook/pull/190))
-  I need a view of what has been done the past week
 - `archive` and `timeline` to filter by boards
 
 ### Ideas
 
-- Copy to clipboard the last `id` (like from `tb task`)
 - Support queueing (linked to next since completing one leads to the next)
 - Support both `@name` and `@id`
 - Time boxing and pomodoro timer
@@ -42,6 +35,9 @@
 - [x] Option to link a new task to a goal from `tb task` (will be made easier supporting board by id)
 - [x] Task points ([Issue #181](https://github.com/klaudiosinani/taskbook/issues/181)) -> use +xs +l...
 
+- [x] [Show timeline ordered by checked date](https://github.com/klaudiosinani/taskbook/issues/158) (this [should be supported](https://github.com/klaudiosinani/taskbook/pull/190))
+- [x] Order boards view by priorities
+- [x] `tb move` should behave like `tb task`, marking boards with `@` and allowing as many ids as we want
 - [x] List boards (hacked it on `tb list`)
 - [x] Support for goals + linking to tasks
 - [x] Focus mode (`tb next`) with timer + display notes
