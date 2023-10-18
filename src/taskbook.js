@@ -332,7 +332,8 @@ class Taskbook {
 
     Object.keys(data).forEach((id) => {
       dates.forEach((date) => {
-        if (data[id]._date === date) {
+        const dt = new Date(data[id]._updatedAt).toDateString()
+        if (dt === date) {
           if (Array.isArray(grouped[date])) {
             return grouped[date].push(data[id])
           }
@@ -413,7 +414,7 @@ class Taskbook {
     render.successCopyToClipboard(ids)
   }
 
-  checkTasks(ids) {
+  checkTasks(ids, duration) {
     ids = this._validateIDs(ids)
     const { _data } = this
     const [checked, unchecked] = [[], []]
@@ -425,10 +426,13 @@ class Taskbook {
         _data[id].isComplete = !_data[id].isComplete
 
         if (_data[id].isComplete) {
+          // if duration is given, converts minutes to ms
+          if (duration) _data[id]._duration = duration * 60 * 1000
           // update time spent - of course if `tb begin` was not used we could do
           // now - _createdAt. But it's almost certain to be innacurate, so I would
           // rather assume one has to first begin a task to enable time tracking
-          if (_data[id]._startedAt) _data[id]._duration += now - _data[id]._startedAt
+          else if (_data[id]._startedAt) _data[id]._duration += now - _data[id]._startedAt
+
           _data[id]._updatedAt = now.getTime()
           _data[id]._startedAt = null
         } else {
@@ -615,7 +619,7 @@ class Taskbook {
 
       return x === 'myboard' ? boards.push('My Board') : attributes.push(x)
     })
-      ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => _removeDuplicates(x))
+    ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => _removeDuplicates(x))
 
     const data = this._filterByAttributes(attributes)
 
@@ -732,7 +736,7 @@ class Taskbook {
     this.deleteItems(ids)
   }
 
-  focus(taskId) {
+  async focus(taskId) {
     const { _data } = this
     const task = _data[taskId]
 

@@ -4,6 +4,7 @@
 ### New Features
 
 - Have a warning when new boards/tags are created
+- Support duration when checking a task
 
 - Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
   that automatically to today todo

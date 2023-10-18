@@ -103,12 +103,6 @@ program
   )
 
 program
-  .command('focus')
-  .description('Start working on a task')
-  .argument('task')
-  .action((task) => taskbook.focus(task))
-
-program
   .command('delete')
   .alias('d')
   .description('Delete items')
@@ -120,9 +114,16 @@ program
   .alias('c')
   .description('Check/uncheck task')
   .argument('<tasks...>')
-  .action((tasks) => taskbook.checkTasks(tasks))
+  .option('-d, --duration [duration]', 'time to complete, in minutes')
+  .action((tasks, options) => taskbook.checkTasks(tasks, options.duration))
 
-// TODO: only allow one task
+// TODO: merge with begin
+program
+  .command('focus')
+  .description('Start working on a task')
+  .argument('task')
+  .action((task) => taskbook.focus(task))
+
 program
   .command('begin')
   .alias('start')
