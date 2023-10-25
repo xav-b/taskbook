@@ -21,11 +21,8 @@ const { event, goal } = new signale.Signale({
   },
 })
 
-const { await: wait, error, log, note, pending, success } = signale
+const { await: wait, error, log, note, pending, success, warn } = signale
 const { blue, green, grey, magenta, red, underline, yellow } = chalk
-
-// TODO: config
-const priorities = { 2: 'yellow', 3: 'red' }
 
 // TODO: move that to utils or something
 function sortByPriorities(t1, t2) {
@@ -90,9 +87,11 @@ class Render {
   }
 
   _buildTitle(key, items) {
-    const title =
-      key === new Date().toDateString() ? `${underline(key)} ${grey('[Today]')}` : underline(key)
+    let title = this._configuration.highlightTitle(key)
+    if (key === new Date().toDateString()) title += ` ${grey('[Today]')}`
+
     const correlation = this._getCorrelation(items)
+
     return { title, correlation }
   }
 
@@ -114,7 +113,8 @@ class Render {
     const priority = parseInt(item.priority, 10)
 
     if (!isComplete && priority > 1) {
-      message.push(underline[priorities[priority]](description))
+      const color = this._configuration.priorities[priority]
+      message.push(underline[color](description))
     } else {
       message.push(isComplete ? grey(description) : description)
     }
@@ -134,7 +134,7 @@ class Render {
   }
 
   _displayItemByBoard(item) {
-    const { _type, isComplete, inProgress, tags } = item
+    const { _type, isComplete, inProgress, tags, _duration } = item
     const age = this._getAge(item._createdAt)
     const star = this._getStar(item)
     const comment = this._getCommentHint(item)
@@ -145,6 +145,7 @@ class Render {
     if (age.length === 0) suffix.push(age)
     if (star) suffix.push(star)
     if (comment) suffix.push(comment)
+    if (_duration > 0 && isComplete) suffix.push(_duration)
     if (tags?.length > 0) suffix.push(grey(tags.join(' ')))
 
     const msgObj = { prefix, message, suffix: suffix.join(' ') }
@@ -170,15 +171,19 @@ class Render {
   }
 
   _displayItemByDate(item) {
-    const { _type, isComplete, inProgress } = item
+    const { _type, isComplete, inProgress, _duration } = item
     const boards = item.boards.filter((x) => x !== 'My Board')
     const star = this._getStar(item)
 
     const prefix = this._buildPrefix(item)
     const message = this._buildMessage(item)
-    const suffix = `${this._colorBoards(boards)} ${star}`
 
-    const msgObj = { prefix, message, suffix }
+    const suffix = []
+    if (_duration > 0 && isComplete) suffix.push(grey(`${Math.ceil(_duration / (1000 * 60))}m`))
+    suffix.push(this._colorBoards(boards))
+    suffix.push(star)
+
+    const msgObj = { prefix, message, suffix: suffix.join(' ') }
 
     if (_type === 'task')
       return isComplete ? success(msgObj) : inProgress ? wait(msgObj) : pending(msgObj)
@@ -237,6 +242,12 @@ class Render {
     if (!this._configuration.displayProgressOverview) {
       return
     }
+
+    complete = complete || 0
+    inProgress = inProgress || 0
+    pending = pending || 0
+    notes = notes || 0
+    percent = percent || Math.ceil(100 * (complete / (inProgress + pending + complete)))
 
     percent =
       percent >= 75 ? green(`${percent}%`) : percent >= 50 ? yellow(`${percent}%`) : `${percent}%`
@@ -362,7 +373,14 @@ class Render {
     error({ prefix, message })
   }
 
-  successCreate({ _id, _type, _isTask }) {
+  warning({ _id }, message) {
+    if (!this._configuration.displayWarnings) return
+
+    const suffix = grey(_id)
+    warn({ message: yellow(message), suffix })
+  }
+
+  successCreate({ _id, _type }) {
     const [prefix, suffix] = ['\n', grey(_id)]
     const message = `Created ${_type}`
     success({ prefix, message, suffix })

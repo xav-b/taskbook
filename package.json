@@ -1,7 +1,7 @@
 {
   "name": "taskbook",
   "productName": "Taskbook",
-  "version": "0.4.0",
+  "version": "0.8.1",
   "description": "Tasks, boards & notes for the command-line habitat",
   "repository": "klaussinani/taskbook",
   "license": "MIT",
@@ -35,7 +35,8 @@
     "default": {
       "taskbookDirectory": "~",
       "displayCompleteTasks": true,
-      "displayProgressOverview": true
+      "displayProgressOverview": true,
+      "displayWarnings": true
     }
   },
   "scripts": {

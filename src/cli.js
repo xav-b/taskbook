@@ -20,6 +20,11 @@ program
   })
 
 program
+  .command('what')
+  .alias('w')
+  .action(() => taskbook.showManual())
+
+program
   .command('list')
   .alias('l')
   .description('List items by attributes')

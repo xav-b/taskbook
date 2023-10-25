@@ -1,41 +1,43 @@
-## Things to build (in order)
-
-
-### New Features
-
-- Have a warning when new boards/tags are created
-- Support duration when checking a task
-
-- Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
-  that automatically to today todo
-- `begin` and `focus` could track time
-- Use estimates to compute unreasonable timeline (in the footer)
-- log of everything that had been done (with auto timing)
-  Every view should be today, except `archive` command
-- Support due date [PR #69](https://github.com/klaudiosinani/taskbook/pull/69)
-
+## Things to build
 
 ### Fix behaviors
 
-- `archive` and `timeline` to filter by boards
+- Merge event `duration` and all items `_duration`
+- FIXME: tb archive doesn't order the boards by time DESC
+- `archive` and `timeline` to support same filters as `tb list`
 
 ### Ideas
 
-- Support queueing (linked to next since completing one leads to the next)
-- Support both `@name` and `@id`
+- Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc...
+- Config: support env variables + type it
+- Support namespaces (or taskbooks/books?)
+- `@` to reference boards both by id and by name
 - Time boxing and pomodoro timer
-- Have a way to document one's workflow
+- Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
+  that automatically to today todo
+- Use estimates to compute unreasonable timeline (in the footer)
+- Support due date [PR #69](https://github.com/klaudiosinani/taskbook/pull/69)
 
 ### Logistics
 
-- Use more the `config`
+- not too sure about bun yet
 - Refactor and typescript
 - Update readmes and others to reflect my project
 - Publish a new package
 
+---
+
+## Done
+
 - [x] Option to link a new task to a goal from `tb task` (will be made easier supporting board by id)
 - [x] Task points ([Issue #181](https://github.com/klaudiosinani/taskbook/issues/181)) -> use +xs +l...
+- [x] Timeline to display done and pending (maybe not bad to keep archive/active segregation)
 
+- [x] Display duration in done task
+- [x] Copy last id of certain commands
+- [x] Parse `[ ]` and `[x]` to display subtasks count
+- [x] `begin` and `focus` could track time
+- [x] Support duration when checking a task
 - [x] [Show timeline ordered by checked date](https://github.com/klaudiosinani/taskbook/issues/158) (this [should be supported](https://github.com/klaudiosinani/taskbook/pull/190))
 - [x] Order boards view by priorities
 - [x] `tb move` should behave like `tb task`, marking boards with `@` and allowing as many ids as we want
@@ -51,9 +53,9 @@
 
 ## As A Service
 
-- Terminal first class citizen
 - Backup + Sync tasks between machines (using github repositories)
 - Github repositories = namespaces
 - Github repositories can have collaborators - team shared boards
-- Event hooks
+- Event hooks (integrate with IFTT/Zapier)
 - Analytics out of the logs
+- Habits, tasks, scheduling, 2 ways sync with google calendar

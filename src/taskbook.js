@@ -6,11 +6,13 @@ const tmp = require('tmp')
 const { marked } = require('marked')
 const { markedTerminal } = require('marked-terminal')
 
+const config = require('./config')
 const Task = require('./task')
 const Goal = require('./goal')
 const Note = require('./note')
 const EventNote = require('./event')
 const Storage = require('./storage')
+const help = require('./help')
 const render = require('./render')
 
 marked.use(
@@ -21,9 +23,12 @@ marked.use(
 
 // TODO: let `@` and `+` be customised?
 const _isPriorityOpt = (x) => ['p:1', 'p:2', 'p:3'].indexOf(x) > -1
+
 const _isBoardOpt = (x) => x.startsWith('@')
+
 const _isTagOpt = (x) => x.startsWith('+')
 
+// TODO: utils
 const _arrayify = (x) => (Array.isArray(x) ? x : [x])
 
 const _removeDuplicates = (x) => [...new Set(_arrayify(x))]
@@ -33,9 +38,41 @@ function _getPriority(desc) {
   return opt ? opt[opt.length - 1] : 1
 }
 
+function _hasTerms(str, terms) {
+  for (const term of terms) {
+    if (str.toLocaleLowerCase().indexOf(term.toLocaleLowerCase()) > -1) {
+      return str
+    }
+  }
+
+  return null
+}
+
+/**
+ * Filter the list of current tasks available to the command.
+ */
+function _filter(data, exclude) {
+  Object.keys(data).forEach((id) => {
+    if (exclude(data[id])) delete data[id]
+  })
+
+  return data
+}
+
+const _filterNote = (data) => _filter(data, (item) => item._isTask)
+const _filterPending = (data) => _filter(data, (item) => !item._isTask || item.isComplete)
+const _filterComplete = (data) => _filter(data, (item) => !item._isTask || !item.isComplete)
+const _filterInProgress = (data) => _filter(data, (item) => !item._isTask || !item.inProgress)
+const _filterStarred = (data) => _filter(data, (item) => !item.isStarred)
+const _filterTask = (data) => _filter(data, (item) => !item._isTask)
+
 class Taskbook {
   constructor() {
     this._storage = new Storage()
+  }
+
+  get _configuration() {
+    return config.get()
   }
 
   get _archive() {
@@ -112,7 +149,7 @@ class Taskbook {
     Object.keys(data).forEach((id) => {
       // for migration purpose, as `_updatedAt should always be set`
       let dt = new Date().toDateString()
-      if (dt._updatedAt) dt = new Date(data[id]._updatedAt).toDateString()
+      if (data[id]._updatedAt) dt = new Date(data[id]._updatedAt).toDateString()
 
       // avoid duplicates
       if (dates.indexOf(dt) === -1) {
@@ -186,68 +223,6 @@ class Taskbook {
     return { percent, complete, inProgress, pending, notes }
   }
 
-  _hasTerms(string, terms) {
-    for (const term of terms) {
-      if (string.toLocaleLowerCase().indexOf(term.toLocaleLowerCase()) > -1) {
-        return string
-      }
-    }
-  }
-
-  _filterTask(data) {
-    Object.keys(data).forEach((id) => {
-      if (!data[id]._isTask) {
-        delete data[id]
-      }
-    })
-    return data
-  }
-
-  _filterStarred(data) {
-    Object.keys(data).forEach((id) => {
-      if (!data[id].isStarred) {
-        delete data[id]
-      }
-    })
-    return data
-  }
-
-  _filterInProgress(data) {
-    Object.keys(data).forEach((id) => {
-      if (!data[id]._isTask || !data[id].inProgress) {
-        delete data[id]
-      }
-    })
-    return data
-  }
-
-  _filterComplete(data) {
-    Object.keys(data).forEach((id) => {
-      if (!data[id]._isTask || !data[id].isComplete) {
-        delete data[id]
-      }
-    })
-    return data
-  }
-
-  _filterPending(data) {
-    Object.keys(data).forEach((id) => {
-      if (!data[id]._isTask || data[id].isComplete) {
-        delete data[id]
-      }
-    })
-    return data
-  }
-
-  _filterNote(data) {
-    Object.keys(data).forEach((id) => {
-      if (data[id]._isTask) {
-        delete data[id]
-      }
-    })
-    return data
-  }
-
   _filterByAttributes(attr, data = this._data) {
     if (Object.keys(data).length === 0) {
       return data
@@ -257,36 +232,36 @@ class Taskbook {
       switch (x) {
         case 'star':
         case 'starred':
-          data = this._filterStarred(data)
+          data = _filterStarred(data)
           break
 
         case 'done':
         case 'checked':
         case 'complete':
-          data = this._filterComplete(data)
+          data = _filterComplete(data)
           break
 
         case 'progress':
         case 'started':
         case 'begun':
-          data = this._filterInProgress(data)
+          data = _filterInProgress(data)
           break
 
         case 'pending':
         case 'unchecked':
         case 'incomplete':
-          data = this._filterPending(data)
+          data = _filterPending(data)
           break
 
         case 'todo':
         case 'task':
         case 'tasks':
-          data = this._filterTask(data)
+          data = _filterTask(data)
           break
 
         case 'note':
         case 'notes':
-          data = this._filterNote(data)
+          data = _filterNote(data)
           break
 
         default:
@@ -384,11 +359,26 @@ class Taskbook {
   }
 
   createNote(desc) {
+    const { _data } = this
+    const storedBoards = this._getBoards()
+    const storedTags = this._getTags()
+
     const { id, description, tags, boards } = this._getOptions(desc)
     const note = new Note({ id, description, tags, boards })
-    const { _data } = this
+
+    // warn on new tags and boards
+    tags.forEach((t) => {
+      if (!storedTags.includes(t)) render.warning(note, `new tag: ${t}`)
+    })
+    boards.forEach((b) => {
+      if (!storedBoards.includes(b)) render.warning(note, `new board: ${b}`)
+    })
+
     _data[id] = note
     this._save(_data)
+
+    if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
+
     render.successCreate(note)
   }
 
@@ -397,8 +387,11 @@ class Taskbook {
     const { id, description, tags } = this._getOptions(desc)
     const event = new EventNote({ id, description, boards, tags, schedule, duration })
     const { _data } = this
+
     _data[id] = event
     this._save(_data)
+
+    if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
 
     render.successCreate(event)
   }
@@ -451,41 +444,16 @@ class Taskbook {
     render.markIncomplete(unchecked)
   }
 
-  beginTask(id) {
-    ;[id] = this._validateIDs([id])
-    const { _data } = this
-    const [started, paused] = [[], []]
-
-    if (_data[id]._isTask) {
-      _data[id].isComplete = false
-      _data[id].inProgress = !_data[id].inProgress
-
-      const now = new Date()
-      if (_data[id].inProgress) {
-        started.push(id)
-        // record start time, no change on duration
-        _data[id]._startedAt = now.getTime()
-      } else {
-        paused.push(id)
-        // update duration
-        _data[id]._duration += now.getTime() - _data[id]._startedAt
-        _data[id]._startedAt = null
-      }
-    }
-    // TODO: else render error
-
-    this._save(_data)
-
-    if (started.length > 0) render.markStarted(started)
-    if (paused.length > 0) render.markPaused(paused)
-  }
-
   createTask(desc) {
     const { boards, tags, description, id, priority } = this._getOptions(desc)
     const task = new Task({ id, description, boards, tags, priority })
     const { _data } = this
+
     _data[id] = task
     this._save(_data)
+
+    if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
+
     render.successCreate(task)
   }
 
@@ -496,8 +464,11 @@ class Taskbook {
 
     const goal = new Goal({ id, description, boards, priority, tags })
     const { _data } = this
+
     _data[id] = goal
     this._save(_data)
+
+    if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
 
     render.successCreate(goal)
   }
@@ -586,7 +557,7 @@ class Taskbook {
     const { _data } = this
 
     Object.keys(_data).forEach((id) => {
-      if (!this._hasTerms(_data[id].description, terms)) {
+      if (!_hasTerms(_data[id].description, terms)) {
         return
       }
 
@@ -619,7 +590,7 @@ class Taskbook {
 
       return x === 'myboard' ? boards.push('My Board') : attributes.push(x)
     })
-    ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => _removeDuplicates(x))
+      ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => _removeDuplicates(x))
 
     const data = this._filterByAttributes(attributes)
 
@@ -729,9 +700,7 @@ class Taskbook {
       }
     })
 
-    if (ids.length === 0) {
-      return
-    }
+    if (ids.length === 0) return
 
     this.deleteItems(ids)
   }
@@ -740,6 +709,7 @@ class Taskbook {
     const { _data } = this
     const task = _data[taskId]
 
+    // TODO: test
     if (task._type === 'goal') {
       const goalBoard = `@${task.description.replace(' ', '')}`
       const subtasks = Object.values(_data).filter((t) => t.boards.includes(goalBoard))
@@ -753,10 +723,46 @@ class Taskbook {
 
     if (task.comment) {
       const decoded = Buffer.from(task.comment, 'base64').toString('ascii')
+
+      const subtasksDone = (decoded.match(/\[x\]/g) || []).length
+      const subtasksTodo = (decoded.match(/\[\s\]/g) || []).length
+
       console.log(`\n${marked.parse('---')}`)
       console.log(marked.parse(decoded))
-      console.log(marked.parse('---\n'))
+      console.log(marked.parse('---'))
+
+      // this.displayStats({ percent, complete, inProgress, pending: , notes: 1 })
+      render.displayStats({ complete: subtasksDone, pending: subtasksTodo, notes: 1 })
     }
+  }
+
+  beginTask(id) {
+    ;[id] = this._validateIDs([id])
+    const { _data } = this
+    const [started, paused] = [[], []]
+
+    if (_data[id]._isTask) {
+      _data[id].isComplete = false
+      _data[id].inProgress = !_data[id].inProgress
+
+      const now = new Date()
+      if (_data[id].inProgress) {
+        started.push(id)
+        // record start time, no change on duration
+        _data[id]._startedAt = now.getTime()
+      } else {
+        paused.push(id)
+        // update duration
+        _data[id]._duration += now.getTime() - _data[id]._startedAt
+        _data[id]._startedAt = null
+      }
+    }
+    // TODO: else render error
+
+    this._save(_data)
+
+    if (started.length > 0) render.markStarted(started)
+    if (paused.length > 0) render.markPaused(paused)
   }
 
   comment(itemId) {
@@ -789,6 +795,10 @@ class Taskbook {
     this._save(_data)
 
     render.successEdit(itemId)
+  }
+
+  showManual() {
+    console.log(marked.parse(help))
   }
 }
 
