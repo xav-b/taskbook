@@ -1,5 +1,6 @@
 const chalk = require('chalk')
 const signale = require('signale')
+
 const config = require('./config')
 
 signale.config({ displayLabel: false })
@@ -22,7 +23,30 @@ const { event, goal } = new signale.Signale({
 })
 
 const { await: wait, error, log, note, pending, success, warn } = signale
-const { blue, green, grey, magenta, red, underline, yellow } = chalk
+const { blue, green, magenta, red, underline, yellow } = chalk
+const grey = chalk.cyan.dim
+
+/**
+ * Road to configurable theme
+ * 1. Replace labels with below theme (like `theme.p2`)
+ * 2. Have a js way to swap theme: `const theme = config.theme()`
+ * 3. Offer a way in config to overwrite any individual property, from json
+ * 4. Have pre-defined theme and a way to pick them
+ *
+const theme = {
+  blue,
+  grey,
+  magenta,
+  red,
+  underline,
+  done: green,
+  wip: yellow,
+  p2: yellow,
+  p3: red,
+  error: red,
+  warning: yellow,
+}
+ */
 
 // TODO: move that to utils or something
 function sortByPriorities(t1, t2) {
@@ -145,7 +169,14 @@ class Render {
     if (age.length === 0) suffix.push(age)
     if (star) suffix.push(star)
     if (comment) suffix.push(comment)
-    if (_duration > 0 && isComplete) suffix.push(_duration)
+    if (_duration > 0 && isComplete) {
+      // convert to minutes
+      let prettyDuration = ''
+      const minutes = _duration / (1000 * 60)
+      if (minutes > 60) prettyDuration = `${Math.ceil(minutes / 60)}h`
+      else prettyDuration = `${Math.ceil(minutes / 60)}m`
+      suffix.push(grey(prettyDuration))
+    }
     if (tags?.length > 0) suffix.push(grey(tags.join(' ')))
 
     const msgObj = { prefix, message, suffix: suffix.join(' ') }
@@ -156,12 +187,12 @@ class Render {
     if (_type === 'note') return note(msgObj)
 
     if (_type === 'goal') {
-      msgObj.message = `${chalk.blue('goal')}: ${message}`
+      msgObj.message = `${blue('goal')}: ${message}`
       return isComplete ? success(msgObj) : inProgress ? wait(msgObj) : goal(msgObj)
     }
 
     if (_type === 'event') {
-      msgObj.message = `${chalk.blue(item.schedule)} ${message}`
+      msgObj.message = `${blue(item.schedule)} ${message}`
       if (item.duration) msgObj.suffix = grey(item.duration)
 
       return isComplete ? success(msgObj) : inProgress ? wait(msgObj) : event(msgObj)

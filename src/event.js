@@ -11,6 +11,7 @@ class EventTask extends Task {
 
     this.schedule = options.schedule
     this.duration = options.duration || null
+    this.repeat = options.priority || null
   }
 }
 

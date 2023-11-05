@@ -1,8 +1,10 @@
 const fs = require('fs')
 const childProcess = require('child_process')
+const tmp = require('tmp')
+
+const { prompt, NumberPrompt } = require('enquirer')
 const clipboardy = require('clipboardy')
 const chalk = require('chalk')
-const tmp = require('tmp')
 const { marked } = require('marked')
 const { markedTerminal } = require('marked-terminal')
 
@@ -93,7 +95,19 @@ class Taskbook {
 
   _generateID(data = this._data) {
     const ids = Object.keys(data).map((id) => parseInt(id, 10))
-    const max = ids.length === 0 ? 0 : Math.max(...ids)
+    const max = Math.max(...ids)
+
+    // THE first task
+    if (ids.length === 0) return 1
+
+    // pick up the first available id. This allows to recycle ids that have
+    // been archived.
+    for (let idx = 0; idx < max; idx++) {
+      // will return the lowest id that is not in the used list of tasks
+      if (!ids.includes(idx)) return idx
+    }
+
+    // fallback strategy: keep incrementing
     return max + 1
   }
 
@@ -407,36 +421,62 @@ class Taskbook {
     render.successCopyToClipboard(ids)
   }
 
-  checkTasks(ids, duration) {
+  async checkTasks(ids, duration) {
     ids = this._validateIDs(ids)
     const { _data } = this
     const [checked, unchecked] = [[], []]
     const now = new Date()
 
-    ids.forEach((id) => {
-      if (_data[id]._isTask) {
-        _data[id].inProgress = false
-        _data[id].isComplete = !_data[id].isComplete
+    await Promise.all(
+      ids.map(async (id) => {
+        if (_data[id]._isTask) {
+          _data[id].inProgress = false
+          _data[id].isComplete = !_data[id].isComplete
 
-        if (_data[id].isComplete) {
-          // if duration is given, converts minutes to ms
-          if (duration) _data[id]._duration = duration * 60 * 1000
-          // update time spent - of course if `tb begin` was not used we could do
-          // now - _createdAt. But it's almost certain to be innacurate, so I would
-          // rather assume one has to first begin a task to enable time tracking
-          else if (_data[id]._startedAt) _data[id]._duration += now - _data[id]._startedAt
+          if (_data[id].isComplete) {
+            // if duration is given, converts minutes to ms
+            if (duration) _data[id]._duration = duration * 60 * 1000
+            // update time spent - of course if `tb begin` was not used we could do
+            // now - _createdAt. But it's almost certain to be innacurate, so I would
+            // rather assume one has to first begin a task to enable time tracking
+            else if (_data[id]._startedAt) _data[id]._duration += now - _data[id]._startedAt
 
-          _data[id]._updatedAt = now.getTime()
-          _data[id]._startedAt = null
-        } else {
-          // been unchecked, not done
-          _data[id]._updatedAt = null
+            // if duration is > 3h, ask confirmation
+            // TODO: configuration of the number of hours
+            if (_data[id]._duration && _data[id]._duration > 3 * 60 * 60 * 1000) {
+              const { isYes } = await prompt({
+                type: 'confirm',
+                name: 'isYes',
+                message: `Duration seems excessive: about ${Math.round(_data[id]._duration / (60 * 60 * 1000), 2)}h, is that correct`,
+              })
+              // offer to overwrite if that was a mistake
+              if (!isYes) {
+                const { correct } = await prompt({
+                  type: 'number',
+                  name: 'correct',
+                  message: 'How long did it take (in minutes)?',
+                })
+                _data[id]._duration = correct * 60 * 1000
+              }
+            }
+
+            _data[id]._updatedAt = now.getTime()
+            _data[id]._startedAt = null
+          } else {
+            // been unchecked, not done
+            // NOTE: it's quite inaccurate since we are updating it now. Worth
+            // checking this is not a workaround to get some features working,
+            // like timeline/archive properly displaying tasks at the right date.
+            // But it's not event like we are restoring the previous value, so
+            // really setting this to `null` looks wrong.
+            _data[id]._updatedAt = null
+          }
+
+          return _data[id].isComplete ? checked.push(id) : unchecked.push(id)
         }
-
-        return _data[id].isComplete ? checked.push(id) : unchecked.push(id)
-      }
-      // else invalid item id
-    })
+        // else invalid item id
+      })
+    )
 
     this._save(_data)
 
@@ -777,7 +817,7 @@ class Taskbook {
 
     let initContent = `# ID ${itemId} - ${_data[itemId].description}
 
-> write content here...
+> _write content here..._
 `
     if (_data[itemId].comment)
       // initialise the file with the existing comment
@@ -795,6 +835,19 @@ class Taskbook {
     this._save(_data)
 
     render.successEdit(itemId)
+  }
+
+  /**
+   * Offer an easy place to loop through all items and apply/backfill logic.
+   */
+  _migrate() {
+    const { _data } = this
+
+    Object.keys(_data).forEach((id) => {
+      // if (!_data[id]._uid) _data[id]._uid = nanoid()
+    })
+
+    this._save(_data)
   }
 
   showManual() {

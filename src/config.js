@@ -2,6 +2,7 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 const chalk = require('chalk')
+
 const pkg = require('../package.json')
 
 const { default: defaultConfig } = pkg.configuration
@@ -25,10 +26,8 @@ class Config {
   }
 
   get() {
-    let config = {}
-
     const content = fs.readFileSync(this._configFile, 'utf8')
-    config = JSON.parse(content)
+    const config = JSON.parse(content)
 
     if (config.taskbookDirectory.startsWith('~')) {
       config.taskbookDirectory = _formatTaskbookDir(config.taskbookDirectory)
@@ -37,21 +36,25 @@ class Config {
     return {
       // package.json
       ...defaultConfig,
+
       // ~/.taskbook/config.json
       ...config,
+
+      // TODO: support in package.json and/or environment
       // constants
+      // NOTE: will have to do with theming if implemented
       priorities: { 2: 'yellow', 3: 'red' },
       highlightTitle: chalk.bold.cyan,
-      // TODO: support in package.json and/or environment
       enableCopyID: true,
 
-      // TODO: not supported yet
+      // TODO: not supported yet (would really benefit from a flat config)
       defaultBoard: 'My Board',
       eventBoard: 'calendar',
       editor: process.env.EDITOR || 'vi',
       prioritiesLabels: ['p:1', 'p:2', 'p:3'],
       boardPrefix: '@',
       tagPrefix: '+',
+      suspiciousDuration: 3 /* hours */,
     }
   }
 }

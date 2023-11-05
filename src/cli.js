@@ -27,6 +27,7 @@ program
 program
   .command('list')
   .alias('l')
+  .alias('ls')
   .description('List items by attributes')
   .argument('[attributes...]')
   .action((attributes) => taskbook.listByAttributes(attributes))
@@ -110,6 +111,7 @@ program
 program
   .command('delete')
   .alias('d')
+  .alias('rm')
   .description('Delete items')
   .argument('<items...>')
   .action((items) => taskbook.deleteItems(items))
@@ -125,6 +127,7 @@ program
 // TODO: merge with begin
 program
   .command('focus')
+  .alias('F')
   .description('Start working on a task')
   .argument('task')
   .action((task) => taskbook.focus(task))
@@ -193,6 +196,7 @@ program
 program
   .command('move')
   .alias('m')
+  .alias('mv')
   .description('Move item between boards')
   .argument('<input...>')
   .action((input) => taskbook.moveBoards(input))
