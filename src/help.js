@@ -1,48 +1,37 @@
-'use strict';
-
 module.exports = `
+
+  **Tasks, boards & notes for the command-line habitat.**
+
   Usage
-    $ tb [<options> ...]
+    $ tb <command> [<args> ...]
 
-    Options
-        none             Display board view
-      --archive, -a      Display archived items
-      --begin, -b        Start/pause task
-      --check, -c        Check/uncheck task
-      --clear            Delete all checked items
-      --copy, -y         Copy item description
-      --delete, -d       Delete item
-      --edit, -e         Edit item description
-      --find, -f         Search for items
-      --help, -h         Display help message
-      --list, -l         List items by attributes
-      --move, -m         Move item between boards
-      --note, -n         Create note
-      --priority, -p     Update priority of task
-      --restore, -r      Restore items from archive
-      --star, -s         Star/unstar item
-      --task, -t         Create task
-      --timeline, -i     Display timeline view
-      --version, -v      Display installed version
-
-    Examples
-      $ tb
-      $ tb --archive
-      $ tb --begin 2 3
-      $ tb --check 1 2
-      $ tb --clear
-      $ tb --copy 1 2 3
-      $ tb --delete 4
-      $ tb --edit @3 Merge PR #42
-      $ tb --find documentation
-      $ tb --list pending coding
-      $ tb --move @1 cooking
-      $ tb --note @coding Mergesort worse-case O(nlogn)
-      $ tb --priority @3 2
-      $ tb --restore 4
-      $ tb --star 2
-      $ tb --task @coding @reviews Review PR #42
-      $ tb --task @coding Improve documentation
-      $ tb --task Make some buttercream
-      $ tb --timeline
-`;
+  Examples
+    $ \`tb\`
+    $ \`tb list\`
+    $ \`tb list pending coding\`
+    $ \`tb archive\`
+    $ \`tb timeline\`
+    $ \`tb note +coding @interview Mergesort worse-case O(nlogn)\`
+    $ \`tb clear\`
+    $ \`tb begin 2\`
+    $ \`tb check 1 2\`
+    $ \`tb check 1 --duration 30\`
+    $ \`tb copy 1\`
+    $ \`tb delete 4 6\`
+    $ \`tb edit 3 Merge PR #42\`
+    $ \`tb find documentation\`
+    $ \`tb move 1 2 @cooking @tomorrow\`
+    $ \`tb priority 3 22 34\`
+    $ \`tb restore 4\`
+    $ \`tb star 1 2\`
+    $ \`tb task +coding @reviews Review PR #42\`
+    $ \`tb task +coding Improve documentation\`
+    $ \`tb task Make some buttercream\`
+    $ \`tb goal Read more\`
+    $ \`tb toward 1 34 89\`
+    $ \`tb list goals\`
+    $ \`tb event 02:30pm 1h Meet at the coffee\`
+    $ \`tb list calendar\`
+    $ \`tb tag 2 +demo +help\`
+    $ \`tb focus 1\`
+`

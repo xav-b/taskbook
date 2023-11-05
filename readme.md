@@ -18,16 +18,41 @@
 
 ## Description
 
-By utilizing a simple and minimal usage syntax, that requires a flat learning curve, taskbook enables you to effectively manage your tasks and notes across multiple boards from within your terminal. All data are written atomically to the storage in order to prevent corruptions, and are never shared with anyone or anything. Deleted items are automatically archived and can be inspected or restored at any moment.
+By utilizing a simple and minimal usage syntax, that requires a flat learning
+curve, taskbook enables you to effectively manage your tasks and notes across
+multiple boards from within your terminal. All data are written atomically to
+the storage in order to prevent corruptions, and are never shared with anyone
+or anything. Deleted items are automatically archived and can be inspected or
+restored at any moment.
 
-Read this document in:
-[简体中文](https://github.com/klaussinani/taskbook/blob/master/docs/readme.ZH.md), [Русский](https://github.com/klaussinani/taskbook/blob/master/docs/readme.RU.md), [Français](https://github.com/klaussinani/taskbook/blob/master/docs/readme.FR.md), [Deutsch](https://github.com/klaussinani/taskbook/blob/master/docs/readme.GER.md), [Portuguese](https://github.com/klaussinani/taskbook/blob/master/docs/readme.PT-BR.md), [日本語](https://github.com/klaussinani/taskbook/blob/master/docs/readme.JP.md), [한국어](https://github.com/klaussinani/taskbook/blob/master/docs/readme.KR.md), [Spanish](https://github.com/klaussinani/taskbook/blob/master/docs/readme.ES.md), [Bulgarian](https://github.com/klaussinani/taskbook/blob/master/docs/readme.BG.md).
+You can now support the development process through [GitHub
+Sponsors](https://github.com/sponsors/klaussinani).
 
-You can now support the development process through [GitHub Sponsors](https://github.com/sponsors/klaussinani).
+Visit the [contributing
+guidelines](https://github.com/klaussinani/taskbook/blob/master/contributing.md#translating-documentation)
+to learn more on how to translate this document into more languages.
 
-Visit the [contributing guidelines](https://github.com/klaussinani/taskbook/blob/master/contributing.md#translating-documentation) to learn more on how to translate this document into more languages.
+## About the fork
 
-Come over to [Gitter](https://gitter.im/klaussinani/taskbook) or [Twitter](https://twitter.com/klaussinani) to share your thoughts on the project.
+This is an attempt to retain the initial philosophy of the project, simplicity
+and low learning curve, while adding some opinionated workflows I came to appreciate
+on my day to day work:
+- Task markdown notes
+- Linking to Goals
+- Timeline by update date, not creation
+- Support tags, which are just sticky boards (i.e. boards that are not meant to change)
+- Support events item type
+- Tasks ordering by priorities, list boards in the order they are given
+- Time tracker
+- ... probably more to come, but not too much
+
+As well as having fun refactoring (IMOO) the project:
+- Replacing commands flags by positional arguments
+- Typescript
+
+Why not contributing to the original project? Well there are pull requests and
+issues for most of what I wanted, but the project has been inactive for a year
+or so, ignoring them. And I wanted the liberty to implement myu own workflows.
 
 ## Highlights
 
@@ -59,6 +84,7 @@ View highlights in a [taskbook board](https://raw.githubusercontent.com/klaussin
 - [Development](#development)
 - [Related](#related)
 - [Team](#team)
+- [Credits](#credits)
 - [License](#license)
 
 ## Install
@@ -95,6 +121,9 @@ $ tb --help
     Options
         none             Display board view
       --archive, -a      Display archived items
+      --begin, -b        Start/pause task
+      --check, -c        Check/uncheck task
+      --clear            Delete all checked items
       --begin, -b        Start/pause task
       --check, -c        Check/uncheck task
       --clear            Delete all checked items
@@ -288,25 +317,6 @@ $ tb -p @1 2
 ```
 
 ### Move Item
-
-To move an item to one or more boards, use the `--move`/`-m` option, followed by the target item id, prefixed by the `@` symbol, and the name of the destination boards. The default `My board` can be accessed through the `myboard` keyword. The order in which the target id and board names are placed is not significant.
-
-```
-$ tb -m @1 myboard reviews
-```
-
-### Delete Item
-
-To delete one or more items, use the `--delete`/`-d` options followed by the ids of the target items. Note that deleted items are automatically archived, and can be inspected or restored at any moment. Duplicate ids are automatically filtered out.
-
-```
-$ tb -d 1 2
-```
-
-### Delete Checked Tasks
-
-To delete/clear all complete tasks at once across all boards, use the `--clear` option. Note that all deleted tasks are automatically archived, and can be inspected or restored at any moment. In order to discourage any possible accidental usage, the `--clear` option has no available shorter alias.
-
 ```
 $ tb --clear
 ```
@@ -355,20 +365,19 @@ $ tb -f documentation
 
 ## Development
 
-For more info on how to contribute to the project, please read the [contributing guidelines](https://github.com/klaussinani/taskbook/blob/master/contributing.md).
+For more info on how to contribute to the project, please read the
+[contributing guidelines](https://github.com/klaussinani/taskbook/blob/master/contributing.md).
 
 - Fork the repository and clone it to your machine
 - Navigate to your local fork: `cd taskbook`
 - Install the project dependencies: `npm install` or `yarn install`
 - Lint the code for errors: `npm test` or `yarn test`
 
-## Related
-
-- [signale](https://github.com/klaussinani/signale) - Highly configurable logging utility
-- [qoa](https://github.com/klaussinani/qoa) - Minimal interactive command-line prompts
-- [hyperocean](https://github.com/klaussinani/hyperocean) - Deep oceanic blue Hyper terminal theme
-
 ## Team
+
+- Xavier Bruhiere [(@xav-b)](https://github.com/xav-b)
+
+## Credits
 
 - Klaus Sinani [(@klaussinani)](https://github.com/klaussinani)
 - Mario Sinani [(@mariosinani)](https://github.com/mariosinani)
