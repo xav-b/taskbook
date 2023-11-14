@@ -7,11 +7,12 @@ const Task = require('./task')
 class EventTask extends Task {
   constructor(options = {}) {
     super(options)
+
+    // overwrite and make it a specific type of task
     this._type = 'event'
 
     this.schedule = options.schedule
-    this.duration = options.duration || null
-    this.repeat = options.priority || null
+    this.estimate = options.estimate * 60 * 1000
   }
 }
 

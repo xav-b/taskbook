@@ -2,20 +2,21 @@ const fs = require('fs')
 const childProcess = require('child_process')
 const tmp = require('tmp')
 
-const { prompt, NumberPrompt } = require('enquirer')
+const { prompt } = require('enquirer')
 const clipboardy = require('clipboardy')
 const chalk = require('chalk')
 const { marked } = require('marked')
 const { markedTerminal } = require('marked-terminal')
 
-const config = require('./config')
-const Task = require('./task')
-const Goal = require('./goal')
-const Note = require('./note')
-const EventNote = require('./event')
-const Storage = require('./storage')
-const help = require('./help')
-const render = require('./render')
+const config = require('../config').default
+const Storage = require('../store/localjson').default
+const help = require('../interfaces/help')
+const render = require('../interfaces/render')
+const { parseDuration } = require('../shared/utils')
+const Task = require('../domain/task')
+const Goal = require('../domain/goal')
+const Note = require('../domain/note')
+const EventNote = require('../domain/event')
 
 marked.use(
   markedTerminal({
@@ -23,7 +24,42 @@ marked.use(
   })
 )
 
-// TODO: let `@` and `+` be customised?
+// TODO: part of task domain -----------------------------------------------------------
+function checkTask(task, duration = null) {
+  // idempotency
+  if (task.isComplete) return
+
+  const now = new Date()
+
+  task.isComplete = true
+  task.inProgress = false
+  task._updatedAt = now.getTime()
+  task._startedAt = null
+
+  if (duration) task.duration = parseDuration(duration)
+  // TODO: handle `duration` to be `null` (replace by 0)
+  else if (task._startedAt) task.duration += now - task._startedAt
+  // could be `null` too but that's the best we can do at this point
+  else task.duration = task.estimate
+}
+
+function uncheckTask(task) {
+  // idempotency
+  if (!task.isComplete) return
+
+  task.isComplete = false
+
+  // been unchecked, not done
+  // NOTE: it's quite inaccurate since we are updating it now. Worth
+  // checking this is not a workaround to get some features working,
+  // like timeline/archive properly displaying tasks at the right date.
+  // But it's not event like we are restoring the previous value, so
+  // really setting this to `null` looks wrong.
+  task._updatedAt = null
+}
+// -------------------------------------------------------------------------------------
+
+// TODO: let `@` and `+` be customised? Easy but will be a pain? nd compatibility?
 const _isPriorityOpt = (x) => ['p:1', 'p:2', 'p:3'].indexOf(x) > -1
 
 const _isBoardOpt = (x) => x.startsWith('@')
@@ -70,7 +106,7 @@ const _filterTask = (data) => _filter(data, (item) => !item._isTask)
 
 class Taskbook {
   constructor() {
-    this._storage = new Storage()
+    this._storage = Storage
   }
 
   get _configuration() {
@@ -396,10 +432,10 @@ class Taskbook {
     render.successCreate(note)
   }
 
-  createEvent(schedule, desc, duration) {
-    const boards = ['@calendar']
+  createEvent(schedule, desc, estimate) {
+    const boards = [`@${this._configuration.eventBoard}`]
     const { id, description, tags } = this._getOptions(desc)
-    const event = new EventNote({ id, description, boards, tags, schedule, duration })
+    const event = new EventNote({ id, description, boards, tags, schedule, estimate })
     const { _data } = this
 
     _data[id] = event
@@ -425,51 +461,37 @@ class Taskbook {
     ids = this._validateIDs(ids)
     const { _data } = this
     const [checked, unchecked] = [[], []]
-    const now = new Date()
 
     await Promise.all(
       ids.map(async (id) => {
         if (_data[id]._isTask) {
-          _data[id].inProgress = false
-          _data[id].isComplete = !_data[id].isComplete
+          if (_data[id].isComplete) uncheckTask(_data[id])
+          else checkTask(_data[id], duration)
 
-          if (_data[id].isComplete) {
-            // if duration is given, converts minutes to ms
-            if (duration) _data[id]._duration = duration * 60 * 1000
-            // update time spent - of course if `tb begin` was not used we could do
-            // now - _createdAt. But it's almost certain to be innacurate, so I would
-            // rather assume one has to first begin a task to enable time tracking
-            else if (_data[id]._startedAt) _data[id]._duration += now - _data[id]._startedAt
-
-            // if duration is > 3h, ask confirmation
-            // TODO: configuration of the number of hours
-            if (_data[id]._duration && _data[id]._duration > 3 * 60 * 60 * 1000) {
-              const { isYes } = await prompt({
-                type: 'confirm',
-                name: 'isYes',
-                message: `Duration seems excessive: about ${Math.round(_data[id]._duration / (60 * 60 * 1000), 2)}h, is that correct`,
+          // if duration is > 3h, ask confirmation
+          // TODO: configuration of the number of hours
+          if (
+            _data[id].isComplete &&
+            _data[id].duration &&
+            _data[id].duration > 3 * 60 * 60 * 1000
+          ) {
+            const { isYes } = await prompt({
+              type: 'confirm',
+              name: 'isYes',
+              message: `Duration seems excessive: about ${Math.round(
+                _data[id].duration / (60 * 60 * 1000),
+                2
+              )}h, is that correct`,
+            })
+            // offer to overwrite if that was a mistake
+            if (!isYes) {
+              const { correct } = await prompt({
+                type: 'number',
+                name: 'correct',
+                message: 'How long did it take (in minutes)?',
               })
-              // offer to overwrite if that was a mistake
-              if (!isYes) {
-                const { correct } = await prompt({
-                  type: 'number',
-                  name: 'correct',
-                  message: 'How long did it take (in minutes)?',
-                })
-                _data[id]._duration = correct * 60 * 1000
-              }
+              _data[id].duration = correct * 60 * 1000
             }
-
-            _data[id]._updatedAt = now.getTime()
-            _data[id]._startedAt = null
-          } else {
-            // been unchecked, not done
-            // NOTE: it's quite inaccurate since we are updating it now. Worth
-            // checking this is not a workaround to get some features working,
-            // like timeline/archive properly displaying tasks at the right date.
-            // But it's not event like we are restoring the previous value, so
-            // really setting this to `null` looks wrong.
-            _data[id]._updatedAt = null
           }
 
           return _data[id].isComplete ? checked.push(id) : unchecked.push(id)
@@ -630,7 +652,7 @@ class Taskbook {
 
       return x === 'myboard' ? boards.push('My Board') : attributes.push(x)
     })
-      ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => _removeDuplicates(x))
+    ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => _removeDuplicates(x))
 
     const data = this._filterByAttributes(attributes)
 
@@ -793,7 +815,7 @@ class Taskbook {
       } else {
         paused.push(id)
         // update duration
-        _data[id]._duration += now.getTime() - _data[id]._startedAt
+        _data[id].duration += now.getTime() - _data[id]._startedAt
         _data[id]._startedAt = null
       }
     }

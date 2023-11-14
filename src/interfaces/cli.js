@@ -3,8 +3,8 @@
 const { Command } = require('commander')
 const updateNotifier = require('update-notifier')
 
-const pkg = require('../package.json')
-const taskbook = require('./taskbook')
+const pkg = require('../../package.json')
+const taskbook = require('../use_cases/taskbook')
 
 const program = new Command()
 
@@ -58,12 +58,12 @@ program
   .alias('E')
   .description('Create event')
   .argument('schedule')
-  .argument('duration')
+  .argument('estimate')
   .argument('<description...>')
-  .action((schedule, duration, description) =>
+  .action((schedule, estimate, description) =>
     // TODO: support `schedule` as a datetime, and trick the system of creation date
-    // so by default w display today's events
-    taskbook.createEvent(schedule, description, duration)
+    // so by default will display today's events
+    taskbook.createEvent(schedule, description, estimate)
   )
 
 program

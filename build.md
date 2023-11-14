@@ -1,25 +1,28 @@
 ## Things to build
 
+- [Taskline](https://github.com/perryrh0dan/taskline#configuration)
+
 ### Next
 
-- Support context switch
+- Support estimates
 - ZSH Autocompletion (take example of the existing one)
+- Typescript and refactoring
 
 ### Fix behaviors
 
-- Storage of duration in ms is inapropriate
 - Make board names stored lower case, displayed title case (case insensitive basically)
-- Merge event `duration` and all items `_duration`
 - `archive` and `timeline` to support same filters as `tb list`
+- Event to understand time: entering `10am` should show up as `10:00am` and rightly align
 
 ### Ideas
 
 - Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc...
 - Config:
-    - support env variables + type it
     - use env-paths https://github.com/sindresorhus/env-paths
-    - but have a fallback on current .tasbook, with warning
-- Support namespaces (or taskbooks/books?)
+    - but have a fallback on current .taskbook, with warning
+- Namespaces
+    - Support namespaces (or taskbooks/books?)
+    - Support context switch
 - `@` to reference boards both by id and by name
 - Time boxing and pomodoro timer
 - Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
@@ -34,9 +37,10 @@
 
 - Write a nice documentation once stable
 - not too sure about bun yet
-- Refactor and typescript
 - Update readmes and others to reflect my project
 - Publish a new package
+- Make it a DDD typescript incredible package
+
 
 ---
 
@@ -46,6 +50,7 @@
 - [x] Task points ([Issue #181](https://github.com/klaudiosinani/taskbook/issues/181)) -> use +xs +l...
 - [x] Timeline to display done and pending (maybe not bad to keep archive/active segregation)
 
+- [x] Fix grey rendering on certain terminal themes
 - [x] Duration: if the value is more than 3h, ask confirmation and offer to overwrite
 - [x] Support [task id recycling](https://github.com/klaudiosinani/taskbook/issues/33)
 - [x] Unix aliases: tb ls, rm, mv

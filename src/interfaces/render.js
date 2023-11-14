@@ -1,7 +1,7 @@
 const chalk = require('chalk')
 const signale = require('signale')
 
-const config = require('./config')
+const config = require('../config').default
 
 signale.config({ displayLabel: false })
 
