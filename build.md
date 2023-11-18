@@ -4,9 +4,8 @@
 
 ### Next
 
-- Support estimates
+- Support estimates (is null for event currently)
 - ZSH Autocompletion (take example of the existing one)
-- Typescript and refactoring
 
 ### Fix behaviors
 
@@ -17,9 +16,6 @@
 ### Ideas
 
 - Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc...
-- Config:
-    - use env-paths https://github.com/sindresorhus/env-paths
-    - but have a fallback on current .taskbook, with warning
 - Namespaces
     - Support namespaces (or taskbooks/books?)
     - Support context switch
@@ -36,10 +32,8 @@
 ### Logistics
 
 - Write a nice documentation once stable
-- not too sure about bun yet
 - Update readmes and others to reflect my project
 - Publish a new package
-- Make it a DDD typescript incredible package
 
 
 ---
@@ -50,6 +44,8 @@
 - [x] Task points ([Issue #181](https://github.com/klaudiosinani/taskbook/issues/181)) -> use +xs +l...
 - [x] Timeline to display done and pending (maybe not bad to keep archive/active segregation)
 
+- [x] DDD structure
+- [x] Typescript
 - [x] Fix grey rendering on certain terminal themes
 - [x] Duration: if the value is more than 3h, ask confirmation and offer to overwrite
 - [x] Support [task id recycling](https://github.com/klaudiosinani/taskbook/issues/33)

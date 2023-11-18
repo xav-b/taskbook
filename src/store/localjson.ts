@@ -2,11 +2,33 @@ import fs from 'fs'
 import path from 'path'
 
 import config from '../config'
+import Storage from '.'
+import Task from '../domain/task'
+import Note from '../domain/note'
+import CalendarEvent from '../domain/event'
+import Goal from '../domain/goal'
+import Catalog, { CatalogInnerData } from '../domain/catalog'
 import { randomHexString } from '../shared/utils'
 
 const { basename, join } = path
 
-class Storage {
+function parseJson(data: any): Catalog {
+  const catalog: CatalogInnerData = {}
+
+  Object.keys(data).forEach((id: string) => {
+    if (data[id]._type === 'task') catalog[id] = new Task(data[id])
+    else if (data[id]._type === 'note') catalog[id] = new Note(data[id])
+    else if (data[id]._type === 'event') catalog[id] = new CalendarEvent(data[id])
+    else if (data[id]._type === 'goal') catalog[id] = new Goal(data[id])
+    // TODO: proper rendering
+    else console.log(`[warning] unknown item type: ${data[id]._type}`)
+  })
+
+  return new Catalog(catalog)
+}
+
+class LocalJSONStorage implements Storage {
+  // local storage is all about directories and files
   _storageDir: string
   _archiveDir: string
   _tempDir: string
@@ -55,43 +77,32 @@ class Storage {
     return join(this._tempDir, tempFilename)
   }
 
-  get() {
+  get(storageFile = this._mainStorageFile): Catalog {
     let data = {}
 
-    if (fs.existsSync(this._mainStorageFile)) {
-      const content = fs.readFileSync(this._mainStorageFile, 'utf8')
+    if (fs.existsSync(storageFile)) {
+      const content = fs.readFileSync(storageFile, 'utf8')
       data = JSON.parse(content)
     }
 
-    return data
+    return parseJson(data)
   }
 
-  getArchive() {
-    let archive = {}
-
-    if (fs.existsSync(this._archiveFile)) {
-      const content = fs.readFileSync(this._archiveFile, 'utf8')
-      archive = JSON.parse(content)
-    }
-
-    return archive
+  getArchive(): Catalog {
+    return this.get(this._archiveFile)
   }
 
-  set(data: Record<string, any>) {
+  set(data: CatalogInnerData, storageFile = this._mainStorageFile) {
     const serialized = JSON.stringify(data, null, 4)
-    const tempStorageFile = this._getTempFile(this._mainStorageFile)
+    const tempStorageFile = this._getTempFile(storageFile)
 
     fs.writeFileSync(tempStorageFile, serialized, 'utf8')
-    fs.renameSync(tempStorageFile, this._mainStorageFile)
+    fs.renameSync(tempStorageFile, storageFile)
   }
 
-  setArchive(archive: Record<string, any>) {
-    const data = JSON.stringify(archive, null, 4)
-    const tempArchiveFile = this._getTempFile(this._archiveFile)
-
-    fs.writeFileSync(tempArchiveFile, data, 'utf8')
-    fs.renameSync(tempArchiveFile, this._archiveFile)
+  setArchive(data: CatalogInnerData) {
+    this.set(data, this._archiveFile)
   }
 }
 
-export default new Storage()
+export default LocalJSONStorage

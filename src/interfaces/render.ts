@@ -1,13 +1,18 @@
-const chalk = require('chalk')
-const signale = require('signale')
+import chalk from 'chalk'
+import signale from 'signale'
 
-const config = require('../config').default
+import { sortByPriorities } from '../shared/utils'
+import Item from '../domain/item'
+import Goal from '../domain/goal'
+import Task, { TaskPriority } from '../domain/task'
+import EventTask from '../domain/event'
+import config from '../config'
 
 signale.config({ displayLabel: false })
 
 // have no idea why `signal.config` doesn't work so we create a new custom logger
 const { event, goal } = new signale.Signale({
-  displayLabel: false,
+  config: { displayLabel: false },
   types: {
     event: {
       badge: '⏲',
@@ -23,7 +28,7 @@ const { event, goal } = new signale.Signale({
 })
 
 const { await: wait, error, log, note, pending, success, warn } = signale
-const { blue, green, magenta, red, underline, yellow } = chalk
+const { blue, green, magenta, red, yellow } = chalk
 const grey = chalk.cyan.dim
 
 /**
@@ -48,16 +53,23 @@ const theme = {
 }
  */
 
-// TODO: move that to utils or something
-function sortByPriorities(t1, t2) {
-  // `1` is the dafault and lowest priority
-  const priority1 = parseInt(t1.priority || '1', 10)
-  const priority2 = parseInt(t2.priority || '1', 10)
+function _getItemStats(items: Item[]) {
+  let [tasks, complete, notes] = [0, 0, 0]
 
-  // we want to have top priorities first, down to lowest
-  // so here the highest priority should come as "lower"
-  // than the lowest ones
-  return priority2 - priority1
+  items.forEach((item) => {
+    if (item.isTask) {
+      tasks++
+      if (item instanceof Task && item.isComplete) {
+        return complete++
+      }
+    }
+
+    // FIXME: that kind of work by accident, and we may want to represent
+    // other types like goals and events.
+    return notes++
+  })
+
+  return { tasks, complete, notes }
 }
 
 class Render {
@@ -65,61 +77,34 @@ class Render {
     return config.get()
   }
 
-  _colorBoards(boards) {
+  _colorBoards(boards: string[]) {
     return boards.map((x) => grey(x)).join(' ')
   }
 
-  _isBoardComplete(items) {
-    const { tasks, complete, notes } = this._getItemStats(items)
+  _isBoardComplete(items: Item[]) {
+    const { tasks, complete, notes } = _getItemStats(items)
     return tasks === complete && notes === 0
   }
 
-  _getAge(birthday) {
-    const daytime = 24 * 60 * 60 * 1000
-    const age = Math.round(Math.abs((birthday - Date.now()) / daytime))
-    return age === 0 ? '' : grey(`${age}d`)
-  }
-
-  _getCorrelation(items) {
-    const { tasks, complete } = this._getItemStats(items)
-    return grey(`[${complete}/${tasks}]`)
-  }
-
-  _getItemStats(items) {
-    let [tasks, complete, notes] = [0, 0, 0]
-
-    items.forEach((item) => {
-      if (item._isTask) {
-        tasks++
-        if (item.isComplete) {
-          return complete++
-        }
-      }
-
-      return notes++
-    })
-
-    return { tasks, complete, notes }
-  }
-
-  _getStar(item) {
+  private _getStar(item: Item) {
     return item.isStarred ? yellow('★') : ''
   }
 
-  _getCommentHint(item) {
+  _getCommentHint(item: Item) {
     return item.comment ? blue('✎') : ''
   }
 
-  _buildTitle(key, items) {
+  _buildTitle(key: string, items: Item[]) {
     let title = this._configuration.highlightTitle(key)
     if (key === new Date().toDateString()) title += ` ${grey('[Today]')}`
 
-    const correlation = this._getCorrelation(items)
+    const { tasks, complete } = _getItemStats(items)
+    const correlation = grey(`[${complete}/${tasks}]`)
 
     return { title, correlation }
   }
 
-  _buildPrefix(item) {
+  _buildPrefix(item: Item) {
     const prefix = []
 
     const { _id } = item
@@ -130,128 +115,142 @@ class Render {
     return prefix.join(' ')
   }
 
-  _buildMessage(item) {
+  _buildTaskMessage(item: Task): string {
     const message = []
 
     const { isComplete, description } = item
-    const priority = parseInt(item.priority, 10)
 
-    if (!isComplete && priority > 1) {
-      const color = this._configuration.priorities[priority]
-      message.push(underline[color](description))
+    if (!isComplete && item.priority > 1) {
+      const style = this._configuration.priorities[item.priority]
+      message.push(style(description))
     } else {
       message.push(isComplete ? grey(description) : description)
     }
 
-    if (!isComplete && priority > 1) {
-      message.push(priority === 2 ? yellow('(!)') : red('(!!)'))
+    if (!isComplete && item.priority > 1) {
+      message.push(item.priority === 2 ? yellow('(!)') : red('(!!)'))
     }
 
     return message.join(' ')
   }
 
-  _displayTitle(board, items) {
+  _buildNoteMessage(item: Item): string {
+    return item.description
+  }
+
+  _displayTitle(board: string, items: Item[]) {
     const { title: message, correlation: suffix } = this._buildTitle(board, items)
     const titleObj = { prefix: '\n ', message, suffix }
 
     return log(titleObj)
   }
 
-  _displayItemByBoard(item) {
-    const { _type, isComplete, inProgress, tags, _duration } = item
-    const age = this._getAge(item._createdAt)
+  displayItemByBoard(item: Item) {
+    const { _type, tags } = item
+
+    const age = item.age()
     const star = this._getStar(item)
     const comment = this._getCommentHint(item)
 
     const prefix = this._buildPrefix(item)
-    const message = this._buildMessage(item)
+    let message = ''
+    if (item instanceof Task) message = this._buildTaskMessage(item)
+    else message = this._buildNoteMessage(item)
     const suffix = []
-    if (age.length === 0) suffix.push(age)
+    if (age !== 0) suffix.push(grey(`${age}d`))
     if (star) suffix.push(star)
-    if (comment) suffix.push(comment)
-    if (_duration > 0 && isComplete) {
-      // convert to minutes
-      let prettyDuration = ''
-      const minutes = _duration / (1000 * 60)
-      if (minutes > 60) prettyDuration = `${Math.ceil(minutes / 60)}h`
-      else prettyDuration = `${Math.ceil(minutes / 60)}m`
-      suffix.push(grey(prettyDuration))
+    if (comment.length > 0) suffix.push(comment)
+
+    if (item instanceof Task) {
+      const { duration, isComplete } = item
+      if (duration && duration > 0 && isComplete) {
+        // convert to minutes
+        let prettyDuration = ''
+        const minutes = duration / (1000 * 60)
+        if (minutes > 60) prettyDuration = `${Math.ceil(minutes / 60)}h`
+        else prettyDuration = `${Math.ceil(minutes / 60)}m`
+        suffix.push(grey(prettyDuration))
+      }
     }
+
     if (tags?.length > 0) suffix.push(grey(tags.join(' ')))
 
     const msgObj = { prefix, message, suffix: suffix.join(' ') }
 
-    if (_type === 'task')
-      return isComplete ? success(msgObj) : inProgress ? wait(msgObj) : pending(msgObj)
+    if (item instanceof Task)
+      return item.isComplete ? success(msgObj) : item.inProgress ? wait(msgObj) : pending(msgObj)
 
     if (_type === 'note') return note(msgObj)
 
-    if (_type === 'goal') {
+    if (item instanceof Goal) {
       msgObj.message = `${blue('goal')}: ${message}`
-      return isComplete ? success(msgObj) : inProgress ? wait(msgObj) : goal(msgObj)
+      return item.isComplete ? success(msgObj) : item.inProgress ? wait(msgObj) : goal(msgObj)
     }
 
-    if (_type === 'event') {
+    if (item instanceof EventTask) {
       msgObj.message = `${blue(item.schedule)} ${message}`
-      if (item.duration) msgObj.suffix = grey(item.duration)
+      if (item.duration) msgObj.suffix = grey(String(item.duration))
 
-      return isComplete ? success(msgObj) : inProgress ? wait(msgObj) : event(msgObj)
+      return item.isComplete ? success(msgObj) : item.inProgress ? wait(msgObj) : event(msgObj)
     }
 
     throw new Error(`item of type ${_type} is not supported`)
   }
 
-  _displayItemByDate(item) {
-    const { _type, isComplete, inProgress, _duration } = item
+  _displayItemByDate(item: Item) {
     const boards = item.boards.filter((x) => x !== 'My Board')
     const star = this._getStar(item)
 
     const prefix = this._buildPrefix(item)
-    const message = this._buildMessage(item)
+    let message = ''
+    if (item instanceof Task) message = this._buildTaskMessage(item)
+    else message = this._buildNoteMessage(item)
 
     const suffix = []
-    if (_duration > 0 && isComplete) suffix.push(grey(`${Math.ceil(_duration / (1000 * 60))}m`))
+
+    if (item instanceof Task) {
+      if (item.duration && item.duration > 0 && item.isComplete)
+        suffix.push(grey(`${Math.ceil(item.duration / (1000 * 60))}m`))
+    }
+
     suffix.push(this._colorBoards(boards))
     suffix.push(star)
 
     const msgObj = { prefix, message, suffix: suffix.join(' ') }
 
-    if (_type === 'task')
-      return isComplete ? success(msgObj) : inProgress ? wait(msgObj) : pending(msgObj)
+    if (item instanceof Task)
+      return item.isComplete ? success(msgObj) : item.inProgress ? wait(msgObj) : pending(msgObj)
 
-    if (_type === 'note') return note(msgObj)
+    if (item._type === 'note') return note(msgObj)
 
-    if (_type === 'event') {
+    if (item instanceof EventTask) {
       msgObj.message = `${chalk.blue(item.schedule)} ${message}`
-      if (item.duration) msgObj.suffix = grey(item.duration)
+      if (item.duration) msgObj.suffix = grey(String(item.duration))
 
-      return isComplete ? success(msgObj) : inProgress ? wait(msgObj) : event(msgObj)
+      return item.isComplete ? success(msgObj) : item.inProgress ? wait(msgObj) : event(msgObj)
     }
 
-    throw new Error(`item of type ${_type} is not supported`)
+    throw new Error(`item of type ${item._type} is not supported`)
   }
 
-  displayByBoard(data, displayTasks = true) {
-    Object.keys(data).forEach((board) => {
-      if (this._isBoardComplete(data[board]) && !this._configuration.displayCompleteTasks) {
-        return
-      }
+  displayByBoard(data: Record<string, Item[]>, displayTasks = true) {
+    Object.keys(data).forEach((board: string) => {
+      if (this._isBoardComplete(data[board]) && !this._configuration.displayCompleteTasks) return
 
       this._displayTitle(board, data[board])
 
       // TODO: allow other sorting strategies (default by id)
       data[board].sort(sortByPriorities).forEach((item) => {
         if (!displayTasks) return
-        if (item._isTask && item.isComplete && !this._configuration.displayCompleteTasks) {
+        if (item instanceof Task && item.isComplete && !this._configuration.displayCompleteTasks)
           return
-        }
 
-        this._displayItemByBoard(item)
+        this.displayItemByBoard(item)
       })
     })
   }
 
-  displayByDate(data) {
+  displayByDate(data: Record<string, Item[]>) {
     Object.keys(data).forEach((date) => {
       if (this._isBoardComplete(data[date]) && !this._configuration.displayCompleteTasks) {
         return
@@ -260,7 +259,7 @@ class Render {
       this._displayTitle(date, data[date])
 
       data[date].forEach((item) => {
-        if (item._isTask && item.isComplete && !this._configuration.displayCompleteTasks) {
+        if (item instanceof Task && item.isComplete && !this._configuration.displayCompleteTasks) {
           return
         }
 
@@ -269,25 +268,25 @@ class Render {
     })
   }
 
-  displayStats({ percent, complete, inProgress, pending, notes }) {
+  displayStats(opts: { complete?: number; inProgress?: number; pending?: number; notes?: number }) {
     if (!this._configuration.displayProgressOverview) {
       return
     }
 
-    complete = complete || 0
-    inProgress = inProgress || 0
-    pending = pending || 0
-    notes = notes || 0
-    percent = percent || Math.ceil(100 * (complete / (inProgress + pending + complete)))
+    const complete = opts.complete || 0
+    const inProgress = opts.inProgress || 0
+    const pending = opts.pending || 0
+    const notes = opts.notes || 0
+    const percent = Math.floor(100 * (complete / (inProgress + pending + complete)))
 
-    percent =
+    const prettyPercent =
       percent >= 75 ? green(`${percent}%`) : percent >= 50 ? yellow(`${percent}%`) : `${percent}%`
 
     const status = [
-      `${green(complete)} ${grey('done')}`,
-      `${blue(inProgress)} ${grey('in-progress')}`,
-      `${magenta(pending)} ${grey('pending')}`,
-      `${blue(notes)} ${grey(notes === 1 ? 'note' : 'notes')}`,
+      `${green(String(complete))} ${grey('done')}`,
+      `${blue(String(inProgress))} ${grey('in-progress')}`,
+      `${magenta(String(pending))} ${grey('pending')}`,
+      `${blue(String(notes))} ${grey(notes === 1 ? 'note' : 'notes')}`,
     ]
 
     if (complete !== 0 && inProgress === 0 && pending === 0 && notes === 0) {
@@ -298,17 +297,17 @@ class Render {
       log({ prefix: '\n ', message: 'Type `tb --help` to get started!', suffix: yellow('★') })
     }
 
-    log({ prefix: '\n ', message: grey(`${percent} of all tasks complete.`) })
+    log({ prefix: '\n ', message: grey(`${prettyPercent} of all tasks complete.`) })
     log({ prefix: ' ', message: status.join(grey(' · ')), suffix: '\n' })
   }
 
-  invalidCustomAppDir(path) {
+  invalidCustomAppDir(path: string) {
     const [prefix, suffix] = ['\n', red(path)]
     const message = 'Custom app directory was not found on your system:'
     error({ prefix, message, suffix })
   }
 
-  invalidID(id) {
+  invalidID(id: string) {
     const [prefix, suffix] = ['\n', grey(id)]
     const message = 'Unable to find item with id:'
     error({ prefix, message, suffix })
@@ -326,27 +325,23 @@ class Render {
     error({ prefix, message })
   }
 
-  markComplete(ids) {
-    if (ids.length === 0) {
-      return
-    }
+  markComplete(ids: string[]) {
+    if (ids.length === 0) return
 
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
     const message = `Checked ${ids.length > 1 ? 'tasks' : 'task'}:`
     success({ prefix, message, suffix })
   }
 
-  markIncomplete(ids) {
-    if (ids.length === 0) {
-      return
-    }
+  markIncomplete(ids: string[]) {
+    if (ids.length === 0) return
 
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
     const message = `Unchecked ${ids.length > 1 ? 'tasks' : 'task'}:`
     success({ prefix, message, suffix })
   }
 
-  markStarted(ids) {
+  markStarted(ids: string[]) {
     if (ids.length === 0) {
       return
     }
@@ -356,17 +351,15 @@ class Render {
     success({ prefix, message, suffix })
   }
 
-  markPaused(ids) {
-    if (ids.length === 0) {
-      return
-    }
+  markPaused(ids: string[]) {
+    if (ids.length === 0) return
 
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
     const message = `Paused ${ids.length > 1 ? 'tasks' : 'task'}:`
     success({ prefix, message, suffix })
   }
 
-  markStarred(ids) {
+  markStarred(ids: string[]) {
     if (ids.length === 0) {
       return
     }
@@ -376,7 +369,7 @@ class Render {
     success({ prefix, message, suffix })
   }
 
-  markUnstarred(ids) {
+  markUnstarred(ids: string[]) {
     if (ids.length === 0) {
       return
     }
@@ -404,56 +397,57 @@ class Render {
     error({ prefix, message })
   }
 
-  warning({ _id }, message) {
+  warning(id: number, message: string) {
     if (!this._configuration.displayWarnings) return
 
-    const suffix = grey(_id)
+    const suffix = grey(String(id))
     warn({ message: yellow(message), suffix })
   }
 
-  successCreate({ _id, _type }) {
-    const [prefix, suffix] = ['\n', grey(_id)]
-    const message = `Created ${_type}`
+  successCreate(item: Item) {
+    const [prefix, suffix] = ['\n', grey(String(item._id))]
+    const message = `Created ${item._type}`
     success({ prefix, message, suffix })
   }
 
-  successEdit(id) {
+  successEdit(id: string) {
     const [prefix, suffix] = ['\n', grey(id)]
     const message = 'Edited item:'
     success({ prefix, message, suffix })
   }
 
-  successDelete(ids) {
+  successDelete(ids: string[]) {
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
     const message = `Deleted ${ids.length > 1 ? 'items' : 'item'}:`
     success({ prefix, message, suffix })
   }
 
-  successMove(id, boards) {
+  successMove(id: string, boards: string[]) {
     const [prefix, suffix] = ['\n', grey(boards.join(', '))]
     const message = `Move item: ${grey(id)} to`
     success({ prefix, message, suffix })
   }
 
-  successPriority(id, level) {
+  successPriority(id: string, level: TaskPriority) {
     const prefix = '\n'
     const message = `Updated priority of task: ${grey(id)} to`
-    const suffix = level === '3' ? red('high') : level === '2' ? yellow('medium') : green('normal')
+    const suffix = level === 3 ? red('high') : level === 2 ? yellow('medium') : green('normal')
     success({ prefix, message, suffix })
   }
 
-  successRestore(ids) {
+  successRestore(ids: string[]) {
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
     const message = `Restored ${ids.length > 1 ? 'items' : 'item'}:`
     success({ prefix, message, suffix })
   }
 
-  successCopyToClipboard(ids) {
+  successCopyToClipboard(ids: string[]) {
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
-    const message = `Copied the ${ids.length > 1 ? 'descriptions of items' : 'description of item'
-      }:`
+    const message = `Copied the ${
+      ids.length > 1 ? 'descriptions of items' : 'description of item'
+    }:`
     success({ prefix, message, suffix })
   }
 }
 
-module.exports = new Render()
+export default new Render()

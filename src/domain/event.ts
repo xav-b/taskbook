@@ -1,11 +1,20 @@
-const Task = require('./task')
+import { ItemProperties } from './item'
+import Task from './task'
+
+export interface EventProperties extends ItemProperties {
+  schedule: string
+  estimate: number
+}
 
 /**
  * Events are tasks to accomplish at the end.
  * They may have priorities, and they can be done, in progress, etc...
  */
-class EventTask extends Task {
-  constructor(options = {}) {
+export default class EventTask extends Task {
+  schedule: string
+  estimate: number
+
+  constructor(options: EventProperties) {
     super(options)
 
     // overwrite and make it a specific type of task
@@ -15,5 +24,3 @@ class EventTask extends Task {
     this.estimate = options.estimate * 60 * 1000
   }
 }
-
-module.exports = EventTask

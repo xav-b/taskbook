@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const { Command } = require('commander')
-const updateNotifier = require('update-notifier')
+import { Command } from 'commander'
+import updateNotifier from 'update-notifier'
 
-const pkg = require('../../package.json')
-const taskbook = require('../use_cases/taskbook')
+import pkg from '../../package.json'
+import taskbook from '../use_cases/taskbook'
 
 const program = new Command()
 
@@ -104,7 +104,7 @@ program
   .action((goal, tasks) =>
     taskbook.linkToGoal(
       goal,
-      tasks.map((x) => parseInt(x.trim(), 10))
+      tasks.map((x: string) => parseInt(x.trim(), 10))
     )
   )
 
@@ -172,10 +172,9 @@ program
   .argument('priority')
   .argument('<tasks...>')
   .action((priority, tasks) => {
-    // tag the tasks with `@`
-    tasks = tasks.map((each) => `@${each}`)
-
-    taskbook.updatePriority(tasks.concat(priority))
+    // TODO: validate priority is 1, 2, 3
+    // there's also a `render.invalidPriority`
+    taskbook.updatePriority(parseInt(priority), tasks)
   })
 
 program

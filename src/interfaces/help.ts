@@ -1,4 +1,4 @@
-module.exports = `
+export default `
 
   **Tasks, boards & notes for the command-line habitat.**
 
