@@ -116,7 +116,7 @@ class Taskbook {
     const { _data } = this
     let [complete, inProgress, pending, notes] = [0, 0, 0, 0]
 
-    Object.keys(_data).forEach((id) => {
+    _data.ids().forEach((id) => {
       if (_data.get(id).isTask) {
         return _data.task(id)?.isComplete
           ? complete++
@@ -502,7 +502,8 @@ class Taskbook {
   }
 
   displayStats() {
-    render.displayStats(this._getStats())
+    const stats = this._getStats()
+    render.displayStats(stats)
   }
 
   editDescription(input: string[]) {
@@ -539,9 +540,7 @@ class Taskbook {
     const { _data } = this
 
     Object.keys(_data).forEach((id) => {
-      if (!hasTerms(_data.get(id).description, terms)) {
-        return
-      }
+      if (!hasTerms(_data.get(id).description, terms)) return
 
       result[id] = _data.get(id)
     })
@@ -573,7 +572,7 @@ class Taskbook {
       // TODO: `My Board` config
       return x === 'myboard' ? boards.push('My Board') : attributes.push(x)
     })
-    ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => removeDuplicates(x))
+      ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => removeDuplicates(x))
 
     const data = this._filterByAttributes(attributes)
 

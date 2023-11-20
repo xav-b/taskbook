@@ -71,14 +71,21 @@
 
 ## As A Service
 
-- Collaborative: family
-- Collaborative: pro teams
+- Collaborative: family (UI), pro teams
     - Github repositories can have collaborators - team shared boards
     - Have modular storage and use git, so there can be per-repository list of tasks
     - This would need an assignment too. Other tight integrations could be to
       have tasks completions linked to PR/commits
 - Backup + Sync tasks between machines (using github repositories)
-- Github repositories = namespaces
+- Github repositories = workspaces
 - Event hooks (integrate with IFTT/Zapier)
-- Analytics out of the logs
+- Analytics
 - Habits, tasks, scheduling, 2 ways sync with google calendar
+
+### Technical road
+
+- Fix all the local stuff right now, go through TODO
+- Write tests
+- Finish refactoring (especailly private and public)
+- Make it work with Supabase
+- Make Open source great: Documentation, new name, new npm package
