@@ -1,3 +1,4 @@
+import fs from 'fs'
 import crypto from 'crypto'
 import Item from '../domain/item'
 import Task from '../domain/task'
@@ -33,4 +34,13 @@ export function sortByPriorities(t1: Item, t2: Item): number {
 
   // can't sort by priority for types that have no priority
   return 0
+}
+
+export function ensureDir(directory: string) {
+  // FIXME: since version 10.12.0 `recursive` option is supported. This bumped
+  // the required node from 6 to 10+, which is quite unfortunate for this
+  // detail. This also sounds a bit unsafe if somehow we got it wrong. Probably
+  // better to remove it and just make sure all directories are carefully and
+  // progressively created.
+  if (!fs.existsSync(directory)) fs.mkdirSync(directory, { recursive: true })
 }

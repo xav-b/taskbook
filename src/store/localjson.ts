@@ -8,9 +8,14 @@ import Note from '../domain/note'
 import CalendarEvent from '../domain/event'
 import Goal from '../domain/goal'
 import Catalog, { CatalogInnerData } from '../domain/catalog'
-import { randomHexString } from '../shared/utils'
+import Logger from '../shared/logger'
+import { randomHexString, ensureDir } from '../shared/utils'
 
 const { basename, join } = path
+
+const log = Logger()
+
+const DEFAULT_WORKSPACE = 'default'
 
 function parseJson(data: any): Catalog {
   const catalog: CatalogInnerData = {}
@@ -20,8 +25,7 @@ function parseJson(data: any): Catalog {
     else if (data[id]._type === 'note') catalog[id] = new Note(data[id])
     else if (data[id]._type === 'event') catalog[id] = new CalendarEvent(data[id])
     else if (data[id]._type === 'goal') catalog[id] = new Goal(data[id])
-    // TODO: proper rendering
-    else console.log(`[warning] unknown item type: ${data[id]._type}`)
+    else log.error(`[warning] unknown item type: ${data[id]._type}`)
   })
 
   return new Catalog(catalog)
@@ -35,29 +39,33 @@ class LocalJSONStorage implements Storage {
   _archiveFile: string
   _mainStorageFile: string
 
-  constructor() {
-    this._storageDir = join(this._mainAppDir, 'storage')
-    this._archiveDir = join(this._mainAppDir, 'archive')
-    this._tempDir = join(this._mainAppDir, '.temp')
+  constructor(workspace?: string) {
+    // applying the default there as callers may explicitely pass a `null` or
+    // `undefined`
+    workspace = workspace || DEFAULT_WORKSPACE
+
+    log.info(`initialising workspace storage ${workspace}`)
+
+    this._storageDir = join(this._mainAppDir, workspace, 'storage')
+    this._archiveDir = join(this._mainAppDir, workspace, 'archive')
+    this._tempDir = join(this._mainAppDir, workspace, '.temp')
     this._archiveFile = join(this._archiveDir, 'archive.json')
     this._mainStorageFile = join(this._storageDir, 'storage.json')
 
     this._ensureDirectories()
+
+    log.info(`storage ready ${this._mainStorageFile}`)
   }
 
   get _mainAppDir(): string {
     return config.get().taskbookDirectory
   }
 
-  _ensureDir(directory: string) {
-    if (!fs.existsSync(directory)) fs.mkdirSync(directory)
-  }
-
   _ensureDirectories() {
-    this._ensureDir(this._mainAppDir)
-    this._ensureDir(this._storageDir)
-    this._ensureDir(this._archiveDir)
-    this._ensureDir(this._tempDir)
+    ensureDir(this._mainAppDir)
+    ensureDir(this._storageDir)
+    ensureDir(this._archiveDir)
+    ensureDir(this._tempDir)
 
     this._cleanTempDir()
   }
@@ -78,6 +86,7 @@ class LocalJSONStorage implements Storage {
   }
 
   get(storageFile = this._mainStorageFile): Catalog {
+    log.debug(`loading storage items from ${storageFile}`)
     let data = {}
 
     if (fs.existsSync(storageFile)) {
@@ -93,6 +102,7 @@ class LocalJSONStorage implements Storage {
   }
 
   set(data: CatalogInnerData, storageFile = this._mainStorageFile) {
+    log.info(`saving catalog to storage: ${storageFile}`)
     const serialized = JSON.stringify(data, null, 4)
     const tempStorageFile = this._getTempFile(storageFile)
 

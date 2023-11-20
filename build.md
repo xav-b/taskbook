@@ -3,7 +3,6 @@
 - [Taskline](https://github.com/perryrh0dan/taskline#configuration)
 
 ### Next
-
 - Support estimates (is null for event currently)
 - ZSH Autocompletion (take example of the existing one)
 
@@ -16,9 +15,6 @@
 ### Ideas
 
 - Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc...
-- Namespaces
-    - Support namespaces (or taskbooks/books?)
-    - Support context switch
 - `@` to reference boards both by id and by name
 - Time boxing and pomodoro timer
 - Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
@@ -44,6 +40,11 @@
 - [x] Task points ([Issue #181](https://github.com/klaudiosinani/taskbook/issues/181)) -> use +xs +l...
 - [x] Timeline to display done and pending (maybe not bad to keep archive/active segregation)
 
+
+- [x] Logging
+- [x] Namespaces
+    - [x] Support namespaces (or taskbooks/books?)
+    - [x] Support context switch
 - [x] DDD structure
 - [x] Typescript
 - [x] Fix grey rendering on certain terminal themes

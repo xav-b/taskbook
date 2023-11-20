@@ -5,7 +5,7 @@ import tmp from 'tmp'
 import { prompt } from 'enquirer'
 import clipboardy from 'clipboardy'
 
-import config from '../config'
+import config, { IConfig } from '../config'
 import Storage from '../store'
 import LocalStorage from '../store/localjson'
 import help from '../interfaces/help'
@@ -18,16 +18,20 @@ import Task, { TaskPriority } from '../domain/task'
 import Goal from '../domain/goal'
 import Note from '../domain/note'
 import EventNote from '../domain/event'
+import Logger from '../shared/logger'
+
+const log = Logger()
 
 class Taskbook {
   _storage: Storage
+  _configuration: IConfig
 
   constructor() {
-    this._storage = new LocalStorage()
-  }
+    log.info('initialising taskbook')
 
-  get _configuration() {
-    return config.get()
+    this._configuration = config.get()
+
+    this._storage = new LocalStorage(this._configuration.defaultContext)
   }
 
   get _archive() {
@@ -46,7 +50,7 @@ class Taskbook {
     this._storage.setArchive(data.all())
   }
 
-  _generateID(data = this._data) {
+  private _generateID(data = this._data) {
     const ids = data.ids().map((id) => parseInt(id, 10))
     const max = Math.max(...ids)
 
@@ -125,6 +129,13 @@ class Taskbook {
     })
 
     return { complete, inProgress, pending, notes }
+  }
+
+  switchContext(name: string) {
+    log.info(`switching to context ${name}`)
+    config.set('defaultContext', name)
+
+    render.successSwitchContext(name)
   }
 
   /**
@@ -562,7 +573,7 @@ class Taskbook {
       // TODO: `My Board` config
       return x === 'myboard' ? boards.push('My Board') : attributes.push(x)
     })
-      ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => removeDuplicates(x))
+    ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => removeDuplicates(x))
 
     const data = this._filterByAttributes(attributes)
 
@@ -773,4 +784,4 @@ class Taskbook {
   }
 }
 
-export default new Taskbook()
+export default Taskbook

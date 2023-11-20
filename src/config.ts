@@ -3,12 +3,13 @@ import os from 'os'
 import path from 'path'
 import chalk from 'chalk'
 
+import Logger from './shared/logger'
 import pkg from '../package.json'
 
-// for self-documentation
+// for self-documentation, should use from ./domain/task
 type PriorityLevel = 1 | 2 | 3
 
-interface IConfig {
+export interface IConfig {
   taskbookDirectory: string
   displayCompleteTasks: boolean
   displayProgressOverview: boolean
@@ -20,8 +21,10 @@ interface IConfig {
   defaultBoard: string
   editor: string
   suspiciousDuration: number
+  defaultContext: string
 }
 
+const log = Logger()
 const { default: defaultConfig } = pkg.configuration
 // TODO: https://github.com/sindresorhus/env-paths
 // TODO: Have a fallback on ~/.taskbook
@@ -40,41 +43,69 @@ class Config {
 
     this._configFile = path.join(this._configPath, 'config.json')
 
-    this._ensureConfigFile()
+    this.ensureConfigFile()
   }
 
-  _ensureConfigFile() {
-    if (fs.existsSync(this._configFile)) {
-      return
-    }
+  /**
+   * Create the file from the default configuration in `package.json`.
+   * Worth noting we have a few defaults going on:
+   * - package.json -> used to kickstart the config the first time. tHis could
+   *   be actually empty because of point below.
+   * - `this.defaults()` which defines reasonnable defaults and constants for
+   *   all configuration parameters. Will be overwritten by anything updated by
+   *   the user in ~/.config/taskbook/config.json
+   *
+   */
+  private ensureConfigFile() {
+    if (fs.existsSync(this._configFile)) return
 
     const data = JSON.stringify(defaultConfig, null, 4)
     fs.writeFileSync(this._configFile, data, 'utf8')
   }
 
-  get(): IConfig {
+  userConfig(): Partial<Record<keyof IConfig, any>> {
     const content = fs.readFileSync(this._configFile, 'utf8')
-    const config = JSON.parse(content)
+    return JSON.parse(content)
+  }
 
+  private defaults(): IConfig {
     return {
-      // defaults
       taskbookDirectory: this._configPath,
-      // TODO: support in package.json and/or environment
-      // constants
+      displayCompleteTasks: true,
+      displayProgressOverview: true,
+      displayWarnings: true,
+      enableCopyID: false,
+      eventBoard: 'calendar',
+      // TODO: support in package.json and/or environment constants
       // NOTE: will have to do with theming if implemented
-      priorities: { 2: chalk.underline.yellow, 3: chalk.underline.red },
+      priorities: { 1: chalk, 2: chalk.underline.yellow, 3: chalk.underline.red },
       highlightTitle: chalk.bold.cyan,
       defaultBoard: 'My Board',
       editor: process.env.EDITOR || 'vi',
       suspiciousDuration: 3 /* hours */,
+      defaultContext: 'default',
+    }
+  }
 
+  set(key: keyof IConfig, value: any) {
+    log.info(`updating user config with ${key} = ${value}`)
+    const localConf = this.userConfig()
+    localConf[key] = value
+
+    const data = JSON.stringify(localConf, null, 4)
+    fs.writeFileSync(this._configFile, data, 'utf8')
+  }
+
+  get(): IConfig {
+    const config = this.userConfig()
+
+    return {
+      ...this.defaults(),
       // ~/.config/taskbook/config.json
       ...config,
 
       /**
        * TODO: not supported yet (would really benefit from a flat config)
-       * defaultBoard: 'My Board',
-       * editor: process.env.EDITOR || 'vi',
        * prioritiesLabels: ['p:1', 'p:2', 'p:3'],
        * boardPrefix: '@',
        * tagPrefix: '+',

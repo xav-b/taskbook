@@ -4,9 +4,10 @@ import { Command } from 'commander'
 import updateNotifier from 'update-notifier'
 
 import pkg from '../../package.json'
-import taskbook from '../use_cases/taskbook'
+import Taskbook from '../use_cases/taskbook'
 
 const program = new Command()
+const taskbook = new Taskbook()
 
 // TODO: group commands logically together
 program
@@ -23,6 +24,13 @@ program
   .command('what')
   .alias('w')
   .action(() => taskbook.showManual())
+
+program
+  .command('context:switch')
+  .alias('cx')
+  .description('Switch active context')
+  .argument('context')
+  .action((context: string) => taskbook.switchContext(context))
 
 program
   .command('list')

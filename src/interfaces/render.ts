@@ -448,6 +448,12 @@ class Render {
     }:`
     success({ prefix, message, suffix })
   }
+
+  successSwitchContext(name: string) {
+    const [prefix, suffix] = ['\n', grey(name)]
+    const message = 'Switched context'
+    success({ prefix, message, suffix })
+  }
 }
 
 export default new Render()
