@@ -1,6 +1,6 @@
 import Item, { ItemProperties } from './item'
-import { Maybe } from '../types'
-import { parseDuration } from '../shared/utils'
+import { Maybe, UnixTimestamp } from '../types'
+import { parseDuration } from '../shared/parser'
 
 export enum TaskPriority {
   Normal = 1,
@@ -14,6 +14,7 @@ export interface TaskProperties extends ItemProperties {
   isComplete?: boolean
   inProgress?: boolean
   priority?: TaskPriority
+  _startedAt?: UnixTimestamp
 }
 
 export default class Task extends Item {
@@ -29,18 +30,38 @@ export default class Task extends Item {
   constructor(options: TaskProperties) {
     super(options)
 
+    // items can usually be created either because they are new, or because we
+    // parsed and loaded existing items from storage, and they are all
+    // re-initialised. This is detected by checking _uid, which doesn't exist
+    // when creating a new instance, but has been generated once stored. An
+    // alternative cool be to offer 2 different consutructors, especially if
+    // custom logic grows. `estimate` is a good example, it is stored and
+    // re-passed at init as ms. But we otherwise want to be able to receive
+    // human-friendly values, and the current approach will be a problem.
+    const isNew = options._uid === undefined
+
     this._type = 'task'
-    // also track how long it took to complete it
-    this._startedAt = null
+    this._startedAt = options._startedAt || null
 
     this.isTask = true
     // TODO: `null` is a better representation of not available
-    this.duration = 0
-    this.estimate = parseDuration(options.estimate || null)
+    this.duration = options.duration || 0
     this.isComplete = options.isComplete || false
     this.inProgress = options.inProgress || false
     this.isStarred = options.isStarred || false
     this.priority = options.priority || 1
+
+    this.estimate = options.estimate || null
+    // automatically tag with size shirt
+    // TODO: enable through configuration
+    if (options.estimate && isNew) {
+      const friendly = options.estimate / 60 / 1000
+      if (friendly < 5) this.tags.push('+xs')
+      else if (friendly < 15) this.tags.push('+s')
+      else if (friendly < 1 * 60) this.tags.push('+m')
+      else if (friendly < 5 * 60) this.tags.push('+l')
+      else this.tags.push('+xl')
+    }
   }
 
   begin() {
@@ -61,23 +82,30 @@ export default class Task extends Item {
     }
   }
 
-  check(duration: Maybe<number> = null) {
+  check(duration: Maybe<number> = null, tags?: string[]) {
+    console.log('checking task', this._uid, duration, tags)
     // idempotency
     if (this.isComplete) return
 
     const now = new Date()
 
-    this.isComplete = true
-    this.inProgress = false
-    this.updatedAt = now.getTime()
-    this._startedAt = null
+    // last chance to add tags as we close up the task
+    if (tags) this.tags.push(...tags)
 
+    // best effort to read or infere task duration
+    // 1. if it was given
     if (duration) this.duration = parseDuration(duration)
+    // 2. If we used `tb begin`
     // TODO: handle `duration` to be `null` (replace by 0)
     else if (this._startedAt && typeof this.duration === 'number')
       this.duration += now.getTime() - this._startedAt
     // could be `null` too but that's the best we can do at this point
     else this.duration = this.estimate
+
+    this.isComplete = true
+    this.inProgress = false
+    this.updatedAt = now.getTime()
+    this._startedAt = null
   }
 
   uncheck() {
@@ -87,5 +115,4 @@ export default class Task extends Item {
     this.isComplete = false
     this.updatedAt = new Date().getTime()
   }
-  // -------------------------------------------------------------------------------------
 }

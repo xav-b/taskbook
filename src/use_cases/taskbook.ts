@@ -11,7 +11,14 @@ import LocalStorage from '../store/localjson'
 import help from '../interfaces/help'
 import render from '../interfaces/render'
 import { removeDuplicates } from '../shared/utils'
-import { hasTerms, isTagOpt, isBoardOpt, isPriorityOpt, getPriority } from '../shared/parser'
+import {
+  parseDuration,
+  hasTerms,
+  isTagOpt,
+  isBoardOpt,
+  isPriorityOpt,
+  getPriority,
+} from '../shared/parser'
 import Catalog, { CatalogInnerData } from '../domain/catalog'
 import Item from '../domain/item'
 import Task, { TaskPriority } from '../domain/task'
@@ -25,21 +32,16 @@ const log = Logger()
 class Taskbook {
   _storage: Storage
   _configuration: IConfig
+  _data: Catalog
+  _archive: Catalog
 
   constructor() {
     log.info('initialising taskbook')
 
     this._configuration = config.get()
-
     this._storage = new LocalStorage(this._configuration.defaultContext)
-  }
-
-  get _archive() {
-    return this._storage.getArchive()
-  }
-
-  get _data(): Catalog {
-    return this._storage.get()
+    this._archive = this._storage.getArchive()
+    this._data = this._storage.get()
   }
 
   _save(data: Catalog) {
@@ -68,7 +70,7 @@ class Taskbook {
     return max + 1
   }
 
-  _validateIDs(inputIDs: string[], existingIDs = this._getIDs()): string[] {
+  _validateIDs(inputIDs: string[], existingIDs = this._data.ids()): string[] {
     if (inputIDs.length === 0) {
       render.missingID()
       process.exit(1)
@@ -84,51 +86,6 @@ class Taskbook {
     })
 
     return inputIDs
-  }
-
-  /**
-   * Compile list of task dates,
-   * which are the timestamp the task was completed
-   * (or the note and event was created?)
-   */
-  _getDates(data = this._data) {
-    const dates: string[] = []
-
-    data.ids().forEach((id) => {
-      // for migration purpose, as `updatedAt should always be set`
-      let dt = new Date().toDateString()
-      if (data.get(id).updatedAt) dt = new Date(data.get(id).updatedAt as number).toDateString()
-
-      // avoid duplicates
-      if (dates.indexOf(dt) === -1) {
-        dates.push(dt)
-      }
-    })
-
-    return dates
-  }
-
-  _getIDs(data = this._data) {
-    return data.ids()
-  }
-
-  _getStats() {
-    const { _data } = this
-    let [complete, inProgress, pending, notes] = [0, 0, 0, 0]
-
-    _data.ids().forEach((id) => {
-      if (_data.get(id).isTask) {
-        return _data.task(id)?.isComplete
-          ? complete++
-          : _data.task(id)?.inProgress
-            ? inProgress++
-            : pending++
-      }
-
-      return notes++
-    })
-
-    return { complete, inProgress, pending, notes }
   }
 
   switchContext(name: string) {
@@ -258,10 +215,10 @@ class Taskbook {
     return ordered
   }
 
-  _groupByDate(data = this._data, dates = this._getDates()) {
+  _groupByDate(data = this._data, dates = this._data.dates()) {
     const grouped: Record<string, Item[]> = {}
 
-    Object.keys(data).forEach((id) => {
+    data.ids().forEach((id) => {
       dates.forEach((date) => {
         const dt = new Date(data.get(id).updatedAt).toDateString()
         if (dt === date) {
@@ -282,9 +239,10 @@ class Taskbook {
 
   _saveItemToArchive(item: Item) {
     const { _data, _archive } = this
-    const archiveID = this._generateID(_archive)
 
-    item._id = archiveID
+    const archiveID = this._generateID(_archive)
+    log.info(`archiving item under id ${archiveID}`)
+
     _archive.set(archiveID, item)
 
     this._saveArchive(_archive)
@@ -360,17 +318,21 @@ class Taskbook {
 
   copyToClipboard(ids: string[]) {
     ids = this._validateIDs(ids)
+
     const { _data } = this
     const descriptions: string[] = []
 
     ids.forEach((id) => descriptions.push(_data.get(id).description))
 
     clipboardy.writeSync(descriptions.join('\n'))
+
     render.successCopyToClipboard(ids)
   }
 
   async checkTasks(ids: string[], duration: number) {
-    ids = this._validateIDs(ids)
+    // another gymnastics to allow tags in the list of ids
+    const { tags, description } = this.parseOptions(ids)
+    ids = this._validateIDs(description.split(' '))
 
     const { _data } = this
     const checked: string[] = []
@@ -383,7 +345,7 @@ class Taskbook {
           if (task === null) throw new Error(`task ${id} is not a task`)
 
           if (task.isComplete) task.uncheck()
-          else task.check(duration)
+          else task.check(duration, tags)
 
           // if duration is > 3h, ask confirmation
           // TODO: configuration of the number of hours
@@ -392,25 +354,24 @@ class Taskbook {
             task.duration &&
             task.duration > this._configuration.suspiciousDuration * 60 * 60 * 1000
           ) {
-            const answer = await prompt({
+            // @ts-ignore
+            const { isYes } = await prompt({
               type: 'confirm',
               name: 'isYes',
               message: `Duration seems excessive: about ${Math.round(
                 task.duration / (60 * 60 * 1000)
               )}h, is that correct`,
             })
-            console.log('>>>>>>>>>', answer)
-            /* FIXME:
             // offer to overwrite if that was a mistake
             if (!isYes) {
+              // @ts-ignore
               const { correct } = await prompt({
                 type: 'number',
                 name: 'correct',
                 message: 'How long did it take (in minutes)?',
               })
-              _data.get(id).duration = correct * 60 * 1000
+              task.duration = correct * 60 * 1000
             }
-            */
           }
 
           return task.isComplete ? checked.push(id) : unchecked.push(id)
@@ -426,9 +387,17 @@ class Taskbook {
     render.markIncomplete(unchecked)
   }
 
-  createTask(desc: string[]) {
+  createTask(desc: string[], estimate?: number) {
     const { boards, tags, description, id, priority } = this.parseOptions(desc)
-    const task = new Task({ _id: id, description, boards, tags, priority })
+    const task = new Task({
+      _id: id,
+      description,
+      boards,
+      tags,
+      priority,
+      // weird gymnastics to keep types happy, do it more elegantly
+      estimate: parseDuration(estimate || null) || undefined,
+    })
     const { _data } = this
 
     _data.set(id, task)
@@ -482,15 +451,21 @@ class Taskbook {
     const { _data } = this
 
     ids.forEach((id) => {
+      console.log('MOVING TO ARCHIVE', id, _data.get(id))
+      // the operation will also delete `id` from `_data`
       this._saveItemToArchive(_data.get(id))
     })
+
+    console.log('DELETED', ids, _data.all())
 
     this._save(_data)
     render.successDelete(ids)
   }
 
   displayArchive() {
-    render.displayByDate(this._groupByDate(this._archive, this._getDates(this._archive)))
+    log.debug('displaying the whole archive, by dates')
+    const groups = this._groupByDate(this._archive, this._archive.dates())
+    render.displayByDate(groups)
   }
 
   displayByBoard() {
@@ -502,8 +477,7 @@ class Taskbook {
   }
 
   displayStats() {
-    const stats = this._getStats()
-    render.displayStats(stats)
+    render.displayStats(this._data.stats())
   }
 
   editDescription(input: string[]) {
@@ -614,7 +588,7 @@ class Taskbook {
   }
 
   restoreItems(ids: string[]) {
-    ids = this._validateIDs(ids, this._getIDs(this._archive))
+    ids = this._validateIDs(ids, this._archive.ids())
     const { _archive } = this
 
     ids.forEach((id) => {

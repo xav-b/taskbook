@@ -3,7 +3,7 @@
 - [Taskline](https://github.com/perryrh0dan/taskline#configuration)
 
 ### Next
-- Support estimates (is null for event currently)
+
 - ZSH Autocompletion (take example of the existing one)
 
 ### Fix behaviors
@@ -36,11 +36,13 @@
 
 ## Done
 
+- [x] Support bragging (use a tag when completing or before, then `tb list brag` (need same for archive))
 - [x] Option to link a new task to a goal from `tb task` (will be made easier supporting board by id)
 - [x] Task points ([Issue #181](https://github.com/klaudiosinani/taskbook/issues/181)) -> use +xs +l...
 - [x] Timeline to display done and pending (maybe not bad to keep archive/active segregation)
 
 
+- [x] Support estimates (is null for event currently)
 - [x] Logging
 - [x] Namespaces
     - [x] Support namespaces (or taskbooks/books?)
@@ -87,5 +89,6 @@
 - Fix all the local stuff right now, go through TODO
 - Write tests
 - Finish refactoring (especailly private and public)
+- Blog article on how I use it
 - Make it work with Supabase
 - Make Open source great: Documentation, new name, new npm package

@@ -79,7 +79,8 @@ program
   .alias('t')
   .description('Create task')
   .argument('<description...>')
-  .action((description) => taskbook.createTask(description))
+  .option('-e, --estimate [estimate]', 'estimated time to complete, in minutes')
+  .action((description, options) => taskbook.createTask(description, options.estimate))
 
 program
   .command('comment')

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { isPriorityOpt, isBoardOpt, isTagOpt, getPriority, hasTerms } from './parser'
+import { isPriorityOpt, isBoardOpt, isTagOpt, getPriority, hasTerms, parseDuration } from './parser'
 
 test('valid priority options', () => {
   expect(isPriorityOpt('p:1')).toBeTruthy()
@@ -44,4 +44,14 @@ test('find term occurences', () => {
 
 test('failed to find term occurences', () => {
   expect(hasTerms('Hello, world!', [])).toBeFalsy()
+})
+
+test('handle parsing missing duration', () => {
+  expect(parseDuration(null)).toBeNull()
+  expect(parseDuration(0)).toBeNull()
+  expect(parseDuration(-1)).toBeNull()
+})
+
+test('converts minutes duration in ms', () => {
+  expect(parseDuration(1)).toBe(60000)
 })

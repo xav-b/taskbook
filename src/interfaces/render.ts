@@ -151,12 +151,14 @@ class Render {
     const age = item.age()
     const star = this._getStar(item)
     const comment = this._getCommentHint(item)
+    const suffix = []
+    let message = ''
 
     const prefix = this._buildPrefix(item)
-    let message = ''
+
     if (item instanceof Task) message = this._buildTaskMessage(item)
     else message = this._buildNoteMessage(item)
-    const suffix = []
+
     if (age !== 0) suffix.push(grey(`${age}d`))
     if (star) suffix.push(star)
     if (comment.length > 0) suffix.push(comment)
@@ -168,7 +170,8 @@ class Render {
         let prettyDuration = ''
         const minutes = duration / (1000 * 60)
         if (minutes > 60) prettyDuration = `${Math.ceil(minutes / 60)}h`
-        else prettyDuration = `${Math.ceil(minutes / 60)}m`
+        else prettyDuration = `${minutes}m`
+
         suffix.push(grey(prettyDuration))
       }
     }
@@ -176,9 +179,6 @@ class Render {
     if (tags?.length > 0) suffix.push(grey(tags.join(' ')))
 
     const msgObj = { prefix, message, suffix: suffix.join(' ') }
-
-    if (item instanceof Task)
-      return item.isComplete ? success(msgObj) : item.inProgress ? wait(msgObj) : pending(msgObj)
 
     if (_type === 'note') return note(msgObj)
 
@@ -193,6 +193,11 @@ class Render {
 
       return item.isComplete ? success(msgObj) : item.inProgress ? wait(msgObj) : event(msgObj)
     }
+
+    // finish up by `Task` since a lot of other types inherits from it and
+    // therefor `instanceof Task` is true!
+    if (item instanceof Task)
+      return item.isComplete ? success(msgObj) : item.inProgress ? wait(msgObj) : pending(msgObj)
 
     throw new Error(`item of type ${_type} is not supported`)
   }
@@ -443,9 +448,8 @@ class Render {
 
   successCopyToClipboard(ids: string[]) {
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
-    const message = `Copied the ${
-      ids.length > 1 ? 'descriptions of items' : 'description of item'
-    }:`
+    const message = `Copied the ${ids.length > 1 ? 'descriptions of items' : 'description of item'
+      }:`
     success({ prefix, message, suffix })
   }
 

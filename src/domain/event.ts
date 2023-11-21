@@ -12,7 +12,6 @@ export interface EventProperties extends ItemProperties {
  */
 export default class EventTask extends Task {
   schedule: string
-  estimate: number
 
   constructor(options: EventProperties) {
     super(options)
@@ -21,6 +20,5 @@ export default class EventTask extends Task {
     this._type = 'event'
 
     this.schedule = options.schedule
-    this.estimate = options.estimate * 60 * 1000
   }
 }

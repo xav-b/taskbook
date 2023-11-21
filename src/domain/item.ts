@@ -1,13 +1,18 @@
 import { nanoid } from 'nanoid'
 import { Maybe, UnixTimestamp } from '../types'
 
+// since we load all properties as json and initialising task with it,
+// all Item props need to be supported, albeit mostl options
 export interface ItemProperties {
   _id: number
+  _uid?: string
   description: string
   comment?: string
   isStarred?: boolean
   boards?: string[]
   tags?: string[]
+  _updatedAt?: UnixTimestamp
+  _createdAt?: UnixTimestamp
 }
 
 const MS_IN_DAY = 24 * 60 * 60 * 1000
@@ -34,7 +39,7 @@ export default abstract class Item {
     const now = new Date()
 
     // unique, immutable item id
-    this._uid = nanoid()
+    this._uid = options._uid || nanoid()
     // convenient, transient id for UX
     // TODO: make it public now
     this._id = options._id
@@ -47,7 +52,7 @@ export default abstract class Item {
     // spared `* 60 * 1000` are just moved to `Math.ceil(now.getTime() /
     // 1000)`). And so status quo.
     this._createdAt = now.getTime()
-    this.updatedAt = now.getTime()
+    this.updatedAt = options._updatedAt || now.getTime()
 
     this.description = options.description
     // NOTE: we culd have it a protected `_comment` and expose a `comment()`

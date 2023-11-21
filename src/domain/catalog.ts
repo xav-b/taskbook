@@ -7,6 +7,13 @@ export type CatalogInnerData = Record<string, Item>
 
 type FilterOutLogic = (item: Item) => boolean
 
+interface CatalogStats {
+  complete: number
+  inProgress: number
+  pending: number
+  notes: number
+}
+
 /**
  * Filter the list of current tasks available to the command.
  */
@@ -72,11 +79,17 @@ export default class Catalog {
   }
 
   set(id: number, data: Item) {
-    this._items[id] = data
+    this._items[id] = structuredClone(data)
+    // we also overwrite the `_id` as it might be coming from the `storage`,
+    // while here we save it to `archive`, under a new id. Obviously this is
+    // terrible design.
+    this._items[id]._id = id
   }
 
   delete(id: number) {
+    console.log('DELETING MAN', id, '//', this._items[id])
     delete this._items[id]
+    console.log('DONE', this._items)
   }
 
   task(id: string): Maybe<Task> {
@@ -113,5 +126,44 @@ export default class Catalog {
   starred(): Catalog {
     const items = _filter(this._items, (item) => !item.isStarred)
     return new Catalog(items)
+  }
+
+  /**
+   * Compile list of task dates,
+   * which are the timestamp the task was last updated
+   * (or the note and event was created?)
+   */
+  dates(): string[] {
+    const dates: string[] = []
+
+    this.ids().forEach((id) => {
+      // for migration purpose, as `updatedAt should always be set`
+      let dt = new Date().toDateString()
+
+      if (this.get(id).updatedAt) dt = new Date(this.get(id).updatedAt as number).toDateString()
+
+      // avoid duplicates
+      if (dates.indexOf(dt) === -1) dates.push(dt)
+    })
+
+    return dates
+  }
+
+  public stats(): CatalogStats {
+    let [complete, inProgress, pending, notes] = [0, 0, 0, 0]
+
+    this.ids().forEach((id) => {
+      if (this.get(id).isTask) {
+        return this.task(id)?.isComplete
+          ? complete++
+          : this.task(id)?.inProgress
+            ? inProgress++
+            : pending++
+      }
+
+      return notes++
+    })
+
+    return { complete, inProgress, pending, notes }
   }
 }
