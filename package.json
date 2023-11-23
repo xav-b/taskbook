@@ -14,7 +14,7 @@
     "tb": "dist/src/interfaces/cli.js"
   },
   "engines": {
-    "node": ">=6"
+    "node": ">=10"
   },
   "files": [
     "src"
@@ -43,7 +43,7 @@
   "scripts": {
     "build": "npx tsc",
     "dev": "npx tsc --watch",
-    "test": "xo"
+    "test": "vitest"
   },
   "dependencies": {
     "chalk": "4.1.0",
@@ -79,8 +79,7 @@
     "eslint-plugin-prettier": "^5.0.1",
     "prettier": "^3.1.0",
     "semver": "^7.5.4",
-    "vitest": "^0.34.6",
-    "xo": "*"
+    "vitest": "^0.34.6"
   },
   "xo": {
     "space": 2

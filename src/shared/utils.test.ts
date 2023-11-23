@@ -27,4 +27,4 @@ test('sort items by priorities', () => {
   expect(sorted[3].priority).toBe(1)
 })
 
-// TODO: test `ensureDir`, with proper stuf or cleanup
+// TODO: test `ensureDir`, with proper stuff or cleanup

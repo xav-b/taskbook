@@ -10,12 +10,8 @@ export function randomHexString(length = 8) {
     .slice(0, length)
 }
 
-const _arrayify = (x: string | string[]): string[] => (Array.isArray(x) ? x : [x])
+export const removeDuplicates = (x: string[]): string[] => [...new Set(x)]
 
-// TODO: to review, should not need to handle a string
-export const removeDuplicates = (x: string | string[]): string[] => [...new Set(_arrayify(x))]
-
-// TODO: move that to utils or something
 export function sortByPriorities(t1: Item, t2: Item): number {
   // we want to have top priorities first, down to lowest so here the highest
   // priority should come as "lower" than the lowest ones

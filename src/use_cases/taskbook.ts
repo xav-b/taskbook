@@ -11,14 +11,7 @@ import LocalStorage from '../store/localjson'
 import help from '../interfaces/help'
 import render from '../interfaces/render'
 import { removeDuplicates } from '../shared/utils'
-import {
-  parseDuration,
-  hasTerms,
-  isTagOpt,
-  isBoardOpt,
-  isPriorityOpt,
-  getPriority,
-} from '../shared/parser'
+import { parseOptions, parseDuration, hasTerms, isBoardOpt } from '../shared/parser'
 import Catalog, { CatalogInnerData } from '../domain/catalog'
 import Item from '../domain/item'
 import Task, { TaskPriority } from '../domain/task'
@@ -52,24 +45,6 @@ class Taskbook {
     this._storage.setArchive(data.all())
   }
 
-  private _generateID(data = this._data) {
-    const ids = data.ids().map((id) => parseInt(id, 10))
-    const max = Math.max(...ids)
-
-    // THE first task
-    if (ids.length === 0) return 1
-
-    // pick up the first available id. This allows to recycle ids that have
-    // been archived.
-    for (let idx = 0; idx < max; idx++) {
-      // will return the lowest id that is not in the used list of tasks
-      if (!ids.includes(idx)) return idx
-    }
-
-    // fallback strategy: keep incrementing
-    return max + 1
-  }
-
   _validateIDs(inputIDs: string[], existingIDs = this._data.ids()): string[] {
     if (inputIDs.length === 0) {
       render.missingID()
@@ -95,51 +70,9 @@ class Taskbook {
     render.successSwitchContext(name)
   }
 
-  /**
-   * Main parsing entry point - extract the actual description
-   * nd the specific objets like boards and priorities.
-   */
-  parseOptions(input: string[]) {
-    const boards: string[] = []
-    const tags: string[] = []
-    const desc: string[] = []
-
-    if (input.length === 0) {
-      render.missingDesc()
-      process.exit(1)
-    }
-
-    const id = this._generateID()
-    const priority = getPriority(input)
-
-    input.forEach((x) => {
-      // priorities: already processed
-      if (isPriorityOpt(x)) {
-        // priorities were already processed
-      } else if (isBoardOpt(x)) {
-        return boards.push(x)
-      } else if (isTagOpt(x)) {
-        return tags.push(x)
-      } else if (x.length > 1) {
-        return desc.push(x)
-      }
-
-      // make linter happy
-      return null
-    })
-
-    const description = desc.join(' ')
-
-    if (boards.length === 0) {
-      // TODO: use config.DEFAULT_BOARD
-      boards.push(this._configuration.defaultBoard)
-    }
-
-    return { boards, tags, description, id, priority }
-  }
-
   _filterByAttributes(attr: string[], data = this._data) {
-    if (Object.keys(data).length === 0) return data
+    if (data.ids().length === 0) return data
+    if (attr.length === 0) return data
 
     // NOTE: we don't support goals and events because internally they belong
     // to a board and one can display them with the very expressive `tb list
@@ -240,7 +173,7 @@ class Taskbook {
   _saveItemToArchive(item: Item) {
     const { _data, _archive } = this
 
-    const archiveID = this._generateID(_archive)
+    const archiveID = _archive.generateID()
     log.info(`archiving item under id ${archiveID}`)
 
     _archive.set(archiveID, item)
@@ -252,7 +185,7 @@ class Taskbook {
 
   _saveItemToStorage(item: Item) {
     const { _data, _archive } = this
-    const restoreID = this._generateID()
+    const restoreID = _data.generateID()
 
     item._id = restoreID
     _data.set(restoreID, item)
@@ -283,7 +216,10 @@ class Taskbook {
     const storedBoards = _data.boards()
     const storedTags = this._data.tags()
 
-    const { id, description, tags, boards } = this.parseOptions(desc)
+    const { description, tags, boards } = parseOptions(desc, {
+      defaultBoard: this._configuration.defaultBoard,
+    })
+    const id = _data.generateID()
     const note = new Note({ _id: id, description, tags, boards })
 
     // warn on new tags and boards
@@ -303,10 +239,13 @@ class Taskbook {
   }
 
   createEvent(schedule: string, desc: string[], estimate: number) {
-    const boards = [`@${this._configuration.eventBoard}`]
-    const { id, description, tags } = this.parseOptions(desc)
-    const event = new EventNote({ _id: id, description, boards, tags, schedule, estimate })
     const { _data } = this
+    const boards = [`@${this._configuration.eventBoard}`]
+    const { description, tags } = parseOptions(desc, {
+      defaultBoard: this._configuration.defaultBoard,
+    })
+    const id = _data.generateID()
+    const event = new EventNote({ _id: id, description, boards, tags, schedule, estimate })
 
     _data.set(id, event)
     this._save(_data)
@@ -331,7 +270,9 @@ class Taskbook {
 
   async checkTasks(ids: string[], duration: number) {
     // another gymnastics to allow tags in the list of ids
-    const { tags, description } = this.parseOptions(ids)
+    const { description, tags } = parseOptions(ids, {
+      defaultBoard: this._configuration.defaultBoard,
+    })
     ids = this._validateIDs(description.split(' '))
 
     const { _data } = this
@@ -388,7 +329,10 @@ class Taskbook {
   }
 
   createTask(desc: string[], estimate?: number) {
-    const { boards, tags, description, id, priority } = this.parseOptions(desc)
+    const { boards, tags, description, priority } = parseOptions(desc, {
+      defaultBoard: this._configuration.defaultBoard,
+    })
+    const id = this._data.generateID()
     const task = new Task({
       _id: id,
       description,
@@ -409,9 +353,12 @@ class Taskbook {
   }
 
   createGoal(desc: string[]) {
-    const { id, description, priority, tags } = this.parseOptions(desc)
+    const { description, priority, tags } = parseOptions(desc, {
+      defaultBoard: this._configuration.defaultBoard,
+    })
+    const id = this._data.generateID()
     // we don't parse goals but instead assign it right away to the predefined `goals` one.
-    const boards = ['@goals']
+    const boards = [`@${this._configuration.goalsBoard}`]
 
     const goal = new Goal({ _id: id, description, boards, priority, tags })
     const { _data } = this
@@ -448,15 +395,13 @@ class Taskbook {
 
   deleteItems(ids: string[]) {
     ids = this._validateIDs(ids)
+
     const { _data } = this
 
     ids.forEach((id) => {
-      console.log('MOVING TO ARCHIVE', id, _data.get(id))
       // the operation will also delete `id` from `_data`
       this._saveItemToArchive(_data.get(id))
     })
-
-    console.log('DELETED', ids, _data.all())
 
     this._save(_data)
     render.successDelete(ids)
@@ -465,6 +410,7 @@ class Taskbook {
   displayArchive() {
     log.debug('displaying the whole archive, by dates')
     const groups = this._groupByDate(this._archive, this._archive.dates())
+
     render.displayByDate(groups)
   }
 
@@ -476,8 +422,8 @@ class Taskbook {
     render.displayByDate(this._groupByDate())
   }
 
-  displayStats() {
-    render.displayStats(this._data.stats())
+  displayStats(data = this._data) {
+    render.displayStats(data.stats())
   }
 
   editDescription(input: string[]) {
@@ -509,17 +455,35 @@ class Taskbook {
     render.successEdit(id)
   }
 
+  // TODO: as catalog function
   findItems(terms: string[]) {
     const result: CatalogInnerData = {}
     const { _data } = this
 
-    Object.keys(_data).forEach((id) => {
+    _data.ids().forEach((id) => {
       if (!hasTerms(_data.get(id).description, terms)) return
 
       result[id] = _data.get(id)
     })
 
     render.displayByBoard(this._groupByBoard(new Catalog(result)))
+  }
+
+  _filterByBoards(boards: string[], data = this._data): Catalog {
+    const filtered: CatalogInnerData = {}
+
+    data.ids().forEach((id) => {
+      boards.forEach((board: string) => {
+        if (data.get(id).boards.includes(board) || data.get(id).tags?.includes(board)) {
+          filtered[id] = data.get(id)
+
+          return
+        }
+        return
+      })
+    })
+
+    return new Catalog(filtered)
   }
 
   listByAttributes(terms: string[]): void {
@@ -543,15 +507,19 @@ class Taskbook {
       if (storedTags.indexOf(`+${x}`) >= 0) tags.push(`+${x}`)
 
       // final condition
-      // TODO: `My Board` config
-      return x === 'myboard' ? boards.push('My Board') : attributes.push(x)
+      return x === 'myboard' ? boards.push(this._configuration.defaultBoard) : attributes.push(x)
     })
       ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => removeDuplicates(x))
 
-    const data = this._filterByAttributes(attributes)
+    let data = this._filterByAttributes(attributes)
+    if (boards.length > 0 || tags.length > 0)
+      // filter by boards and/or tags
+      data = this._filterByBoards(boards.concat(tags), data)
 
     const groups = this._groupByBoard(data, boards.concat(tags))
     render.displayByBoard(groups, showTasks)
+
+    render.displayStats(data.stats())
   }
 
   moveBoards(input: string[]) {
@@ -560,7 +528,7 @@ class Taskbook {
     let boards: string[] = []
 
     input.filter(isBoardOpt).forEach((x) => {
-      boards.push(x === 'myboard' ? 'My Board' : x)
+      boards.push(x === 'myboard' ? this._configuration.defaultBoard : x)
     })
 
     if (boards.length === 0) {
@@ -581,8 +549,8 @@ class Taskbook {
 
     ids.forEach((id) => {
       _data.get(id).boards = boards
-      render.successMove(id, boards)
     })
+    render.successMove(ids.join(', '), boards)
 
     this._save(_data)
   }
@@ -639,8 +607,12 @@ class Taskbook {
     const ids: string[] = []
     const { _data } = this
 
-    Object.keys(_data).forEach((id) => {
-      if (_data.task(id)?.isComplete) ids.push(id)
+    _data.ids().forEach((id) => {
+      const item = _data.get(id)
+
+      if (item instanceof Task && item.isComplete) ids.push(id)
+      else if (item instanceof Note) ids.push(id)
+      // else not something we want to clear
     })
 
     if (ids.length === 0) return
@@ -744,7 +716,7 @@ class Taskbook {
   _migrate() {
     const { _data } = this
 
-    Object.keys(_data).forEach((id) => {
+    _data.ids().forEach((id) => {
       // if (!_data.get(id)._uid) _data.get(id)._uid = nanoid()
     })
 

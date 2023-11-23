@@ -36,6 +36,8 @@
 
 ## Done
 
+- [x] display stats option when using `tb list`
+- [x] Tests
 - [x] Support bragging (use a tag when completing or before, then `tb list brag` (need same for archive))
 - [x] Option to link a new task to a goal from `tb task` (will be made easier supporting board by id)
 - [x] Task points ([Issue #181](https://github.com/klaudiosinani/taskbook/issues/181)) -> use +xs +l...
@@ -83,11 +85,11 @@
 - Event hooks (integrate with IFTT/Zapier)
 - Analytics
 - Habits, tasks, scheduling, 2 ways sync with google calendar
+- Works offline
 
 ### Technical road
 
 - Fix all the local stuff right now, go through TODO
-- Write tests
 - Finish refactoring (especailly private and public)
 - Blog article on how I use it
 - Make it work with Supabase

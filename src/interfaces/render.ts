@@ -6,7 +6,7 @@ import Item from '../domain/item'
 import Goal from '../domain/goal'
 import Task, { TaskPriority } from '../domain/task'
 import EventTask from '../domain/event'
-import config from '../config'
+import config, { IConfig } from '../config'
 
 signale.config({ displayLabel: false })
 
@@ -73,8 +73,10 @@ function _getItemStats(items: Item[]) {
 }
 
 class Render {
-  get _configuration() {
-    return config.get()
+  _configuration: IConfig
+
+  constructor() {
+    this._configuration = config.get()
   }
 
   _colorBoards(boards: string[]) {
@@ -203,7 +205,7 @@ class Render {
   }
 
   _displayItemByDate(item: Item) {
-    const boards = item.boards.filter((x) => x !== 'My Board')
+    const boards = item.boards.filter((x) => x !== this._configuration.defaultBoard)
     const star = this._getStar(item)
 
     const prefix = this._buildPrefix(item)

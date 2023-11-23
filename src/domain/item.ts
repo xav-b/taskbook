@@ -11,7 +11,7 @@ export interface ItemProperties {
   isStarred?: boolean
   boards?: string[]
   tags?: string[]
-  _updatedAt?: UnixTimestamp
+  updatedAt?: UnixTimestamp
   _createdAt?: UnixTimestamp
 }
 
@@ -51,8 +51,8 @@ export default abstract class Item {
     // visibile benefit to the user, and marginally reafactor code (all the
     // spared `* 60 * 1000` are just moved to `Math.ceil(now.getTime() /
     // 1000)`). And so status quo.
-    this._createdAt = now.getTime()
-    this.updatedAt = options._updatedAt || now.getTime()
+    this._createdAt = options._createdAt || now.getTime()
+    this.updatedAt = options.updatedAt || now.getTime()
 
     this.description = options.description
     // NOTE: we culd have it a protected `_comment` and expose a `comment()`

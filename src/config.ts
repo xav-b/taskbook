@@ -18,10 +18,12 @@ export interface IConfig {
   highlightTitle: Function
   enableCopyID: boolean
   eventBoard: string
+  goalsBoard: string
   defaultBoard: string
   editor: string
   suspiciousDuration: number
   defaultContext: string
+  tshirtSizes: boolean
 }
 
 const log = Logger()
@@ -75,15 +77,17 @@ class Config {
       displayProgressOverview: true,
       displayWarnings: true,
       enableCopyID: false,
+      defaultBoard: 'My Board',
       eventBoard: 'calendar',
+      goalsBoard: 'goals',
       // TODO: support in package.json and/or environment constants
       // NOTE: will have to do with theming if implemented
       priorities: { 1: chalk, 2: chalk.underline.yellow, 3: chalk.underline.red },
       highlightTitle: chalk.bold.cyan,
-      defaultBoard: 'My Board',
       editor: process.env.EDITOR || 'vi',
       suspiciousDuration: 3 /* hours */,
       defaultContext: 'default',
+      tshirtSizes: true,
     }
   }
 

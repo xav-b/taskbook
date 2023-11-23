@@ -1,6 +1,7 @@
 import Item, { ItemProperties } from './item'
 import { Maybe, UnixTimestamp } from '../types'
 import { parseDuration } from '../shared/parser'
+import config from '../config'
 
 export enum TaskPriority {
   Normal = 1,
@@ -30,6 +31,8 @@ export default class Task extends Item {
   constructor(options: TaskProperties) {
     super(options)
 
+    const conf = config.get()
+
     // items can usually be created either because they are new, or because we
     // parsed and loaded existing items from storage, and they are all
     // re-initialised. This is detected by checking _uid, which doesn't exist
@@ -54,7 +57,7 @@ export default class Task extends Item {
     this.estimate = options.estimate || null
     // automatically tag with size shirt
     // TODO: enable through configuration
-    if (options.estimate && isNew) {
+    if (options.estimate && isNew && conf.tshirtSizes) {
       const friendly = options.estimate / 60 / 1000
       if (friendly < 5) this.tags.push('+xs')
       else if (friendly < 15) this.tags.push('+s')
@@ -83,7 +86,6 @@ export default class Task extends Item {
   }
 
   check(duration: Maybe<number> = null, tags?: string[]) {
-    console.log('checking task', this._uid, duration, tags)
     // idempotency
     if (this.isComplete) return
 

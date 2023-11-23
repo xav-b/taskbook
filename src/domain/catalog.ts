@@ -1,6 +1,7 @@
 import Item from './item'
 import Task from './task'
 import { Maybe } from '../types'
+import config, { IConfig } from '../config'
 
 // base layout of items is { itemId: Item, .... }
 export type CatalogInnerData = Record<string, Item>
@@ -27,9 +28,29 @@ function _filter(data: CatalogInnerData, exclude: FilterOutLogic): CatalogInnerD
 
 export default class Catalog {
   protected _items: CatalogInnerData
+  protected _configuration: IConfig
 
   constructor(items: CatalogInnerData) {
     this._items = items
+    this._configuration = config.get()
+  }
+
+  public generateID(): number {
+    const ids = this.ids().map((id) => parseInt(id, 10))
+    const max = Math.max(...ids)
+
+    // THE first task
+    if (ids.length === 0) return 1
+
+    // pick up the first available id. This allows to recycle ids that have
+    // been archived.
+    for (let idx = 0; idx < max; idx++) {
+      // will return the lowest id that is not in the used list of tasks
+      if (!ids.includes(idx)) return idx
+    }
+
+    // fallback strategy: keep incrementing
+    return max + 1
   }
 
   private _isComplete(item: Item) {
@@ -53,7 +74,7 @@ export default class Catalog {
    */
   public boards(): string[] {
     // TODO: from config
-    const boards = ['My Board']
+    const boards = [this._configuration.defaultBoard]
 
     this.ids().forEach((id: string) => {
       boards.push(...this.get(id).boards.filter((x: string) => boards.indexOf(x) === -1))
@@ -87,9 +108,7 @@ export default class Catalog {
   }
 
   delete(id: number) {
-    console.log('DELETING MAN', id, '//', this._items[id])
     delete this._items[id]
-    console.log('DONE', this._items)
   }
 
   task(id: string): Maybe<Task> {
