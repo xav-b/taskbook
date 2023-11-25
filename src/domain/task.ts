@@ -47,8 +47,7 @@ export default class Task extends Item {
     this._startedAt = options._startedAt || null
 
     this.isTask = true
-    // TODO: `null` is a better representation of not available
-    this.duration = options.duration || 0
+    this.duration = options.duration || null
     this.isComplete = options.isComplete || false
     this.inProgress = options.inProgress || false
     this.isStarred = options.isStarred || false
@@ -56,7 +55,6 @@ export default class Task extends Item {
 
     this.estimate = options.estimate || null
     // automatically tag with size shirt
-    // TODO: enable through configuration
     if (options.estimate && isNew && conf.tshirtSizes) {
       const friendly = options.estimate / 60 / 1000
       if (friendly < 5) this.tags.push('+xs')
@@ -98,16 +96,23 @@ export default class Task extends Item {
     // 1. if it was given
     if (duration) this.duration = parseDuration(duration)
     // 2. If we used `tb begin`
-    // TODO: handle `duration` to be `null` (replace by 0)
-    else if (this._startedAt && typeof this.duration === 'number')
+    else if (this._startedAt) {
+      // initial task has it duration `null` but we may also have worked on it
+      // before, meaning this would be a number.
+      if (this.duration === null) this.duration = 0
+
       this.duration += now.getTime() - this._startedAt
-    // could be `null` too but that's the best we can do at this point
+    }
+    // 3. no clue so far, try to fallback on estimate, which could have been
+    // omitted and therefor `null`. But that's fine, it's a good representation
+    // of " i tried hard but i have no idea at this point"
     else this.duration = this.estimate
 
     this.isComplete = true
     this.inProgress = false
     this.updatedAt = now.getTime()
-    this._startedAt = null
+    // we don't reset _startedAt as there might be some interesting stages
+    // analytics there (created -> started -> completed)
   }
 
   uncheck() {

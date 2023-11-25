@@ -11,7 +11,7 @@ import LocalStorage from '../store/localjson'
 import help from '../interfaces/help'
 import render from '../interfaces/render'
 import { removeDuplicates } from '../shared/utils'
-import { parseOptions, parseDuration, hasTerms, isBoardOpt } from '../shared/parser'
+import { parseOptions, parseDuration, isBoardOpt } from '../shared/parser'
 import Catalog, { CatalogInnerData } from '../domain/catalog'
 import Item from '../domain/item'
 import Task, { TaskPriority } from '../domain/task'
@@ -203,8 +203,7 @@ class Taskbook {
 
     const { _data } = this
 
-    // TODO: remove potential duplicates
-    tags = tags.concat(_data.get(itemid).tags || [])
+    tags = removeDuplicates(tags.concat(_data.get(itemid).tags || []))
 
     _data.get(itemid).tags = tags
     this._save(_data)
@@ -288,8 +287,7 @@ class Taskbook {
           if (task.isComplete) task.uncheck()
           else task.check(duration, tags)
 
-          // if duration is > 3h, ask confirmation
-          // TODO: configuration of the number of hours
+          // if duration is > {config number of hours}, ask confirmation
           if (
             task.isComplete &&
             task.duration &&
@@ -378,9 +376,16 @@ class Taskbook {
     // alternative: const goalBoard = `@goal-${goalID}`
 
     taskIDs.forEach((taskID: string) => {
-      // TODO: check if not there already
-      _data.get(taskID).tags.push(goalTag)
+      // we use `star` to indicate a task is linked to a goal
       _data.get(taskID).isStarred = true
+
+      // and the actual linkage to a goal happens through a tag. As a remidner,
+      // tags are used as immutable boards. We don't expect that task to ever
+      // depart from the goal in its lifetime, but we still enjoy the boards/'
+      // benefits, like listing goal's tasks together with a simple `tb list
+      // <mygoal>`
+      const tags = _data.get(taskID).tags
+      if (!tags.includes(goalTag)) tags.push(goalTag)
     })
 
     // we use a start to indicate this is linked to a goal
@@ -389,7 +394,6 @@ class Taskbook {
 
     this._save(_data)
 
-    // TODO: use a more sepcific rendering
     render.successMove(taskIDs.join(', '), [goalTag])
   }
 
@@ -455,18 +459,10 @@ class Taskbook {
     render.successEdit(id)
   }
 
-  // TODO: as catalog function
   findItems(terms: string[]) {
-    const result: CatalogInnerData = {}
-    const { _data } = this
+    const result = this._data.search(terms)
 
-    _data.ids().forEach((id) => {
-      if (!hasTerms(_data.get(id).description, terms)) return
-
-      result[id] = _data.get(id)
-    })
-
-    render.displayByBoard(this._groupByBoard(new Catalog(result)))
+    render.displayByBoard(this._groupByBoard(result))
   }
 
   _filterByBoards(boards: string[], data = this._data): Catalog {
@@ -663,7 +659,7 @@ class Taskbook {
 
     if (_data.get(id).isTask) {
       const task = _data.task(id)
-      // TODO: handle it
+      // TODO: handle the UI of it
       if (task === null) throw new Error(`item ${id} is not a task`)
 
       task.begin()
@@ -681,7 +677,6 @@ class Taskbook {
 
   comment(itemId: string) {
     // TODO: _validateIDs
-    // TODO: there should be a config
     const editor = this._configuration.editor
 
     const { _data } = this

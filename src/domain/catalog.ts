@@ -1,5 +1,6 @@
 import Item from './item'
 import Task from './task'
+import { hasTerms } from '../shared/parser'
 import { Maybe } from '../types'
 import config, { IConfig } from '../config'
 
@@ -113,6 +114,18 @@ export default class Catalog {
     if (!this._items[id].isTask) return null
 
     return this._items[id] as Task
+  }
+
+  search(terms: string[]): Catalog {
+    const result: CatalogInnerData = {}
+
+    this.ids().forEach((id) => {
+      if (!hasTerms(this.get(id).description, terms)) return
+
+      result[id] = this.get(id)
+    })
+
+    return new Catalog(result)
   }
 
   notes(): Catalog {

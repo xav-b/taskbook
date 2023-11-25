@@ -4,18 +4,20 @@
 
 ### Next
 
-- ZSH Autocompletion (take example of the existing one)
 
 ### Fix behaviors
 
+- _groupByX should belong to Catalog
+- Replace all `throw` by proper rendering + `process.exit`
 - Make board names stored lower case, displayed title case (case insensitive basically)
 - `archive` and `timeline` to support same filters as `tb list`
-- Event to understand time: entering `10am` should show up as `10:00am` and rightly align
+- Durations to understand time: entering `10am` should show up as `10:00am` and rightly align
 
 ### Ideas
 
+- ZSH Autocompletion (take example of the existing one)
 - Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc...
-- `@` to reference boards both by id and by name
+- `@` to reference boards both by id and by name (at the very least get the `grey` customised)
 - Time boxing and pomodoro timer
 - Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
   that automatically to today todo
@@ -89,8 +91,7 @@
 
 ### Technical road
 
-- Fix all the local stuff right now, go through TODO
-- Finish refactoring (especailly private and public)
-- Blog article on how I use it
+1. Package + project + readmes
+2. Blog article on how I use it + Documentation
 - Make it work with Supabase
 - Make Open source great: Documentation, new name, new npm package
