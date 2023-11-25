@@ -73,7 +73,6 @@ export default class Catalog {
    * Pull and de-duplicate all items' boards
    */
   public boards(): string[] {
-    // TODO: from config
     const boards = [this._configuration.defaultBoard]
 
     this.ids().forEach((id: string) => {
@@ -87,7 +86,6 @@ export default class Catalog {
     const tags: string[] = []
 
     this.ids().forEach((id) => {
-      // TODO: just not sure if that's mandatory
       // if (this.get(id).tags.length ) tags.push(...this.get(id).tags.filter((x) => tags.indexOf(x) === -1))
       tags.push(...this.get(id).tags.filter((x) => tags.indexOf(x) === -1))
     })
@@ -101,10 +99,10 @@ export default class Catalog {
 
   set(id: number, data: Item) {
     this._items[id] = structuredClone(data)
-    // we also overwrite the `_id` as it might be coming from the `storage`,
+    // we also overwrite the `id` as it might be coming from the `storage`,
     // while here we save it to `archive`, under a new id. Obviously this is
     // terrible design.
-    this._items[id]._id = id
+    this._items[id].id = id
   }
 
   delete(id: number) {

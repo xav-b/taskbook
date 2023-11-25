@@ -51,16 +51,6 @@ export function parseOptions(input: string[], config?: ILineParserOps): ILineStr
   const boards: string[] = []
   const tags: string[] = []
   const desc: string[] = []
-
-  /** TODO: move that logic on the cli validation
-   * if (input.length === 0) {
-   *   render.missingDesc()
-   *   process.exit(1)
-   * }
-   */
-
-  // TODO: get that out
-  // const id = this._data.generateID()
   const priority = getPriority(input)
 
   input.forEach((x) => {

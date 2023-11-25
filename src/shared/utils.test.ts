@@ -14,10 +14,10 @@ test('remove array duplicates', () => {
 
 test('sort items by priorities', () => {
   const board = [
-    new Task({ _id: 1, description: 'qa 1', priority: 1 }),
-    new Task({ _id: 2, description: 'qa 2', priority: 3 }),
-    new Task({ _id: 3, description: 'qa 3', priority: 2 }),
-    new Task({ _id: 4, description: 'qa 4', priority: 1 }),
+    new Task({ id: 1, description: 'qa 1', priority: 1 }),
+    new Task({ id: 2, description: 'qa 2', priority: 3 }),
+    new Task({ id: 3, description: 'qa 3', priority: 2 }),
+    new Task({ id: 4, description: 'qa 4', priority: 1 }),
   ]
 
   const sorted = board.sort(sortByPriorities)

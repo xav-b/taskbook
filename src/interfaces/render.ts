@@ -109,10 +109,10 @@ class Render {
   _buildPrefix(item: Item) {
     const prefix = []
 
-    const { _id } = item
+    const { id } = item
 
-    prefix.push(' '.repeat(4 - String(_id).length))
-    prefix.push(grey(`${_id}.`))
+    prefix.push(' '.repeat(4 - String(id).length))
+    prefix.push(grey(`${id}.`))
 
     return prefix.join(' ')
   }
@@ -412,7 +412,7 @@ class Render {
   }
 
   successCreate(item: Item) {
-    const [prefix, suffix] = ['\n', grey(String(item._id))]
+    const [prefix, suffix] = ['\n', grey(String(item.id))]
     const message = `Created ${item._type}`
     success({ prefix, message, suffix })
   }
@@ -450,8 +450,9 @@ class Render {
 
   successCopyToClipboard(ids: string[]) {
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
-    const message = `Copied the ${ids.length > 1 ? 'descriptions of items' : 'description of item'
-      }:`
+    const message = `Copied the ${
+      ids.length > 1 ? 'descriptions of items' : 'description of item'
+    }:`
     success({ prefix, message, suffix })
   }
 

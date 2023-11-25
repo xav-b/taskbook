@@ -180,19 +180,19 @@ class Taskbook {
 
     this._saveArchive(_archive)
 
-    _data.delete(item._id)
+    _data.delete(item.id)
   }
 
   _saveItemToStorage(item: Item) {
     const { _data, _archive } = this
     const restoreID = _data.generateID()
 
-    item._id = restoreID
+    item.id = restoreID
     _data.set(restoreID, item)
 
     this._save(_data)
 
-    _archive.delete(item._id)
+    _archive.delete(item.id)
   }
 
   tagItem(itemid: string, tags: string[]) {
@@ -220,14 +220,14 @@ class Taskbook {
       defaultBoard: this._configuration.defaultBoard,
     })
     const id = _data.generateID()
-    const note = new Note({ _id: id, description, tags, boards })
+    const note = new Note({ id, description, tags, boards })
 
     // warn on new tags and boards
     tags.forEach((t) => {
-      if (!storedTags.includes(t)) render.warning(note._id, `new tag: ${t}`)
+      if (!storedTags.includes(t)) render.warning(note.id, `new tag: ${t}`)
     })
     boards.forEach((b) => {
-      if (!storedBoards.includes(b)) render.warning(note._id, `new board: ${b}`)
+      if (!storedBoards.includes(b)) render.warning(note.id, `new board: ${b}`)
     })
 
     _data.set(id, note)
@@ -245,7 +245,7 @@ class Taskbook {
       defaultBoard: this._configuration.defaultBoard,
     })
     const id = _data.generateID()
-    const event = new EventNote({ _id: id, description, boards, tags, schedule, estimate })
+    const event = new EventNote({ id, description, boards, tags, schedule, estimate })
 
     _data.set(id, event)
     this._save(_data)
@@ -334,7 +334,7 @@ class Taskbook {
     })
     const id = this._data.generateID()
     const task = new Task({
-      _id: id,
+      id,
       description,
       boards,
       tags,
@@ -360,7 +360,7 @@ class Taskbook {
     // we don't parse goals but instead assign it right away to the predefined `goals` one.
     const boards = [`@${this._configuration.goalsBoard}`]
 
-    const goal = new Goal({ _id: id, description, boards, priority, tags })
+    const goal = new Goal({ id, description, boards, priority, tags })
     const { _data } = this
 
     _data.set(id, goal)

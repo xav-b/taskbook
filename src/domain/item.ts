@@ -4,7 +4,7 @@ import { Maybe, UnixTimestamp } from '../types'
 // since we load all properties as json and initialising task with it,
 // all Item props need to be supported, albeit mostl options
 export interface ItemProperties {
-  _id: number
+  id: number
   _uid?: string
   description: string
   comment?: string
@@ -22,9 +22,9 @@ export default abstract class Item {
   // storage id for the archive one. Not a great practice but this requires to
   // rething how ids are managed between different kind of storage.
   // (restore management of ids is probaably related)
-  _id: number
+  id: number
   protected _uid: string
-  readonly _createdAt: UnixTimestamp
+  protected _createdAt: UnixTimestamp
   abstract _type: string
   abstract isTask: boolean
 
@@ -41,8 +41,7 @@ export default abstract class Item {
     // unique, immutable item id
     this._uid = options._uid || nanoid()
     // convenient, transient id for UX
-    // TODO: make it public now
-    this._id = options._id
+    this.id = options.id
 
     // NOTE: using UNIX ms for those dates, and subsequently for durations, is
     // a useless precision. Minute granularity is probably what's needed from a

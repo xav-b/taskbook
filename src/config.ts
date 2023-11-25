@@ -29,7 +29,6 @@ export interface IConfig {
 const log = Logger()
 const { default: defaultConfig } = pkg.configuration
 // TODO: https://github.com/sindresorhus/env-paths
-// TODO: Have a fallback on ~/.taskbook
 const CONFIG_DIR = '.config'
 
 class Config {
@@ -80,7 +79,6 @@ class Config {
       defaultBoard: 'My Board',
       eventBoard: 'calendar',
       goalsBoard: 'goals',
-      // TODO: support in package.json and/or environment constants
       // NOTE: will have to do with theming if implemented
       priorities: { 1: chalk, 2: chalk.underline.yellow, 3: chalk.underline.red },
       highlightTitle: chalk.bold.cyan,
@@ -104,16 +102,10 @@ class Config {
     const config = this.userConfig()
 
     return {
+      // sound constants
       ...this.defaults(),
       // ~/.config/taskbook/config.json
       ...config,
-
-      /**
-       * TODO: not supported yet (would really benefit from a flat config)
-       * prioritiesLabels: ['p:1', 'p:2', 'p:3'],
-       * boardPrefix: '@',
-       * tagPrefix: '+',
-       */
     }
   }
 }
