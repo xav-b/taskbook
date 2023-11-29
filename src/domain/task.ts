@@ -1,5 +1,6 @@
 import Item, { ItemProperties } from './item'
 import { Maybe, UnixTimestamp } from '../types'
+import { SignaleLogConfig, wait, success, pending } from '../interfaces/printer'
 import { parseDuration } from '../shared/parser'
 import config from '../config'
 
@@ -121,5 +122,11 @@ export default class Task extends Item {
 
     this.isComplete = false
     this.updatedAt = new Date().getTime()
+  }
+
+  display(signaleObj: SignaleLogConfig) {
+    if (this.isComplete) success(signaleObj)
+    else if (this.inProgress) wait(signaleObj)
+    else pending(signaleObj)
   }
 }

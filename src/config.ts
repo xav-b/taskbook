@@ -82,6 +82,8 @@ class Config {
       // NOTE: will have to do with theming if implemented
       priorities: { 1: chalk, 2: chalk.underline.yellow, 3: chalk.underline.red },
       highlightTitle: chalk.bold.cyan,
+      // TODO: have it under a `theme with the above and use it everywhere
+      // grey: chalk.cyan.dim,
       editor: process.env.EDITOR || 'vi',
       suspiciousDuration: 3 /* hours */,
       defaultContext: 'default',

@@ -1,17 +1,19 @@
 <h1 align="center">
-  Taskbook
+    Bullet Board - BuBo - `bb`
 </h1>
 
 <h4 align="center">
-  Tasks, boards & notes for the command-line habitat
+  Minimalist, obsessively productive task boards, for the command-line habitat.
+
+  <i>Inspired by [taskbook](https://github.com/klaudiosinani/taskbook)</i>
 </h4>
 
 <div align="center">
-  <img alt="Boards" width="60%" src="media/header-boards.png"/>
+  <img alt="Boards" width="60%" src="media/cover.png"/>
 </div>
 
 <p align="center">
-  <a href="https://travis-ci.com/klaussinani/taskbook">
+  <a href="https://travis-ci.com/xav-b/taskbook">
     <img alt="Build Status" src="https://travis-ci.com/klaussinani/taskbook.svg?branch=master">
   </a>
 </p>

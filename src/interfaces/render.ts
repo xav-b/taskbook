@@ -1,38 +1,21 @@
 import chalk from 'chalk'
-import signale from 'signale'
 
 import { sortByPriorities } from '../shared/utils'
+// TODO: import { Item, Note, Goal, Task } from '../domain'
 import Item from '../domain/item'
+import Note from '../domain/goal'
 import Goal from '../domain/goal'
 import Task, { TaskPriority } from '../domain/task'
 import EventTask from '../domain/event'
+import { error, log, success, warn } from './printer'
 import config, { IConfig } from '../config'
 
-signale.config({ displayLabel: false })
-
-// have no idea why `signal.config` doesn't work so we create a new custom logger
-const { event, goal } = new signale.Signale({
-  config: { displayLabel: false },
-  types: {
-    event: {
-      badge: '⏲',
-      color: 'blue',
-      label: '',
-    },
-    goal: {
-      badge: '🎯',
-      color: 'yellow',
-      label: '',
-    },
-  },
-})
-
-const { await: wait, error, log, note, pending, success, warn } = signale
 const { blue, green, magenta, red, yellow } = chalk
+// TODO: should be accessible from configuration
 const grey = chalk.cyan.dim
 
 /**
- * Road to configurable theme
+ * TODO: Road to configurable theme
  * 1. Replace labels with below theme (like `theme.p2`)
  * 2. Have a js way to swap theme: `const theme = config.theme()`
  * 3. Offer a way in config to overwrite any individual property, from json
@@ -129,9 +112,8 @@ class Render {
       message.push(isComplete ? grey(description) : description)
     }
 
-    if (!isComplete && item.priority > 1) {
+    if (!isComplete && item.priority > 1)
       message.push(item.priority === 2 ? yellow('(!)') : red('(!!)'))
-    }
 
     return message.join(' ')
   }
@@ -182,24 +164,12 @@ class Render {
 
     const msgObj = { prefix, message, suffix: suffix.join(' ') }
 
-    if (_type === 'note') return note(msgObj)
-
-    if (item instanceof Goal) {
-      msgObj.message = `${blue('goal')}: ${message}`
-      return item.isComplete ? success(msgObj) : item.inProgress ? wait(msgObj) : goal(msgObj)
-    }
-
-    if (item instanceof EventTask) {
-      msgObj.message = `${blue(item.schedule)} ${message}`
-      if (item.duration) msgObj.suffix = grey(String(item.duration))
-
-      return item.isComplete ? success(msgObj) : item.inProgress ? wait(msgObj) : event(msgObj)
-    }
-
+    if (item instanceof Note) return item.display(msgObj)
+    if (item instanceof Goal) return item.display(msgObj)
+    if (item instanceof EventTask) return item.display(msgObj)
     // finish up by `Task` since a lot of other types inherits from it and
     // therefor `instanceof Task` is true!
-    if (item instanceof Task)
-      return item.isComplete ? success(msgObj) : item.inProgress ? wait(msgObj) : pending(msgObj)
+    if (item instanceof Task) return item.display(msgObj)
 
     throw new Error(`item of type ${_type} is not supported`)
   }
@@ -225,17 +195,10 @@ class Render {
 
     const msgObj = { prefix, message, suffix: suffix.join(' ') }
 
-    if (item instanceof Task)
-      return item.isComplete ? success(msgObj) : item.inProgress ? wait(msgObj) : pending(msgObj)
-
-    if (item._type === 'note') return note(msgObj)
-
-    if (item instanceof EventTask) {
-      msgObj.message = `${chalk.blue(item.schedule)} ${message}`
-      if (item.duration) msgObj.suffix = grey(String(item.duration))
-
-      return item.isComplete ? success(msgObj) : item.inProgress ? wait(msgObj) : event(msgObj)
-    }
+    if (item instanceof Note) return item.display(msgObj)
+    if (item instanceof Goal) return item.display(msgObj)
+    if (item instanceof EventTask) return item.display(msgObj)
+    if (item instanceof Task) return item.display(msgObj)
 
     throw new Error(`item of type ${item._type} is not supported`)
   }

@@ -2,10 +2,6 @@
 
 Thank you for taking the time to contribute to Taskbook!
 
-Please note that this project is released with a [Contributor Code of
-Conduct](code-of-conduct.md). By participating in this project you agree to
-abide by its terms.
-
 ## How to contribute
 
 ### Improve documentation
@@ -40,7 +36,6 @@ You can use issue labels to discover issues you could help us out with!
 You may find an issue is assigned, or has the [`assigned` label](https://github.com/klaussinani/taskbook/labels/assigned). Please double-check before starting on this issue because somebody else is likely already working on it
 
 ### Say hi
-
 
 ### Translating Documentation
 

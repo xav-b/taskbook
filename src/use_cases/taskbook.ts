@@ -239,14 +239,19 @@ class Taskbook {
 
   createEvent(schedule: string, desc: string[], estimate: number) {
     const { _data } = this
+
     const boards = [`@${this._configuration.eventBoard}`]
     const { description, tags } = parseOptions(desc, {
       defaultBoard: this._configuration.defaultBoard,
     })
     const id = _data.generateID()
+
+    log.info(`creating new event note ${id}`)
     const event = new EventNote({ id, description, boards, tags, schedule, estimate })
 
+    log.info(`updating new event note ${id}`, event)
     _data.set(id, event)
+
     this._save(_data)
 
     if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
@@ -371,6 +376,7 @@ class Taskbook {
 
   linkToGoal(goalID: string, taskIDs: string[]) {
     const { _data } = this
+    // TODO: verify that goal exists
     // camel-case it
     const goalTag = `+${_data.get(goalID).description.replace(' ', '')}`
     // alternative: const goalBoard = `@goal-${goalID}`
@@ -579,13 +585,22 @@ class Taskbook {
     render.markUnstarred(unstarred)
   }
 
+  estimateWork(taskid: string, estimate: string) {
+    this._validateIDs([taskid])
+
+    const task = this._data.task(taskid)
+
+    if (task === null) throw new Error(`item ${taskid} is not a task`)
+
+    task.estimate = parseDuration(parseInt(estimate))
+
+    this._save(this._data)
+
+    render.successEdit(taskid)
+  }
+
   updatePriority(priority: TaskPriority, taskids: string[]) {
     const { _data } = this
-
-    if (taskids.length === 0) {
-      render.missingID()
-      process.exit(1)
-    }
 
     const ids = this._validateIDs(taskids)
 

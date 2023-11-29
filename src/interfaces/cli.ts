@@ -4,6 +4,7 @@ import { Command } from 'commander'
 import updateNotifier from 'update-notifier'
 
 import pkg from '../../package.json'
+import render from '../interfaces/render'
 import Taskbook from '../use_cases/taskbook'
 
 const program = new Command()
@@ -23,6 +24,7 @@ program
 program
   .command('what')
   .alias('w')
+  .description('Usage examples')
   .action(() => taskbook.showManual())
 
 program
@@ -31,6 +33,8 @@ program
   .description('Switch active context')
   .argument('context')
   .action((context: string) => taskbook.switchContext(context))
+
+// visualise tasks ---------------------------------------------------------------------
 
 program
   .command('list')
@@ -47,11 +51,23 @@ program
   .action(() => taskbook.displayArchive())
 
 program
-  .command('restore')
-  .alias('r')
-  .description('Restore items from archive')
-  .argument('<items...>')
-  .action((items) => taskbook.restoreItems(items))
+  .command('timeline')
+  .alias('i')
+  .description('Display timeline view')
+  .action(() => {
+    taskbook.displayByDate()
+
+    return taskbook.displayStats()
+  })
+
+program
+  .command('find')
+  .alias('f')
+  .description('Search for items')
+  .argument('<terms...>')
+  .action((terms) => taskbook.findItems(terms))
+
+// Tasks create ------------------------------------------------------------------------
 
 program
   .command('note')
@@ -83,6 +99,22 @@ program
   .action((description, options) => taskbook.createTask(description, options.estimate))
 
 program
+  .command('goal')
+  .alias('g')
+  .description('Create a new goal')
+  .argument('<description...>')
+  .action((description) => taskbook.createGoal(description))
+
+// Tasks manage ------------------------------------------------------------------------
+
+program
+  .command('restore')
+  .alias('r')
+  .description('Restore items from archive')
+  .argument('<items...>')
+  .action((items) => taskbook.restoreItems(items))
+
+program
   .command('comment')
   .alias('z')
   .description('Comment on an item')
@@ -99,23 +131,11 @@ program
   })
 
 program
-  .command('goal')
-  .alias('g')
-  .description('Create a new goal')
-  .argument('<description...>')
-  .action((description) => taskbook.createGoal(description))
-
-program
   .command('toward')
   .description('Link tasks to a goal')
   .argument('goal')
   .argument('<tasks...>')
-  .action((goal, tasks) =>
-    taskbook.linkToGoal(
-      goal,
-      tasks.map((x: string) => parseInt(x.trim(), 10))
-    )
-  )
+  .action((goal, tasks) => taskbook.linkToGoal(goal, tasks))
 
 program
   .command('delete')
@@ -132,6 +152,51 @@ program
   .argument('<tasks...>')
   .option('-d, --duration [duration]', 'time to complete, in minutes')
   .action((tasks, options) => taskbook.checkTasks(tasks, options.duration))
+
+program
+  .command('star')
+  .alias('s')
+  .description('Star/unstar items')
+  .argument('<items...>')
+  .action((items) => taskbook.starItems(items))
+
+program
+  .command('estimate')
+  .alias('s')
+  .description('Set task estimate in minutes')
+  .argument('taskid')
+  .argument('estimate')
+  // NOTE: we kkep `estimate` as string so it remains easy in the future to
+  // support more natural time values like 25min and 4h
+  .action((taskid, estimate) => taskbook.estimateWork(taskid, estimate))
+
+program
+  .command('priority')
+  .alias('p')
+  .description('Update priority of task')
+  .argument('priority', 'Tasks new priority')
+  .argument('<tasks...>')
+  .action((priority, tasks) => {
+    // NOTE: could not figure out how to make Caporal `validator` to work
+
+    // TODO: validate against PriorityLevel type
+    if (!['1', '2', '3'].includes(priority)) {
+      render.invalidPriority()
+      process.exit(1)
+    }
+
+    taskbook.updatePriority(parseInt(priority), tasks)
+  })
+
+program
+  .command('edit')
+  .alias('e')
+  .description('Edit item description')
+  .argument('task')
+  .argument('<description...>')
+  .action((task, description) => taskbook.editDescription([`@${task}`].concat(description)))
+
+// work --------------------------------------------------------------------------------
 
 // TODO: merge with begin
 program
@@ -151,55 +216,13 @@ program
   .action((task) => taskbook.beginTask(task))
 
 program
-  .command('star')
-  .alias('s')
-  .description('Star/unstar items')
-  .argument('<items...>')
-  .action((items) => taskbook.starItems(items))
-
-program
   .command('copy')
   .alias('y')
   .description('Copy items description')
   .argument('<items...>')
   .action((items) => taskbook.copyToClipboard(items))
 
-program
-  .command('timeline')
-  .alias('i')
-  .description('Display timeline view')
-  .action(() => {
-    taskbook.displayByDate()
-
-    return taskbook.displayStats()
-  })
-
-program
-  .command('priority')
-  .alias('p')
-  .description('Update priority of task')
-  .argument('priority')
-  .argument('<tasks...>')
-  .action((priority, tasks) => {
-    // TODO: validate priority is 1, 2, 3
-    // there's also a `render.invalidPriority`
-    taskbook.updatePriority(parseInt(priority), tasks)
-  })
-
-program
-  .command('find')
-  .alias('f')
-  .description('Search for items')
-  .argument('<terms...>')
-  .action((terms) => taskbook.findItems(terms))
-
-program
-  .command('edit')
-  .alias('e')
-  .description('Edit item description')
-  .argument('task')
-  .argument('<description...>')
-  .action((task, description) => taskbook.editDescription([`@${task}`].concat(description)))
+// board -------------------------------------------------------------------------------
 
 program
   .command('move')

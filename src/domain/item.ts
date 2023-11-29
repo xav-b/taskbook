@@ -35,6 +35,8 @@ export default abstract class Item {
   boards: string[]
   tags: string[]
 
+  // abstract display(signaleObj: SignaleLogConfig) : void
+
   constructor(options: ItemProperties) {
     const now = new Date()
 

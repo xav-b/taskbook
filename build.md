@@ -1,37 +1,50 @@
 ## Things to build
 
-- [Taskline](https://github.com/perryrh0dan/taskline#configuration)
-
 ### Next
 
+- Fix `tb event`
+
+- Support `Goal` and `Event` as "plugins"
+    - Need item to implement/abstract display
+    - Support registration of commands (register(program, taskbook))
+- `theme` from config (`grey` and `board title`)
+- Durations to understand time: entering `10am` should show up as `10:00am` and rightly align
+- Replace all `throw` by proper rendering + `process.exit`
 
 ### Fix behaviors
 
 - _groupByX should belong to Catalog
-- Replace all `throw` by proper rendering + `process.exit`
 - Make board names stored lower case, displayed title case (case insensitive basically)
 - `archive` and `timeline` to support same filters as `tb list`
-- Durations to understand time: entering `10am` should show up as `10:00am` and rightly align
 
 ### Ideas
 
+- Storage: implement drizzle, sqlite and turso
+- Support duration and estimate markers instead of cli flags
 - ZSH Autocompletion (take example of the existing one)
-- Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc...
-- `@` to reference boards both by id and by name (at the very least get the `grey` customised)
+- Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
 - Time boxing and pomodoro timer
 - Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
-  that automatically to today todo
+  that automatically adds to today todo
 - Use estimates to compute unreasonable timeline (in the footer)
 - Support due date [PR #69](https://github.com/klaudiosinani/taskbook/pull/69)
 - [Filter by priority](https://github.com/klaudiosinani/taskbook/pull/136)
 - Hook system to implement a plugin system (post-delete, post-create, ...)
 - [Rename boards](https://github.com/klaudiosinani/taskbook/pull/73/files)
+- Undo previous action
+- `schedule` command to put a task on the calendar (as event) (or `mv 2 @calendar --schedule 2pm`)
+- `goal` should be a kind of extension/plugin
+  - [x] task of type goal
+  - [x] different rendering
+  - command `goal` command creates them
+  - command `toward` stars an item and tag it
+  - Can try to implement `habit` like this
 
 ### Logistics
 
+- Publish a new package
 - Write a nice documentation once stable
 - Update readmes and others to reflect my project
-- Publish a new package
 
 
 ---
@@ -45,7 +58,7 @@
 - [x] Task points ([Issue #181](https://github.com/klaudiosinani/taskbook/issues/181)) -> use +xs +l...
 - [x] Timeline to display done and pending (maybe not bad to keep archive/active segregation)
 
-
+- [x] `tb estimate` task
 - [x] Support estimates (is null for event currently)
 - [x] Logging
 - [x] Namespaces
@@ -86,12 +99,22 @@
 - Github repositories = workspaces
 - Event hooks (integrate with IFTT/Zapier)
 - Analytics
-- Habits, tasks, scheduling, 2 ways sync with google calendar
+- Habits, tasks, scheduling, 2 ways sync with google calendar, time boxing
 - Works offline
+- Mobile
+- Support for github, jira (boards are context, status are boards, etc...)
 
 ### Technical road
 
-1. Package + project + readmes
-2. Blog article on how I use it + Documentation
+- Branding
+  - Name: Bullet Board
+  - Package: bulletboard
+  - Main class: Board
+  - Command: `bb`
+- Readmes + repository + basic documentation
+- Blog article on how I use it + Documentation
 - Make it work with Supabase
-- Make Open source great: Documentation, new name, new npm package
+
+---
+
+- [Taskline](https://github.com/perryrh0dan/taskline#configuration)
