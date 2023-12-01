@@ -11,6 +11,7 @@ export interface SignaleLogConfig {
 
 // expose those methods as default to be used anywhere it makes sense, but most
 // sensibly when implementing `display` method on `Item` specialised children.
+// TODO: rename `wait` to `wip` or similar
 export const { await: wait, error, log, note, pending, success, warn } = signale
 
 // TODO: ideally we shouod only expose that interface, taking arbitrary number

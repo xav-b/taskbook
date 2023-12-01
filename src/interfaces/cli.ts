@@ -5,6 +5,7 @@ import updateNotifier from 'update-notifier'
 
 import pkg from '../../package.json'
 import render from '../interfaces/render'
+import { commands as goalCommands } from '../domain/goal'
 import Taskbook from '../use_cases/taskbook'
 
 const program = new Command()
@@ -98,13 +99,6 @@ program
   .option('-e, --estimate [estimate]', 'estimated time to complete, in minutes')
   .action((description, options) => taskbook.createTask(description, options.estimate))
 
-program
-  .command('goal')
-  .alias('g')
-  .description('Create a new goal')
-  .argument('<description...>')
-  .action((description) => taskbook.createGoal(description))
-
 // Tasks manage ------------------------------------------------------------------------
 
 program
@@ -129,13 +123,6 @@ program
   .action((itemid, tags) => {
     taskbook.tagItem(itemid, tags)
   })
-
-program
-  .command('toward')
-  .description('Link tasks to a goal')
-  .argument('goal')
-  .argument('<tasks...>')
-  .action((goal, tasks) => taskbook.linkToGoal(goal, tasks))
 
 program
   .command('delete')
@@ -236,6 +223,9 @@ program
   .command('clear')
   .description('Archive all checked items')
   .action(() => taskbook.clear())
+
+// register plugins
+goalCommands(program, taskbook)
 
 updateNotifier({ pkg }).notify()
 
