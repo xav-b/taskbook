@@ -1,7 +1,8 @@
 import chalk from 'chalk'
-import Printer, { SignaleLogConfig, wait, success } from '../interfaces/printer'
-import { ItemProperties } from './item'
-import Task from './task'
+
+import Printer, { SignaleLogConfig, wait, success } from '../../interfaces/printer'
+import { ItemProperties } from '../../domain/item'
+import Task from '../../domain/task'
 
 export interface EventProperties extends ItemProperties {
   schedule: string

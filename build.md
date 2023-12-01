@@ -1,11 +1,29 @@
 ## Things to build
 
+## Library/Plugin system
+
+The idea is to make Bullet Board a library. One can develop and import the
+modules he wants, using the extensive supporting library, and build the
+ultimately flexible task manager.
+
+This would be organised as a mono repo, made of the core supporting library (a
+package) and the plugins (also packages).
+
+We would also ship:
+- an utility to build a local cli out of custom plugins
+- presets: core (`minimal` to the original taskbook, `bujo` that implements
+Bullet Journal, and `extensive` bundling everything in the mono repo)
+
+- [ ] Merge each `plugin.config` into a config singleton that is easy to import
+- [ ] FIXME: `focus` command is aware of `Goal`
+- [ ] FIXME: `storage` is aware of every types
+- [ ] Migrate Task and Note (but no need for packages, built-in)
+- [ ] Make localjson a storage plugin
+- [ ] Mono repo setup
+
 ### Next
 
-- More performant - should be a feature
-- Support `Goal` and `Event` as "plugins"
-    - Need item to implement/abstract display
-    - Support registration of commands (register(program, taskbook))
+- Implement the library + plugin architecture
 - `theme` from config (`grey` and `board title`)
 - Durations to understand time: entering `10am` should show up as `10:00am` and rightly align
 - Replace all `throw` by proper rendering + `process.exit`
@@ -13,6 +31,7 @@
 
 ### Fix behaviors
 
+- More performant - should be a feature
 - _groupByX should belong to Catalog
 - Make board names stored lower case, displayed title case (case insensitive basically)
 - `archive` and `timeline` to support same filters as `tb list`

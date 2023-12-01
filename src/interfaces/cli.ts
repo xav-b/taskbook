@@ -5,7 +5,8 @@ import updateNotifier from 'update-notifier'
 
 import pkg from '../../package.json'
 import render from '../interfaces/render'
-import { commands as goalCommands } from '../domain/goal'
+import EventPlugin from '../plugins/bb-domain-event/plugin'
+import GoalPlugin from '../plugins/bb-domain-goal/plugin'
 import Taskbook from '../use_cases/taskbook'
 
 const program = new Command()
@@ -76,20 +77,6 @@ program
   .description('Create note')
   .argument('<description...>')
   .action((description) => taskbook.createNote(description))
-
-// NOTE: support duration as a markup? Like `last:30m`
-program
-  .command('event')
-  .alias('E')
-  .description('Create event')
-  .argument('schedule')
-  .argument('estimate')
-  .argument('<description...>')
-  .action((schedule, estimate, description) =>
-    // TODO: support `schedule` as a datetime, and trick the system of creation date
-    // so by default will display today's events
-    taskbook.createEvent(schedule, description, estimate)
-  )
 
 program
   .command('task')
@@ -225,7 +212,8 @@ program
   .action(() => taskbook.clear())
 
 // register plugins
-goalCommands(program, taskbook)
+new EventPlugin().register(program, taskbook)
+new GoalPlugin().register(program, taskbook)
 
 updateNotifier({ pkg }).notify()
 

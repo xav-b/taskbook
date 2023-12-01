@@ -15,9 +15,9 @@ import { parseOptions, parseDuration, isBoardOpt } from '../shared/parser'
 import Catalog, { CatalogInnerData } from '../domain/catalog'
 import Item from '../domain/item'
 import Task, { TaskPriority } from '../domain/task'
-import Goal from '../domain/goal'
+// FIXME: i should not need to know about Goal plugin here
+import Goal from '../plugins/bb-domain-goal/goal'
 import Note from '../domain/note'
-import EventNote from '../domain/event'
 import Logger from '../shared/logger'
 
 const log = Logger()
@@ -237,28 +237,6 @@ class Taskbook {
     render.successCreate(note)
   }
 
-  createEvent(schedule: string, desc: string[], estimate: number) {
-    const { _data } = this
-
-    const boards = [`@${this._configuration.eventBoard}`]
-    const { description, tags } = parseOptions(desc, {
-      defaultBoard: this._configuration.defaultBoard,
-    })
-    const id = _data.generateID()
-
-    log.info(`creating new event note ${id}`)
-    const event = new EventNote({ id, description, boards, tags, schedule, estimate })
-
-    log.info(`updating new event note ${id}`, event)
-    _data.set(id, event)
-
-    this._save(_data)
-
-    if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
-
-    render.successCreate(event)
-  }
-
   copyToClipboard(ids: string[]) {
     ids = this._validateIDs(ids)
 
@@ -353,54 +331,6 @@ class Taskbook {
     if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
 
     render.successCreate(task)
-  }
-
-  createGoal(desc: string[]) {
-    const { description, priority, tags } = parseOptions(desc, {
-      defaultBoard: this._configuration.defaultBoard,
-    })
-    const id = this._data.generateID()
-    // we don't parse goals but instead assign it right away to the predefined `goals` one.
-    const boards = [`@${this._configuration.goalsBoard}`]
-
-    const goal = new Goal({ id, description, boards, priority, tags })
-    const { _data } = this
-
-    _data.set(id, goal)
-    this._save(_data)
-
-    if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
-
-    render.successCreate(goal)
-  }
-
-  linkToGoal(goalID: string, taskIDs: string[]) {
-    const { _data } = this
-    // TODO: verify that goal exists
-    // camel-case it
-    const goalTag = `+${_data.get(goalID).description.replace(' ', '')}`
-    // alternative: const goalBoard = `@goal-${goalID}`
-
-    taskIDs.forEach((taskID: string) => {
-      // we use `star` to indicate a task is linked to a goal
-      _data.get(taskID).isStarred = true
-
-      // and the actual linkage to a goal happens through a tag. As a remidner,
-      // tags are used as immutable boards. We don't expect that task to ever
-      // depart from the goal in its lifetime, but we still enjoy the boards/'
-      // benefits, like listing goal's tasks together with a simple `tb list
-      // <mygoal>`
-      const tags = _data.get(taskID).tags
-      if (!tags.includes(goalTag)) tags.push(goalTag)
-    })
-
-    // we use a start to indicate this is linked to a goal
-    // FIXME: this.starItems(taskIDs) won't save it
-    render.markStarred(taskIDs)
-
-    this._save(_data)
-
-    render.successMove(taskIDs.join(', '), [goalTag])
   }
 
   deleteItems(ids: string[]) {
@@ -511,7 +441,7 @@ class Taskbook {
       // final condition
       return x === 'myboard' ? boards.push(this._configuration.defaultBoard) : attributes.push(x)
     })
-    ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => removeDuplicates(x))
+      ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => removeDuplicates(x))
 
     let data = this._filterByAttributes(attributes)
     if (boards.length > 0 || tags.length > 0)
