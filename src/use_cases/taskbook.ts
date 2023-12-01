@@ -511,7 +511,7 @@ class Taskbook {
       // final condition
       return x === 'myboard' ? boards.push(this._configuration.defaultBoard) : attributes.push(x)
     })
-      ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => removeDuplicates(x))
+    ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => removeDuplicates(x))
 
     let data = this._filterByAttributes(attributes)
     if (boards.length > 0 || tags.length > 0)
@@ -633,13 +633,18 @@ class Taskbook {
 
   async focus(taskId: string) {
     const { _data } = this
-    const task = _data.get(taskId)
+    const task = _data.task(taskId)
 
     if (task === null) throw new Error(`item ${taskId} is not a task`)
 
-    if (task._type === 'goal') {
-      const goalBoard = `@${task.description.replace(' ', '')}`
-      const subtasks = Object.values(_data).filter((t) => t.boards.includes(goalBoard))
+    // TODO: not sure about that focus thing. We need to either scratch the per
+    // item rendering, or expose it like `display` per type method
+    // implementation. But as it is now, the value is pretty limited and it
+    // does make the plugin system a bit harder to implement.
+    if (task instanceof Goal) {
+      // TODO: `task.board()` to abstract that logic in one place?
+      const goalTag = `+${task.description.replace(' ', '')}`
+      const subtasks = Object.values(_data.all()).filter((t) => t.tags.includes(goalTag))
       render._displayTitle(task.description, subtasks)
       subtasks.forEach((t) => render.displayItemByBoard(t))
     } else {

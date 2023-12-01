@@ -2,14 +2,14 @@
 
 ### Next
 
-- Fix `tb event`
-
+- More performant - should be a feature
 - Support `Goal` and `Event` as "plugins"
     - Need item to implement/abstract display
     - Support registration of commands (register(program, taskbook))
 - `theme` from config (`grey` and `board title`)
 - Durations to understand time: entering `10am` should show up as `10:00am` and rightly align
 - Replace all `throw` by proper rendering + `process.exit`
+- Support estimates and time spent in the statistics at the bottom
 
 ### Fix behaviors
 

@@ -3,10 +3,7 @@ import chalk from 'chalk'
 import { sortByPriorities } from '../shared/utils'
 // TODO: import { Item, Note, Goal, Task } from '../domain'
 import Item from '../domain/item'
-import Note from '../domain/goal'
-import Goal from '../domain/goal'
 import Task, { TaskPriority } from '../domain/task'
-import EventTask from '../domain/event'
 import { error, log, success, warn } from './printer'
 import config, { IConfig } from '../config'
 
@@ -130,8 +127,6 @@ class Render {
   }
 
   displayItemByBoard(item: Item) {
-    const { _type, tags } = item
-
     const age = item.age()
     const star = this._getStar(item)
     const comment = this._getCommentHint(item)
@@ -160,18 +155,11 @@ class Render {
       }
     }
 
-    if (tags?.length > 0) suffix.push(grey(tags.join(' ')))
+    if (item.tags?.length > 0) suffix.push(grey(item.tags.join(' ')))
 
     const msgObj = { prefix, message, suffix: suffix.join(' ') }
 
-    if (item instanceof Note) return item.display(msgObj)
-    if (item instanceof Goal) return item.display(msgObj)
-    if (item instanceof EventTask) return item.display(msgObj)
-    // finish up by `Task` since a lot of other types inherits from it and
-    // therefor `instanceof Task` is true!
-    if (item instanceof Task) return item.display(msgObj)
-
-    throw new Error(`item of type ${_type} is not supported`)
+    item.display(msgObj)
   }
 
   _displayItemByDate(item: Item) {
@@ -195,12 +183,7 @@ class Render {
 
     const msgObj = { prefix, message, suffix: suffix.join(' ') }
 
-    if (item instanceof Note) return item.display(msgObj)
-    if (item instanceof Goal) return item.display(msgObj)
-    if (item instanceof EventTask) return item.display(msgObj)
-    if (item instanceof Task) return item.display(msgObj)
-
-    throw new Error(`item of type ${item._type} is not supported`)
+    item.display(msgObj)
   }
 
   displayByBoard(data: Record<string, Item[]>, displayTasks = true) {
@@ -376,7 +359,7 @@ class Render {
 
   successCreate(item: Item) {
     const [prefix, suffix] = ['\n', grey(String(item.id))]
-    const message = `Created ${item._type}`
+    const message = `Created ${typeof item}`
     success({ prefix, message, suffix })
   }
 

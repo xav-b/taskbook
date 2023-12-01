@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid'
+import { SignaleLogConfig } from '../interfaces/printer'
 import { Maybe, UnixTimestamp } from '../types'
 
 // since we load all properties as json and initialising task with it,
@@ -25,7 +26,7 @@ export default abstract class Item {
   id: number
   protected _uid: string
   protected _createdAt: UnixTimestamp
-  abstract _type: string
+  static _type: string
   abstract isTask: boolean
 
   updatedAt: UnixTimestamp
@@ -35,7 +36,7 @@ export default abstract class Item {
   boards: string[]
   tags: string[]
 
-  // abstract display(signaleObj: SignaleLogConfig) : void
+  abstract display(signaleObj: SignaleLogConfig): void
 
   constructor(options: ItemProperties) {
     const now = new Date()

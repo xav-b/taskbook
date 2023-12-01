@@ -19,11 +19,12 @@ const grey = chalk.cyan.dim
 export default class EventTask extends Task {
   schedule: string
 
+  _type = 'event'
+
   constructor(options: EventProperties) {
     super(options)
 
     // overwrite and make it a specific type of task
-    this._type = 'event'
     this.schedule = options.schedule
   }
 

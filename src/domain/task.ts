@@ -21,13 +21,14 @@ export interface TaskProperties extends ItemProperties {
 
 export default class Task extends Item {
   protected _startedAt: Maybe<number>
-  _type: string
   duration: Maybe<number>
   estimate: Maybe<number>
   isTask: boolean
   isComplete: boolean
   inProgress: boolean
   priority: TaskPriority
+
+  _type = 'task'
 
   constructor(options: TaskProperties) {
     super(options)
@@ -44,7 +45,6 @@ export default class Task extends Item {
     // human-friendly values, and the current approach will be a problem.
     const isNew = options._uid === undefined
 
-    this._type = 'task'
     this._startedAt = options._startedAt || null
 
     this.isTask = true
