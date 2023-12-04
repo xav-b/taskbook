@@ -441,7 +441,9 @@ class Taskbook {
       // final condition
       return x === 'myboard' ? boards.push(this._configuration.defaultBoard) : attributes.push(x)
     })
-      ;[boards, tags, attributes] = [boards, tags, attributes].map((x) => removeDuplicates(x))
+    boards = removeDuplicates(boards)
+    tags = removeDuplicates(tags)
+    attributes = removeDuplicates(attributes)
 
     let data = this._filterByAttributes(attributes)
     if (boards.length > 0 || tags.length > 0)

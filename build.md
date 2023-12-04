@@ -23,23 +23,25 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 
 ### Next
 
+- Fix board's sorting by priorities
 - Implement the library + plugin architecture
+- `edit` command to consolidate description, comment, tag, board, estimate, duration, ...
 - `theme` from config (`grey` and `board title`)
-- Durations to understand time: entering `10am` should show up as `10:00am` and rightly align
+- Durations to understand time: entering `10am` should show up as `10:00am` and rightly align. Also support `--estimate` as t-shirt sizes
 - Replace all `throw` by proper rendering + `process.exit`
 - Support estimates and time spent in the statistics at the bottom
 
-### Fix behaviors
+### Technicalities
 
 - More performant - should be a feature
 - _groupByX should belong to Catalog
 - Make board names stored lower case, displayed title case (case insensitive basically)
-- `archive` and `timeline` to support same filters as `tb list`
 
 ### Ideas
 
+- `archive` and `timeline` to support same filters as `tb list`
 - Storage: implement drizzle, sqlite and turso
-- Support duration and estimate markers instead of cli flags
+- Support duration and estimate markers in addition to cli flags
 - ZSH Autocompletion (take example of the existing one)
 - Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
 - Time boxing and pomodoro timer
@@ -59,11 +61,9 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
   - command `toward` stars an item and tag it
   - Can try to implement `habit` like this
 
-### Logistics
+### Workflow notes
 
-- Publish a new package
-- Write a nice documentation once stable
-- Update readmes and others to reflect my project
+- would/should/must + stash (up next) + backlog (that also includes notes, i.e. ideas that are not tasks)
 
 
 ---
@@ -122,17 +122,6 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - Works offline
 - Mobile
 - Support for github, jira (boards are context, status are boards, etc...)
-
-### Technical road
-
-- Branding
-  - Name: Bullet Board
-  - Package: bulletboard
-  - Main class: Board
-  - Command: `bb`
-- Readmes + repository + basic documentation
-- Blog article on how I use it + Documentation
-- Make it work with Supabase
 
 ---
 

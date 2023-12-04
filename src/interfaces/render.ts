@@ -147,7 +147,8 @@ class Render {
       if (duration && duration > 0 && isComplete) {
         // convert to minutes
         let prettyDuration = ''
-        const minutes = duration / (1000 * 60)
+        // minutes and hours don't need decimals
+        const minutes = Math.round(duration / (1000 * 60))
         if (minutes > 60) prettyDuration = `${Math.ceil(minutes / 60)}h`
         else prettyDuration = `${minutes}m`
 
@@ -195,6 +196,7 @@ class Render {
       // TODO: allow other sorting strategies (default by id)
       data[board].sort(sortByPriorities).forEach((item) => {
         if (!displayTasks) return
+
         if (item instanceof Task && item.isComplete && !this._configuration.displayCompleteTasks)
           return
 

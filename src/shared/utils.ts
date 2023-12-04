@@ -12,12 +12,18 @@ export function randomHexString(length = 8) {
 
 export const removeDuplicates = (x: string[]): string[] => [...new Set(x)]
 
-export function sortByPriorities(t1: Item, t2: Item): number {
+export function sortByPriorities(t1: Item, t2: Item, pushNullDown = true): number {
+  const orderNull = pushNullDown ? -1 : 1
   // we want to have top priorities first, down to lowest so here the highest
   // priority should come as "lower" than the lowest ones
   if (t1 instanceof Task && t2 instanceof Task) return t2.priority - t1.priority
+  // if we are here, one of the 2 items is not a task. The behaviour we want is
+  // to a) jot affect the sorting of tasks with priorities, and b) push
+  // downward/upward
+  else if (t1 instanceof Task) return orderNull
+  else if (t2 instanceof Task) return -orderNull
 
-  // can't sort by priority for types that have no priority
+  // none of the items are a task, stand still
   return 0
 }
 

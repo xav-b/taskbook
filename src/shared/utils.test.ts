@@ -20,6 +20,7 @@ test('sort items by priorities', () => {
     new Task({ id: 4, description: 'qa 4', priority: 1 }),
   ]
 
+  // TODO: test sorting of board with non-task items
   const sorted = board.sort(sortByPriorities)
   expect(sorted[0].priority).toBe(3)
   expect(sorted[1].priority).toBe(2)
