@@ -9,11 +9,17 @@ export type CatalogInnerData = Record<string, Item>
 
 type FilterOutLogic = (item: Item) => boolean
 
-interface CatalogStats {
+export interface CatalogStats {
   complete: number
-  inProgress: number
   pending: number
   notes: number
+  // `render` method is quite resilient and accept mostly everything as
+  // optional. And with our subtask detection we do leverage this to only
+  // display some of those stats (there's no way to know estimate and duration
+  // there for example and that's fine)
+  inProgress?: number
+  estimate?: number
+  duration?: number
 }
 
 /**
@@ -180,20 +186,26 @@ export default class Catalog {
   }
 
   public stats(): CatalogStats {
-    let [complete, inProgress, pending, notes] = [0, 0, 0, 0]
+    let [complete, inProgress, pending, notes, estimate, duration] = [0, 0, 0, 0, 0, 0]
 
     this.ids().forEach((id) => {
       if (this.get(id).isTask) {
-        return this.task(id)?.isComplete
-          ? complete++
-          : this.task(id)?.inProgress
-            ? inProgress++
-            : pending++
+        const task = this.task(id)
+
+        // given the first check it should never happen, so throw it if it does
+        // because it's a bug
+        if (task === null) throw new Error(`item #${id} is not a task`)
+
+        estimate += task.estimate || 0
+        duration += task.duration || 0
+
+        // we actually know it's a task thanks for the first condition
+        return task.isComplete ? complete++ : task.inProgress ? inProgress++ : pending++
       }
 
       return notes++
     })
 
-    return { complete, inProgress, pending, notes }
+    return { complete, inProgress, pending, notes, estimate, duration }
   }
 }

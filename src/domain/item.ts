@@ -70,6 +70,13 @@ export default abstract class Item {
     return Math.round(Math.abs((birthday - Date.now()) / MS_IN_DAY))
   }
 
+  /**
+   * Simple wrapper to avoid duplicates
+   */
+  public addTag(tag: string) {
+    if (!this.tags.includes(tag)) this.tags.push(tag)
+  }
+
   public toJSON(): Record<string, any> {
     const jsonObj: Record<string, any> = {}
 

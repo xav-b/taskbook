@@ -30,8 +30,9 @@ export default class EventTask extends Task {
   }
 
   display(signaleObj: SignaleLogConfig) {
+    const color = this.isComplete ? grey.strikethrough : chalk.blue
     // prefix message with scheduled time
-    signaleObj.message = `${chalk.blue(this.schedule)} ${signaleObj.message}`
+    signaleObj.message = `${color(this.schedule)} ${signaleObj.message}`
 
     if (this.duration) signaleObj.suffix = grey(String(this.duration))
 

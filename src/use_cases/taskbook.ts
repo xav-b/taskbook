@@ -5,13 +5,14 @@ import tmp from 'tmp'
 import { prompt } from 'enquirer'
 import clipboardy from 'clipboardy'
 
+import { Maybe } from '../types'
 import config, { IConfig } from '../config'
 import Storage from '../store'
 import LocalStorage from '../store/localjson'
 import help from '../interfaces/help'
 import render from '../interfaces/render'
 import { removeDuplicates } from '../shared/utils'
-import { parseOptions, parseDuration, isBoardOpt } from '../shared/parser'
+import { parseOptions, isBoardOpt } from '../shared/parser'
 import Catalog, { CatalogInnerData } from '../domain/catalog'
 import Item from '../domain/item'
 import Task, { TaskPriority } from '../domain/task'
@@ -195,19 +196,20 @@ class Taskbook {
     _archive.delete(item.id)
   }
 
-  tagItem(itemid: string, tags: string[]) {
-    tags = tags.map((each) => {
-      if (!each.startsWith('+')) return `+${each}`
-      return each
-    })
+  tagItem(desc: string[]) {
+    const { description, tags } = parseOptions(desc)
+    const ids = description.split(' ')
 
     const { _data } = this
 
-    tags = removeDuplicates(tags.concat(_data.get(itemid).tags || []))
+    ids
+      .map((each) => _data.get(each))
+      .forEach((item: Item) => {
+        item.tags = removeDuplicates(tags.concat(item.tags || []))
+      })
 
-    _data.get(itemid).tags = tags
     this._save(_data)
-    render.successEdit(itemid)
+    render.successEdit(ids.join(', '))
   }
 
   createNote(desc: string[]) {
@@ -250,7 +252,7 @@ class Taskbook {
     render.successCopyToClipboard(ids)
   }
 
-  async checkTasks(ids: string[], duration: number) {
+  async checkTasks(ids: string[], duration: Maybe<number>, doneAt: Maybe<Date>) {
     // another gymnastics to allow tags in the list of ids
     const { description, tags } = parseOptions(ids, {
       defaultBoard: this._configuration.defaultBoard,
@@ -258,8 +260,8 @@ class Taskbook {
     ids = this._validateIDs(description.split(' '))
 
     const { _data } = this
-    const checked: string[] = []
-    const unchecked: string[] = []
+    const checked: Task[] = []
+    const unchecked: Task[] = []
 
     await Promise.all(
       ids.map(async (id) => {
@@ -270,10 +272,15 @@ class Taskbook {
           if (task.isComplete) task.uncheck()
           else task.check(duration, tags)
 
+          // `check` method sets `updatedAt` to now. But if the task is
+          // complete and a `doneAt` was provided, overwrite it
+          if (task.isComplete && doneAt) task.updatedAt = doneAt.getTime()
+
           // if duration is > {config number of hours}, ask confirmation
           if (
             task.isComplete &&
             task.duration &&
+            // configured as hours so comapre this in ms
             task.duration > this._configuration.suspiciousDuration * 60 * 60 * 1000
           ) {
             // @ts-ignore
@@ -296,7 +303,7 @@ class Taskbook {
             }
           }
 
-          return task.isComplete ? checked.push(id) : unchecked.push(id)
+          return task.isComplete ? checked.push(task) : unchecked.push(task)
         }
         // else invalid item id
         return
@@ -320,8 +327,7 @@ class Taskbook {
       boards,
       tags,
       priority,
-      // weird gymnastics to keep types happy, do it more elegantly
-      estimate: parseDuration(estimate || null) || undefined,
+      estimate,
     })
     const { _data } = this
 
@@ -517,14 +523,14 @@ class Taskbook {
     render.markUnstarred(unstarred)
   }
 
-  estimateWork(taskid: string, estimate: string) {
+  estimateWork(taskid: string, estimate: number) {
     this._validateIDs([taskid])
 
     const task = this._data.task(taskid)
 
     if (task === null) throw new Error(`item ${taskid} is not a task`)
 
-    task.estimate = parseDuration(parseInt(estimate))
+    task.setEstimate(estimate, this._configuration.tshirtSizes)
 
     this._save(this._data)
 

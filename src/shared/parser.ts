@@ -1,3 +1,4 @@
+import { set, addDays } from 'date-fns'
 import { TaskPriority } from '../domain/task'
 import { Maybe } from '../types'
 
@@ -14,10 +15,16 @@ interface ILineStruct {
   priority: TaskPriority
 }
 
-// TODO: parse `duration` as `2h`, `35m`, ...
-// for now expecting minutes integer
-export function parseDuration(minutes: Maybe<number>): Maybe<number> {
-  if (minutes === null || minutes <= 0) return null
+// TODO: accept strings and parse `duration` as `2h`, `35m`, ...
+// for now expecting minutes as a string
+export function parseDuration(maybeMinutes: Maybe<string>): Maybe<number> {
+  if (maybeMinutes === null || maybeMinutes === undefined) return null
+
+  // interestingly it manages to parse `'33m'` into `33`, don't know why but
+  // quite common for us (not that we want to rely on it, hence this heads up)
+  const minutes = parseInt(maybeMinutes)
+
+  if (isNaN(minutes) || minutes <= 0) return null
 
   // convert to UNIX ms so it's easy to work with timestamps created with `New
   // Date().getTime()`
@@ -74,4 +81,21 @@ export function parseOptions(input: string[], config?: ILineParserOps): ILineStr
   if (boards.length === 0 && config) boards.push(config.defaultBoard)
 
   return { boards, tags, description, priority }
+}
+
+function toFixTime(dt: Date): Date {
+  return set(dt, {
+    hours: 18,
+    minutes: 0,
+    seconds: 0,
+    milliseconds: 0,
+  }) satisfies Date
+}
+
+export function parseDate(raw: string): Date {
+  // TODO: support more
+  if (raw === 'yesterday') return toFixTime(addDays(new Date(), -1))
+
+  // by default, expect `YYYY-MM--DD` kind of input
+  return toFixTime(new Date(raw))
 }

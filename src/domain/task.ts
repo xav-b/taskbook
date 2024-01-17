@@ -1,7 +1,6 @@
 import Item, { ItemProperties } from './item'
 import { Maybe, UnixTimestamp } from '../types'
 import { SignaleLogConfig, wait, success, pending } from '../interfaces/printer'
-import { parseDuration } from '../shared/parser'
 import config from '../config'
 
 export enum TaskPriority {
@@ -17,6 +16,17 @@ export interface TaskProperties extends ItemProperties {
   inProgress?: boolean
   priority?: TaskPriority
   _startedAt?: UnixTimestamp
+}
+
+export function toSize(estimate: UnixTimestamp) {
+  const friendly = estimate / 60 / 1000
+
+  if (friendly < 5) return 'xs'
+  else if (friendly < 15) return 's'
+  else if (friendly < 1 * 60) return 'm'
+  else if (friendly < 5 * 60) return 'l'
+
+  return 'xl'
 }
 
 export default class Task extends Item {
@@ -54,15 +64,21 @@ export default class Task extends Item {
     this.isStarred = options.isStarred || false
     this.priority = options.priority || 1
 
+    // that line is redundant with the function but makes typescript happy,
+    // having the constructor to explicitely set `this.estimate` to a valid
+    // type
     this.estimate = options.estimate || null
+    this.setEstimate(options.estimate || null, isNew && conf.tshirtSizes)
+  }
+
+  public setEstimate(estimate: Maybe<number>, withSize: boolean) {
+    // it's ok to set it to null - we don't have to know or we can even cancel it
+    this.estimate = estimate
+
     // automatically tag with size shirt
-    if (options.estimate && isNew && conf.tshirtSizes) {
-      const friendly = options.estimate / 60 / 1000
-      if (friendly < 5) this.tags.push('+xs')
-      else if (friendly < 15) this.tags.push('+s')
-      else if (friendly < 1 * 60) this.tags.push('+m')
-      else if (friendly < 5 * 60) this.tags.push('+l')
-      else this.tags.push('+xl')
+    if (estimate && withSize) {
+      const size = toSize(estimate)
+      this.addTag(`+${size}`)
     }
   }
 
@@ -95,7 +111,7 @@ export default class Task extends Item {
 
     // best effort to read or infere task duration
     // 1. if it was given
-    if (duration) this.duration = parseDuration(duration)
+    if (duration) this.duration = duration
     // 2. If we used `tb begin`
     else if (this._startedAt) {
       // initial task has it duration `null` but we may also have worked on it

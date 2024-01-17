@@ -4,7 +4,9 @@ import { sortByPriorities } from '../shared/utils'
 // TODO: import { Item, Note, Goal, Task } from '../domain'
 import Item from '../domain/item'
 import Task, { TaskPriority } from '../domain/task'
+import { CatalogStats } from '../domain/catalog'
 import { error, log, success, warn } from './printer'
+import { Maybe } from '../types'
 import config, { IConfig } from '../config'
 
 const { blue, green, magenta, red, yellow } = chalk
@@ -32,6 +34,33 @@ const theme = {
   warning: yellow,
 }
  */
+
+// credits: https://www.codingbeautydev.com/blog/javascript-convert-minutes-to-hours-and-minutes
+function toHoursAndMinutes(totalMinutes: number) {
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+
+  return `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}`
+}
+
+/**
+ * Convert Unix milliseconds timestamp to human friendly minutes or hours
+ *
+ * TODO: in utils, but I'm almost sure I had it somewhere
+ */
+function msToMinutes(unixTs: Maybe<number>): string {
+  if (!unixTs) return 'n.a.'
+
+  const minutes = unixTs / 60 / 1000
+
+  // More than 1h can be displayed in partial hours
+  if (minutes > 60) {
+    return toHoursAndMinutes(minutes)
+  }
+
+  // else just round up at the minute
+  return `${Math.round(minutes)}m`
+}
 
 function _getItemStats(items: Item[]) {
   let [tasks, complete, notes] = [0, 0, 0]
@@ -145,14 +174,7 @@ class Render {
     if (item instanceof Task) {
       const { duration, isComplete } = item
       if (duration && duration > 0 && isComplete) {
-        // convert to minutes
-        let prettyDuration = ''
-        // minutes and hours don't need decimals
-        const minutes = Math.round(duration / (1000 * 60))
-        if (minutes > 60) prettyDuration = `${Math.ceil(minutes / 60)}h`
-        else prettyDuration = `${minutes}m`
-
-        suffix.push(grey(prettyDuration))
+        suffix.push(grey(msToMinutes(duration)))
       }
     }
 
@@ -223,19 +245,24 @@ class Render {
     })
   }
 
-  displayStats(opts: { complete?: number; inProgress?: number; pending?: number; notes?: number }) {
-    if (!this._configuration.displayProgressOverview) {
-      return
-    }
+  displayStats(opts: CatalogStats) {
+    if (!this._configuration.displayProgressOverview) return
 
     const complete = opts.complete || 0
     const inProgress = opts.inProgress || 0
     const pending = opts.pending || 0
     const notes = opts.notes || 0
     const percent = Math.floor(100 * (complete / (inProgress + pending + complete)))
+    const estimate = opts.estimate || 0
+    const duration = opts.duration || 0
 
     const prettyPercent =
       percent >= 75 ? green(`${percent}%`) : percent >= 50 ? yellow(`${percent}%`) : `${percent}%`
+
+    const timings = [
+      `${green(msToMinutes(duration))} ${grey('worked')}`,
+      `${blue(msToMinutes(estimate))} ${grey('estimated')}`,
+    ]
 
     const status = [
       `${green(String(complete))} ${grey('done')}`,
@@ -253,6 +280,7 @@ class Render {
     }
 
     log({ prefix: '\n ', message: grey(`${prettyPercent} of all tasks complete.`) })
+    log({ prefix: ' ', message: timings.join(grey(' / ')) })
     log({ prefix: ' ', message: status.join(grey(' · ')), suffix: '\n' })
   }
 
@@ -280,16 +308,25 @@ class Render {
     error({ prefix, message })
   }
 
-  markComplete(ids: string[]) {
-    if (ids.length === 0) return
+  markComplete(tasks: Task[]) {
+    if (tasks.length === 0) return
 
-    const [prefix, suffix] = ['\n', grey(ids.join(', '))]
-    const message = `Checked ${ids.length > 1 ? 'tasks' : 'task'}:`
+    const pretty = tasks.map((t: Task) => {
+      const duration = msToMinutes(t.duration)
+      const estimate = msToMinutes(t.estimate)
+
+      return `${t.id} (${duration}/${estimate})`
+    })
+
+    const [prefix, suffix] = ['\n', grey(pretty.join(', '))]
+    const message = `Checked ${tasks.length > 1 ? 'tasks' : 'task'}:`
     success({ prefix, message, suffix })
   }
 
-  markIncomplete(ids: string[]) {
-    if (ids.length === 0) return
+  markIncomplete(tasks: Task[]) {
+    if (tasks.length === 0) return
+
+    const ids = tasks.map((t: Task) => t.id)
 
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
     const message = `Unchecked ${ids.length > 1 ? 'tasks' : 'task'}:`
@@ -361,7 +398,10 @@ class Render {
 
   successCreate(item: Item) {
     const [prefix, suffix] = ['\n', grey(String(item.id))]
-    const message = `Created ${typeof item}`
+    // FIXME: in most cases `typeof Item` is `Object`, but that alternative is
+    // a pretty poor UX
+    // const message = `Created ${typeof item}`
+    const message = `Created ${item.constructor.name}`
     success({ prefix, message, suffix })
   }
 

@@ -49,6 +49,7 @@
     "chalk": "4.1.0",
     "clipboardy": "2.3.0",
     "commander": "^11.1.0",
+    "date-fns": "^2.30.0",
     "enquirer": "^2.4.1",
     "env-paths": "^3.0.0",
     "marked": "^10.0.0",

@@ -1,10 +1,10 @@
 ## Things to build
 
-## Library/Plugin system
+### Library/Plugin system
 
 The idea is to make Bullet Board a library. One can develop and import the
 modules he wants, using the extensive supporting library, and build the
-ultimately flexible task manager.
+ultimate flexible task manager.
 
 This would be organised as a mono repo, made of the core supporting library (a
 package) and the plugins (also packages).
@@ -21,15 +21,27 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [ ] Make localjson a storage plugin
 - [ ] Mono repo setup
 
+### Schedule of task
+
+For timeboxing technic + calendar event uniformisation, make `schedule` a task thing. Then:
+- Any task can be scheduled: there's a `tb schedule {id} 10AM` and `tb task --schedule 10AM`
+- Make all those and `tb event` to understand it as a date
+- Implement it as a sorting strategy
+- `event` plugin to support event view (like today) and calendar (all scheduled tasks)
+
+### FIXME
+
+- [ ] `tb event` says `Created EventTask x` - re-implements a pretty `item._type`
+
 ### Next
 
-- Fix board's sorting by priorities
+- Support `e:60` and `d:60` for estimates and durations
+- `archive` and `timeline` to support same filters as `tb list`
 - Implement the library + plugin architecture
 - `edit` command to consolidate description, comment, tag, board, estimate, duration, ...
 - `theme` from config (`grey` and `board title`)
-- Durations to understand time: entering `10am` should show up as `10:00am` and rightly align. Also support `--estimate` as t-shirt sizes
+- Schedule to understand time: entering `10am` should show up as `10:00am` and rightly align. Also support `--estimate` as t-shirt sizes
 - Replace all `throw` by proper rendering + `process.exit`
-- Support estimates and time spent in the statistics at the bottom
 
 ### Technicalities
 
@@ -39,7 +51,10 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 
 ### Ideas
 
-- `archive` and `timeline` to support same filters as `tb list`
+- `tb task` and `tb tag` should set estimate when given t-shirt sizes
+- Support ids range in the form of 3..7
+- Blocked stage with visual cue (also dimmed, but different icon, and not affected by clear)
+- `calendar` should organise by time (once we have time understood)
 - Storage: implement drizzle, sqlite and turso
 - Support duration and estimate markers in addition to cli flags
 - ZSH Autocompletion (take example of the existing one)
@@ -60,10 +75,12 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
   - command `goal` command creates them
   - command `toward` stars an item and tag it
   - Can try to implement `habit` like this
+- `tb find` could look accross archive too
 
 ### Workflow notes
 
-- would/should/must + stash (up next) + backlog (that also includes notes, i.e. ideas that are not tasks)
+- would/should/must + stash (up next) + backlog (that also includes notes, i.e.
+  ideas that are not tasks) + blocked (...blocked)
 
 
 ---
@@ -77,6 +94,10 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [x] Task points ([Issue #181](https://github.com/klaudiosinani/taskbook/issues/181)) -> use +xs +l...
 - [x] Timeline to display done and pending (maybe not bad to keep archive/active segregation)
 
+- [x] `tb check 34 --on 2023-12-24` `yesterday`
+- [x] `tb tag` should take any number of ids and tags (just extract them from `+`)
+- [x] Support estimates and time spent in the statistics at the bottom
+- [x] render.check task to show the duration and estimate
 - [x] `tb estimate` task
 - [x] Support estimates (is null for event currently)
 - [x] Logging

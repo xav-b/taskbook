@@ -5,6 +5,7 @@ import updateNotifier from 'update-notifier'
 
 import pkg from '../../package.json'
 import render from '../interfaces/render'
+import { parseDuration, parseDate } from '../shared/parser'
 import EventPlugin from '../plugins/bb-domain-event/plugin'
 import GoalPlugin from '../plugins/bb-domain-goal/plugin'
 import Taskbook from '../use_cases/taskbook'
@@ -84,7 +85,12 @@ program
   .description('Create task')
   .argument('<description...>')
   .option('-e, --estimate [estimate]', 'estimated time to complete, in minutes')
-  .action((description, options) => taskbook.createTask(description, options.estimate))
+  .action((description, options) => {
+    const estimate = parseDuration(options.estimate)
+    // the `undefined` trick just avoids the function to manage both null and
+    // undefined and keep a clean signature
+    taskbook.createTask(description, estimate || undefined)
+  })
 
 // Tasks manage ------------------------------------------------------------------------
 
@@ -105,10 +111,9 @@ program
 program
   .command('tag')
   .description('Add a tag to an item')
-  .argument('itemid')
-  .argument('<tags...>')
-  .action((itemid, tags) => {
-    taskbook.tagItem(itemid, tags)
+  .argument('<description...>')
+  .action((description) => {
+    taskbook.tagItem(description)
   })
 
 program
@@ -125,7 +130,12 @@ program
   .description('Check/uncheck task')
   .argument('<tasks...>')
   .option('-d, --duration [duration]', 'time to complete, in minutes')
-  .action((tasks, options) => taskbook.checkTasks(tasks, options.duration))
+  .option('--on [completion]', 'Overwrite completion date')
+  .action((tasks, options) => {
+    const duration = parseDuration(options.duration)
+    const doneAt = options.on && parseDate(options.on)
+    taskbook.checkTasks(tasks, duration, doneAt)
+  })
 
 program
   .command('star')
@@ -140,9 +150,12 @@ program
   .description('Set task estimate in minutes')
   .argument('taskid')
   .argument('estimate')
-  // NOTE: we kkep `estimate` as string so it remains easy in the future to
-  // support more natural time values like 25min and 4h
-  .action((taskid, estimate) => taskbook.estimateWork(taskid, estimate))
+  .action((taskid, estimate) => {
+    const estimateMs = parseDuration(estimate)
+    if (!estimateMs) throw new Error(`failed to parse estimate: ${estimate}`)
+
+    taskbook.estimateWork(taskid, estimateMs)
+  })
 
 program
   .command('priority')
