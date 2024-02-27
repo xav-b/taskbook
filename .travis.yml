@@ -1,8 +1,0 @@
-language: node_js
-node_js:
-  - 20
-  - 14
-  - 10
-before_install:
-  - npm install --global npm@10.1.0
-  - npm --version

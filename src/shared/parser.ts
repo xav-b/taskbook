@@ -13,6 +13,7 @@ interface ILineStruct {
   tags: string[]
   description: string
   priority: TaskPriority
+  estimate: number | null
 }
 
 // TODO: accept strings and parse `duration` as `2h`, `35m`, ...
@@ -33,9 +34,21 @@ export function parseDuration(maybeMinutes: Maybe<string>): Maybe<number> {
 
 export const isPriorityOpt = (x: string): boolean => ['p:1', 'p:2', 'p:3'].indexOf(x) > -1
 
+export const isEstimateOpt = (x: string): boolean => x.startsWith('e:')
+
 export const isBoardOpt = (x: string): boolean => x.startsWith('@')
 
 export const isTagOpt = (x: string): boolean => x.startsWith('+')
+
+export function getEstimate(desc: string[]): number | null {
+  const opt = desc.find((x) => isEstimateOpt(x))
+
+  // TODO: `as string` is because we're sure it should look like e:int but in fact
+  // this would be valid to check
+  if (opt) return parseDuration(opt.split(':').pop() as string)
+
+  return null
+}
 
 export function getPriority(desc: string[]): TaskPriority {
   const opt = desc.find((x) => isPriorityOpt(x))
@@ -58,12 +71,14 @@ export function parseOptions(input: string[], config?: ILineParserOps): ILineStr
   const boards: string[] = []
   const tags: string[] = []
   const desc: string[] = []
+  const estimate = getEstimate(input)
   const priority = getPriority(input)
 
   input.forEach((x) => {
-    // priorities: already processed
     if (isPriorityOpt(x)) {
       // priorities were already processed
+    } else if (isEstimateOpt(x)) {
+      // estimate were already processed
     } else if (isBoardOpt(x)) {
       return boards.push(x)
     } else if (isTagOpt(x)) {
@@ -80,7 +95,7 @@ export function parseOptions(input: string[], config?: ILineParserOps): ILineStr
 
   if (boards.length === 0 && config) boards.push(config.defaultBoard)
 
-  return { boards, tags, description, priority }
+  return { boards, tags, description, priority, estimate }
 }
 
 function toFixTime(dt: Date): Date {

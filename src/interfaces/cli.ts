@@ -85,11 +85,12 @@ program
   .description('Create task')
   .argument('<description...>')
   .option('-e, --estimate [estimate]', 'estimated time to complete, in minutes')
+  .option('-l, --link [link]', 'Bind a clickable link to the task')
   .action((description, options) => {
     const estimate = parseDuration(options.estimate)
     // the `undefined` trick just avoids the function to manage both null and
     // undefined and keep a clean signature
-    taskbook.createTask(description, estimate || undefined)
+    taskbook.createTask(description, estimate || undefined, options.link)
   })
 
 // Tasks manage ------------------------------------------------------------------------

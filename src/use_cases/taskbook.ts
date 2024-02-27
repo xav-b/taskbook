@@ -312,12 +312,15 @@ class Taskbook {
 
     this._save(_data)
 
+    for (const t of checked) log.info(`checking task ${t.id}`, t)
+    for (const t of unchecked) log.info(`un-checking task ${t.id}`)
+
     render.markComplete(checked)
     render.markIncomplete(unchecked)
   }
 
-  createTask(desc: string[], estimate?: number) {
-    const { boards, tags, description, priority } = parseOptions(desc, {
+  createTask(desc: string[], cliEstimate?: number, link?: string) {
+    const { boards, tags, description, priority, estimate } = parseOptions(desc, {
       defaultBoard: this._configuration.defaultBoard,
     })
     const id = this._data.generateID()
@@ -327,7 +330,8 @@ class Taskbook {
       boards,
       tags,
       priority,
-      estimate,
+      link,
+      estimate: estimate || cliEstimate,
     })
     const { _data } = this
 
@@ -600,11 +604,13 @@ class Taskbook {
       // console.log(`\n${marked.parse('---')}`)
       // console.log(marked.parse(decoded))
       // console.log(marked.parse('---'))
-      console.log('---')
+      console.log(`\n--- ${task.link || ''}`)
       console.log(decoded)
       console.log('---')
 
       render.displayStats({ complete: subtasksDone, pending: subtasksTodo, notes: 1 })
+    } else {
+      console.log(`\n--- ${task.link || ''}\n`)
     }
   }
 

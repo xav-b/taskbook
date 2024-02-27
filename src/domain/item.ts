@@ -12,6 +12,7 @@ export interface ItemProperties {
   isStarred?: boolean
   boards?: string[]
   tags?: string[]
+  link?: string
   updatedAt?: UnixTimestamp
   _createdAt?: UnixTimestamp
 }
@@ -35,6 +36,7 @@ export default abstract class Item {
   isStarred: boolean
   boards: string[]
   tags: string[]
+  link: string | null
 
   abstract display(signaleObj: SignaleLogConfig): void
 
@@ -63,6 +65,8 @@ export default abstract class Item {
     this.isStarred = options.isStarred || false
     this.boards = options.boards || []
     this.tags = options.tags || []
+
+    this.link = options.link || null
   }
 
   age(): number {

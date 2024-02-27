@@ -155,7 +155,7 @@ class Render {
     return log(titleObj)
   }
 
-  displayItemByBoard(item: Item) {
+  async displayItemByBoard(item: Item) {
     const age = item.age()
     const star = this._getStar(item)
     const comment = this._getCommentHint(item)
@@ -438,9 +438,8 @@ class Render {
 
   successCopyToClipboard(ids: string[]) {
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
-    const message = `Copied the ${
-      ids.length > 1 ? 'descriptions of items' : 'description of item'
-    }:`
+    const message = `Copied the ${ids.length > 1 ? 'descriptions of items' : 'description of item'
+      }:`
     success({ prefix, message, suffix })
   }
 
