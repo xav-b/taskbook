@@ -21,3 +21,18 @@ function tbblock() {
 function tbsearch() {
   tb archive | grep -i "$1"
 }
+
+function tbdo() {
+  echo -e "creating new task: $@"
+  local taskid=$(tb task --json $@ | jq ".id")
+
+  # FIXME: somehow an incorrect flag or argument still yield `0`
+  exit_status=$?
+  if [ $exit_status -ne 0 ]; then
+    echo -e "ERROR: $status"
+    exit $exit_status
+  fi
+
+  echo -e "task ${taskid} created - starting working on it"
+  tb begin "${taskid}"
+}

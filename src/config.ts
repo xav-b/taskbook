@@ -24,6 +24,8 @@ export interface IConfig {
   suspiciousDuration: number
   defaultContext: string
   tshirtSizes: boolean
+  plannedHoursWarn: number
+  plannedHoursError: number
 }
 
 const log = Logger()
@@ -80,7 +82,7 @@ class Config {
       eventBoard: 'calendar',
       goalsBoard: 'goals',
       // NOTE: will have to do with theming if implemented
-      priorities: { 1: chalk, 2: chalk.underline.yellow, 3: chalk.underline.red },
+      priorities: { 1: chalk, 2: chalk.yellow, 3: chalk.red },
       highlightTitle: chalk.bold.cyan,
       // TODO: have it under a `theme with the above and use it everywhere
       // grey: chalk.cyan.dim,
@@ -88,6 +90,8 @@ class Config {
       suspiciousDuration: 3 /* hours */,
       defaultContext: 'default',
       tshirtSizes: true,
+      plannedHoursWarn: 6,
+      plannedHoursError: 8,
     }
   }
 

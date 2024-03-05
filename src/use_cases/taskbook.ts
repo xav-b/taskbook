@@ -149,28 +149,6 @@ class Taskbook {
     return ordered
   }
 
-  _groupByDate(data = this._data, dates = this._data.dates()) {
-    const grouped: Record<string, Item[]> = {}
-
-    data.ids().forEach((id) => {
-      dates.forEach((date) => {
-        const dt = new Date(data.get(id).updatedAt).toDateString()
-        if (dt === date) {
-          if (Array.isArray(grouped[date])) {
-            return grouped[date].push(data.get(id))
-          }
-
-          grouped[date] = [data.get(id)]
-          return grouped[date]
-        }
-
-        return
-      })
-    })
-
-    return grouped
-  }
-
   _saveItemToArchive(item: Item) {
     const { _data, _archive } = this
 
@@ -305,7 +283,9 @@ class Taskbook {
 
           return task.isComplete ? checked.push(task) : unchecked.push(task)
         }
+
         // else invalid item id
+        // TODO: log and print something
         return
       })
     )
@@ -319,7 +299,7 @@ class Taskbook {
     render.markIncomplete(unchecked)
   }
 
-  createTask(desc: string[], cliEstimate?: number, link?: string) {
+  createTask(desc: string[], cliEstimate?: number, link?: string, renderJSON?: boolean) {
     const { boards, tags, description, priority, estimate } = parseOptions(desc, {
       defaultBoard: this._configuration.defaultBoard,
     })
@@ -340,7 +320,8 @@ class Taskbook {
 
     if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
 
-    render.successCreate(task)
+    if (renderJSON) console.log(JSON.stringify({ id: task.id, created: task.toJSON() }))
+    else render.successCreate(task)
   }
 
   deleteItems(ids: string[]) {
@@ -357,19 +338,42 @@ class Taskbook {
     render.successDelete(ids)
   }
 
+  /**
+   * Pull all archived items, group them by dates of last update, order it, and
+   * display wher the date is the board.
+   */
   displayArchive() {
-    log.debug('displaying the whole archive, by dates')
-    const groups = this._groupByDate(this._archive, this._archive.dates())
+    log.debug('displaying the whole archive, by dates ASC')
+
+    // first we want to group items by day, in a way that can be the ordered
+    // (so don't go to UI-friendly yet)
+
+    const groups = this._groupByDate(this._archive)
 
     render.displayByDate(groups)
+  }
+
+  _groupByDate(data: Catalog) {
+    const grouped: Record<string, Item[]> = {}
+
+    data.ids().forEach((id) => {
+      const item = data.get(id)
+      const dt = new Date(item.updatedAt).toLocaleDateString('en-UK')
+
+      if (grouped.hasOwnProperty(dt)) grouped[dt].push(item)
+      else grouped[dt] = [item]
+    })
+
+    return grouped
   }
 
   displayByBoard() {
     render.displayByBoard(this._groupByBoard())
   }
 
+  // expose the render method to our business logic there
   displayByDate() {
-    render.displayByDate(this._groupByDate())
+    render.displayByDate(this._groupByDate(this._data))
   }
 
   displayStats(data = this._data) {
@@ -405,10 +409,20 @@ class Taskbook {
     render.successEdit(id)
   }
 
-  findItems(terms: string[]) {
-    const result = this._data.search(terms)
+  findItems(terms: string[], inArchive: Maybe<boolean>) {
+    let result: Catalog | undefined
+    if (inArchive) result = this._archive.search(terms)
+    else this._data.search(terms)
 
-    render.displayByBoard(this._groupByBoard(result))
+    if (inArchive) {
+      // searching through archive makes more sense to display by date
+      // (we are sure about the type given the `else` above)
+      const groups = this._groupByDate(result as Catalog)
+      render.displayByDate(groups)
+    } else {
+      const groups = this._groupByBoard(result)
+      render.displayByBoard(groups)
+    }
   }
 
   _filterByBoards(boards: string[], data = this._data): Catalog {
@@ -573,9 +587,13 @@ class Taskbook {
     this.deleteItems(ids)
   }
 
-  async focus(taskId: string) {
-    const { _data } = this
-    const task = _data.task(taskId)
+  async focus(taskId: string, useArchive = false) {
+    ;[taskId] = this._validateIDs([taskId])
+
+    log.debug(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
+
+    const store = useArchive ? this._archive : this._data
+    const task = store.task(taskId)
 
     if (task === null) throw new Error(`item ${taskId} is not a task`)
 
@@ -586,7 +604,7 @@ class Taskbook {
     if (task instanceof Goal) {
       // TODO: `task.board()` to abstract that logic in one place?
       const goalTag = `+${task.description.replace(' ', '')}`
-      const subtasks = Object.values(_data.all()).filter((t) => t.tags.includes(goalTag))
+      const subtasks = Object.values(store.all()).filter((t) => t.tags.includes(goalTag))
       render._displayTitle(task.description, subtasks)
       subtasks.forEach((t) => render.displayItemByBoard(t))
     } else {

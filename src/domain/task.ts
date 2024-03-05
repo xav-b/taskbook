@@ -18,7 +18,7 @@ export interface TaskProperties extends ItemProperties {
   _startedAt?: UnixTimestamp
 }
 
-export function toSize(estimate: UnixTimestamp) {
+function toSize(estimate: UnixTimestamp) {
   const friendly = estimate / 60 / 1000
 
   if (friendly < 5) return 'xs'

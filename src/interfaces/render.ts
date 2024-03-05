@@ -1,4 +1,5 @@
 import chalk from 'chalk'
+import { parse, compareAsc } from 'date-fns'
 
 import { sortByPriorities } from '../shared/utils'
 // TODO: import { Item, Note, Goal, Task } from '../domain'
@@ -228,21 +229,35 @@ class Render {
   }
 
   displayByDate(data: Record<string, Item[]>) {
-    Object.keys(data).forEach((date) => {
-      if (this._isBoardComplete(data[date]) && !this._configuration.displayCompleteTasks) {
-        return
-      }
+    Object.keys(data)
+      // we move it to 11pm because otherwise the library considers it to be
+      // midnight and subtract to go to UTC+0, effectivelymoving to the
+      // previous day
+      // Initially this was parsed using the local timezone, so there should
+      // not be any new conversion, just use the day
+      .map((dt) => parse(`${dt} 23`, 'dd/MM/yyyy HH', new Date()))
+      .sort(compareAsc)
+      .forEach((date) => {
+        const prettyDt = date.toDateString()
+        const indexDt = date.toLocaleDateString('en-UK')
 
-      this._displayTitle(date, data[date])
-
-      data[date].forEach((item) => {
-        if (item instanceof Task && item.isComplete && !this._configuration.displayCompleteTasks) {
+        if (this._isBoardComplete(data[indexDt]) && !this._configuration.displayCompleteTasks)
           return
-        }
 
-        this._displayItemByDate(item)
+        this._displayTitle(prettyDt, data[indexDt])
+
+        data[indexDt].forEach((item) => {
+          if (
+            item instanceof Task &&
+            item.isComplete &&
+            !this._configuration.displayCompleteTasks
+          ) {
+            return
+          }
+
+          this._displayItemByDate(item)
+        })
       })
-    })
   }
 
   displayStats(opts: CatalogStats) {
@@ -259,9 +274,13 @@ class Render {
     const prettyPercent =
       percent >= 75 ? green(`${percent}%`) : percent >= 50 ? yellow(`${percent}%`) : `${percent}%`
 
+    let estimateWarning = blue
+    if (estimate / (1000 * 60 * 60) > this._configuration.plannedHoursError) estimateWarning = red
+    else if (estimate / (1000 * 60 * 60) > this._configuration.plannedHoursWarn)
+      estimateWarning = yellow
     const timings = [
       `${green(msToMinutes(duration))} ${grey('worked')}`,
-      `${blue(msToMinutes(estimate))} ${grey('estimated')}`,
+      `${estimateWarning(msToMinutes(estimate))} ${grey('estimated')}`,
     ]
 
     const status = [

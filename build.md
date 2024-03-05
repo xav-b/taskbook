@@ -1,61 +1,63 @@
 ## Things to build
 
-### FIXME
-
-- [ ] `tb archive` is not ordered
-- [ ] NaNm worked / NaNm estimated
-- [ ] `tb event` says `Created EventTask x` - re-implements a pretty `item._type`
-- [ ] Running `tb estimate` twice may create 2 t-shirt sizes
-- [ ] Typing a wrong command and having all the boards returned is not helpful nor intuitive
-
 ### Next
 
-- [ ] Improve search: fuzzy, (optionnally) look into archive
-- [ ] Improve `focus`: use glow for the comment, clickable link, merge with `begin`
-- [ ] ZSH Autocompletion (take example of the existing one)
-- [ ] Implement the library + plugin architecture
+- [ ] FEAT Improve search: fuzzy with suggestions, (optionnally) look into archive
+- [ ] FEAT `tb find` could look accross archive too, or at least offer a way to do it
+- [ ] IDEA Improve `focus`: use glow for the comment, clickable link, merge with `begin` and `do`
+- [ ] FEAT ZSH Autocompletion (take example of the existing one)
+- [ ] TECH Implement the library + plugin architecture
 
-### Technicalities
+### Todo
 
-- More performant - should be a feature
-- _groupByX should belong to Catalog
-- Make board names stored lower case, displayed title case (case insensitive basically)
-- `My Board` is annoying with that space
-- `theme` from config (`grey` and `board title`)
-- Replace all `throw` by proper rendering + `process.exit`
+### Backlog
 
-### Ideas
+- [ ] FEAT Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
+           that automatically adds to today todo
+- [ ] FEAT Undo previous action
+- [ ] FEAT Storage: implement drizzle, sqlite and turso
+- [ ] FEAT reschedule events
+- [ ] FEAT [Filter by priority](https://github.com/klaudiosinani/taskbook/pull/136)
+- [ ] FEAT [Rename boards](https://github.com/klaudiosinani/taskbook/pull/73/files)
+- [ ] FEAT Support ids range in the form of 3..7
+- [ ] FEAT Support due date [PR #69](https://github.com/klaudiosinani/taskbook/pull/69)
 
-- Time boxing and pomodoro timer
-- Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
-  that automatically adds to today todo
-- `edit` command to consolidate description, comment, tag, board, estimate, duration, ...
-- Schedule to understand time: entering `10am` should show up as `10:00am` and rightly align. Also support `--estimate` as t-shirt sizes
-- `archive` and `timeline` to support same filters as `tb list`
-- Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
-  when reviewed and automatically uncheck according to schedule (maybe add a
-  flag). Bind it to `@flashcard.{deck}`
-- Support ids range in the form of 3..7
-- `calendar` should organise by time (once we have time understood)
-- Storage: implement drizzle, sqlite and turso
-- Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
-- Use estimates to compute unreasonable timeline (in the footer)
-- Support due date [PR #69](https://github.com/klaudiosinani/taskbook/pull/69)
-- [Filter by priority](https://github.com/klaudiosinani/taskbook/pull/136)
-- Hook system to implement a plugin system (post-delete, post-create, ...)
-- [Rename boards](https://github.com/klaudiosinani/taskbook/pull/73/files)
-- Undo previous action
-- Support `--brag` flag on `tb check`, which will simply tag `+brag`
-- `schedule` command to put a task on the calendar (as event) (or `mv 2 @calendar --schedule 2pm`)
-- `goal` should be a kind of extension/plugin
-  - [x] task of type goal
-  - [x] different rendering
-  - command `goal` command creates them
-  - command `toward` stars an item and tag it
-  - Can try to implement `habit` like this
-- `tb find` could look accross archive too, or at least offer a way to do it
+- [ ] IDEA Exports/convert/import: json (done), markdown (for github sharing), sqlite dumb
+- [ ] IDEA `tb list` with dynamic sorting (prority, estimate (both should actually still combine))
+- [ ] IDEA `archive` and `timeline` to support same filters as `tb list`
+- [ ] IDEA `edit` command to consolidate description, comment, tag, board, estimate, duration, ...
+- [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
+           when reviewed and automatically uncheck according to schedule (maybe add a
+           flag). Bind it to `@flashcard.{deck}`
+- [ ] IDEA `schedule` command to put a task on the calendar (as event) (or `tb mv 2 @calendar --schedule 2pm`)
+- [ ] IDEA Time boxing and pomodoro timer
+- [ ] IDEA Hook system to implement a plugin system (post-delete, post-create, ...)
+- [ ] IDEA Schedule to understand time: entering `10am` should show up as `10:00am`
+           and rightly align. Tehn fix ordering
+- [ ] IDEA Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
+
+- [ ] FIXME Running `tb estimate` twice may create 2 t-shirt sizes
+- [ ] FIXME Typing a wrong command and having all the boards returned is not helpful nor intuitive
+- [ ] FIXME NaNm worked / NaNm estimated (or n.a.)
+- [ ] FIXME `tb event` says `Created EventTask x` - re-implements a pretty `item._type`
+- [ ] FIXME Replace all `throw` by proper rendering + `process.exit`
+
+- [ ] TECH More performant - should be a feature
+- [ ] TECH _groupByX should belong to Catalog
+- [ ] TECH Make board names stored lower case, displayed title case (case insensitive basically)
+- [ ] TECH `My Board` is annoying with that space
+- [ ] TECH `theme` from config (`grey` and `board title`)
 
 ---
+
+### Focus/begin/do
+
+Fancy - in place ov visual distraction, can i use an event plugin + TTS system
+to have regular heads up of the time left from estimate
+
+There should be one command `tb do` that works like `tb todo` except:
+- if no id is 
+
 
 ### Library/Plugin system
 
@@ -90,7 +92,7 @@ For timeboxing technic + calendar event uniformisation, make `schedule` a task t
 ### Workflow notes
 
 - would/should/must + stash (up next) + backlog (that also includes notes, i.e.
-  ideas that are not tasks) + blocked (...blocked)
+  ideas that are not tasks) + blocked (...blocked) + evergreen (more for forever notes)
 - `brag` tag to remember what to brag about
 
 
@@ -105,7 +107,12 @@ For timeboxing technic + calendar event uniformisation, make `schedule` a task t
 - [x] Task points ([Issue #181](https://github.com/klaudiosinani/taskbook/issues/181)) -> use +xs +l...
 - [x] Timeline to display done and pending (maybe not bad to keep archive/active segregation)
 - [x] Blocked stage with visual cue (also dimmed, but different icon, and not affected by clear) (use `tbblock` alias)
+- [x] Brag about tasks (use `tb c x y z +brag`)
 
+- [x] FEAT Use estimates to compute unreasonable timeline (visual clue in the footer) - should be configurable
+- [x] Support output json (task only now `--json`)
+- [x] FIXME: `tb archive` is not ordered
+- [x] FIXME: I can't see comments of archived items
 - [x] Support `e:60` for estimates and durations
 - [x] `tb check 34 --on 2023-12-24` `yesterday`
 - [x] `tb tag` should take any number of ids and tags (just extract them from `+`)

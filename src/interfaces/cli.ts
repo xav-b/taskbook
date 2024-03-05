@@ -68,7 +68,8 @@ program
   .alias('f')
   .description('Search for items')
   .argument('<terms...>')
-  .action((terms) => taskbook.findItems(terms))
+  .option('-a, --archive', 'look into archive')
+  .action((terms, opts) => taskbook.findItems(terms, opts.archive))
 
 // Tasks create ------------------------------------------------------------------------
 
@@ -86,11 +87,12 @@ program
   .argument('<description...>')
   .option('-e, --estimate [estimate]', 'estimated time to complete, in minutes')
   .option('-l, --link [link]', 'Bind a clickable link to the task')
+  .option('-j, --json', 'json output instead of console rendering')
   .action((description, options) => {
     const estimate = parseDuration(options.estimate)
     // the `undefined` trick just avoids the function to manage both null and
     // undefined and keep a clean signature
-    taskbook.createTask(description, estimate || undefined, options.link)
+    taskbook.createTask(description, estimate || undefined, options.link, options.json)
   })
 
 // Tasks manage ------------------------------------------------------------------------
@@ -192,7 +194,8 @@ program
   .alias('F')
   .description('Start working on a task')
   .argument('task')
-  .action((task) => taskbook.focus(task))
+  .option('-a, --archive', 'use achive instead of normal storage')
+  .action((task, opts) => taskbook.focus(task, opts.archive))
 
 program
   .command('begin')

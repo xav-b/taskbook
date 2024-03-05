@@ -164,27 +164,6 @@ export default class Catalog {
     return new Catalog(items)
   }
 
-  /**
-   * Compile list of task dates,
-   * which are the timestamp the task was last updated
-   * (or the note and event was created?)
-   */
-  dates(): string[] {
-    const dates: string[] = []
-
-    this.ids().forEach((id) => {
-      // for migration purpose, as `updatedAt should always be set`
-      let dt = new Date().toDateString()
-
-      if (this.get(id).updatedAt) dt = new Date(this.get(id).updatedAt as number).toDateString()
-
-      // avoid duplicates
-      if (dates.indexOf(dt) === -1) dates.push(dt)
-    })
-
-    return dates
-  }
-
   public stats(): CatalogStats {
     let [complete, inProgress, pending, notes, estimate, duration] = [0, 0, 0, 0, 0, 0]
 
