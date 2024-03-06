@@ -22,3 +22,7 @@ parts
 stage
 snap
 *.snap
+
+# google api secrets
+token.json
+gapi-*.json

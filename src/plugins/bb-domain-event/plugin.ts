@@ -30,5 +30,7 @@ export default class EventPlugin extends BulletBoardPlugin {
         // so by default will display today's events
         commands.create(board, schedule, description, estimateMs)
       })
+
+    program.command('event.sync').action(async () => await commands.syncGCal(board))
   }
 }

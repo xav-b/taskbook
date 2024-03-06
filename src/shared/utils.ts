@@ -18,8 +18,8 @@ export function sortByPriorities(t1: Item, t2: Item, pushNullDown = true): numbe
   // priority should come as "lower" than the lowest ones
   if (t1 instanceof Task && t2 instanceof Task) return t2.priority - t1.priority
   // if we are here, one of the 2 items is not a task. The behaviour we want is
-  // to a) jot affect the sorting of tasks with priorities, and b) push
-  // downward/upward
+  // to a) not affect the sorting of tasks with priorities, and b) push
+  // downward/upward (depending on flag)
   else if (t1 instanceof Task) return orderNull
   else if (t2 instanceof Task) return -orderNull
 

@@ -33,6 +33,9 @@ function tbdo() {
     exit $exit_status
   fi
 
-  echo -e "task ${taskid} created - starting working on it"
+  echo -e "task ${taskid} created - opening notes"
+  tb comment "${taskid}"
+
+  echo -e "task ${taskid} configured - starting working on it"
   tb begin "${taskid}"
 }
