@@ -1,7 +1,7 @@
 {
   "name": "taskbook",
   "productName": "Taskbook",
-  "version": "0.10.0",
+  "version": "0.11.1",
   "description": "Tasks, boards & notes for the command-line habitat",
   "repository": "klaussinani/taskbook",
   "license": "MIT",
@@ -46,12 +46,15 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@google-cloud/local-auth": "2.1.0",
     "chalk": "4.1.0",
     "clipboardy": "2.3.0",
     "commander": "^11.1.0",
     "date-fns": "^2.30.0",
+    "debug": "^4.3.4",
     "enquirer": "^2.4.1",
     "env-paths": "^3.0.0",
+    "googleapis": "105",
     "marked": "^10.0.0",
     "marked-terminal": "^6.1.0",
     "meow": "^12.1.1",
@@ -64,6 +67,7 @@
   },
   "devDependencies": {
     "@types/chalk": "^2.2.0",
+    "@types/debug": "^4",
     "@types/marked-terminal": "^6.0.1",
     "@types/node": "^20.9.1",
     "@types/signale": "^1.4.7",

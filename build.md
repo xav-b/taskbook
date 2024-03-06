@@ -2,33 +2,33 @@
 
 ### Next
 
-- [ ] FEAT Improve search: fuzzy with suggestions, (optionnally) look into archive
-- [ ] FEAT `tb find` could look accross archive too, or at least offer a way to do it
 - [ ] IDEA Improve `focus`: use glow for the comment, clickable link, merge with `begin` and `do`
-- [ ] FEAT ZSH Autocompletion (take example of the existing one)
+- [ ] FEAT Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
+           that automatically adds to today todo
+- [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
+           when reviewed and automatically uncheck according to schedule (maybe add a
+           flag). Bind it to `@flashcard.{deck}`
 - [ ] TECH Implement the library + plugin architecture
 
 ### Todo
 
 ### Backlog
 
-- [ ] FEAT Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
-           that automatically adds to today todo
-- [ ] FEAT Undo previous action
+- [ ] FEAT ZSH Autocompletion (take example of the existing one)
 - [ ] FEAT Storage: implement drizzle, sqlite and turso
+- [ ] FEAT Undo previous action
 - [ ] FEAT reschedule events
 - [ ] FEAT [Filter by priority](https://github.com/klaudiosinani/taskbook/pull/136)
 - [ ] FEAT [Rename boards](https://github.com/klaudiosinani/taskbook/pull/73/files)
 - [ ] FEAT Support ids range in the form of 3..7
 - [ ] FEAT Support due date [PR #69](https://github.com/klaudiosinani/taskbook/pull/69)
+- [ ] FEAT Have task link rendered and clickable
 
+- [ ] IDEA Use taskbook to track those items, in the open on Github
 - [ ] IDEA Exports/convert/import: json (done), markdown (for github sharing), sqlite dumb
-- [ ] IDEA `tb list` with dynamic sorting (prority, estimate (both should actually still combine))
 - [ ] IDEA `archive` and `timeline` to support same filters as `tb list`
 - [ ] IDEA `edit` command to consolidate description, comment, tag, board, estimate, duration, ...
-- [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
-           when reviewed and automatically uncheck according to schedule (maybe add a
-           flag). Bind it to `@flashcard.{deck}`
+- [ ] IDEA `tb list` with dynamic sorting (prority, estimate (both should actually still combine))
 - [ ] IDEA `schedule` command to put a task on the calendar (as event) (or `tb mv 2 @calendar --schedule 2pm`)
 - [ ] IDEA Time boxing and pomodoro timer
 - [ ] IDEA Hook system to implement a plugin system (post-delete, post-create, ...)
@@ -56,7 +56,10 @@ Fancy - in place ov visual distraction, can i use an event plugin + TTS system
 to have regular heads up of the time left from estimate
 
 There should be one command `tb do` that works like `tb todo` except:
-- if no id is 
+- Add task `link` in the comment
+- `--notebook` to open the comment
+- start/Fork a process to countdown from estimate
+- support `--pomodoro 25` to split work and breaks
 
 
 ### Library/Plugin system
@@ -80,14 +83,7 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [ ] Make localjson a storage plugin
 - [ ] Mono repo setup
 
-### Schedule of task
-
-For timeboxing technic + calendar event uniformisation, make `schedule` a task thing. Then:
-- Any task can be scheduled: there's a `tb schedule {id} 10AM` and `tb task --schedule 10AM`
-- Make all those and `tb event` to understand it as a date
-- Implement it as a sorting strategy
-- `event` plugin to support event view (like today) and calendar (all scheduled tasks)
-- `tb focus` to support `--pomodoro 25`
+---
 
 ### Workflow notes
 
@@ -109,6 +105,7 @@ For timeboxing technic + calendar event uniformisation, make `schedule` a task t
 - [x] Blocked stage with visual cue (also dimmed, but different icon, and not affected by clear) (use `tbblock` alias)
 - [x] Brag about tasks (use `tb c x y z +brag`)
 
+- [x] FEAT Improve search: look into archive
 - [x] FEAT Use estimates to compute unreasonable timeline (visual clue in the footer) - should be configurable
 - [x] Support output json (task only now `--json`)
 - [x] FIXME: `tb archive` is not ordered
@@ -165,5 +162,12 @@ For timeboxing technic + calendar event uniformisation, make `schedule` a task t
 - Support for github, jira (boards are context, status are boards, etc...)
 
 ---
+
+## Google Calendar integration
+
+Guide: https://developers.google.com/calendar/api/quickstart/nodejs?authuser=1
+Download `gapi-token.json` from https://console.cloud.google.com/apis/credentials?authuser=1&project=your-project
+
+## Resources
 
 - [Taskline](https://github.com/perryrh0dan/taskline#configuration)

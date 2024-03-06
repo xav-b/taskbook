@@ -139,8 +139,10 @@ class Render {
       message.push(isComplete ? grey(description) : description)
     }
 
-    if (!isComplete && item.priority > 1)
-      message.push(item.priority === 2 ? yellow('(!)') : red('(!!)'))
+    // NOTE: alternatively we could leave the actual description as-is, and
+    // simply add a prefix to indicate urgency
+    // if (!isComplete && item.priority > 1)
+    //   message.push(item.priority === 2 ? yellow('(!)') : red('(!!)'))
 
     return message.join(' ')
   }
