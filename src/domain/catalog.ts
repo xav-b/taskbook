@@ -60,6 +60,13 @@ export default class Catalog {
     return max + 1
   }
 
+  /**
+   * Unlike other methods, use the internal id to check for existence.
+   */
+  public exists(uid: string): boolean {
+    return Object.values(this.all()).find((each) => each._uid === uid) !== undefined
+  }
+
   private _isComplete(item: Item) {
     return item instanceof Task && item.isComplete
   }
@@ -100,8 +107,12 @@ export default class Catalog {
     return tags
   }
 
-  get(id: string): Item {
+  public get(id: string): Item {
     return this._items[id]
+  }
+
+  public uget(uid: string): Maybe<Item> {
+    return Object.values(this.all()).find((each) => each._uid === uid) || null
   }
 
   set(id: number, data: Item) {

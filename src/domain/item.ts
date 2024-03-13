@@ -25,7 +25,7 @@ export default abstract class Item {
   // rething how ids are managed between different kind of storage.
   // (restore management of ids is probaably related)
   id: number
-  protected _uid: string
+  _uid: string
   protected _createdAt: UnixTimestamp
   static _type: string
   abstract isTask: boolean

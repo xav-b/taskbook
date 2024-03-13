@@ -12,7 +12,7 @@ REFRESH_SECONDS=10
 while true; do
   clear
 
-  tb list must should would calendar pending
+  tb list must should would calendar
 
   # refresh every x seconds
   sleep $REFRESH_SECONDS

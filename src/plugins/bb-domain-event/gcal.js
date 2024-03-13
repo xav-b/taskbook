@@ -12,6 +12,9 @@ const debug = require('debug')('tb:plugin:event:gcal')
 const { authenticate } = require('@google-cloud/local-auth')
 const { google } = require('googleapis')
 
+import { today, prettyTzOffset } from './utils'
+
+const CALENDAR_VERSION = 'v3'
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 // The file token.json stores the user's access and refresh tokens, and is
@@ -87,7 +90,7 @@ async function authorize() {
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
 async function listEvents(auth, opts) {
-  const calendar = google.calendar({ version: 'v3', auth })
+  const calendar = google.calendar({ version: CALENDAR_VERSION, auth })
 
   const res = await calendar.events.list({
     calendarId: 'primary',
@@ -121,6 +124,7 @@ async function listEvents(auth, opts) {
         const endTime = new Date(event.end.dateTime)
 
         return {
+          id: event.id,
           title: event.summary,
           description: event.description || null,
           link: event.htmlLink,
@@ -138,13 +142,12 @@ async function _example() {
   const auth = await authorize()
 
   // get today events
-  const todayDate = new Date().toISOString().replace(/T.*/, '')
-  const timeMin = `${todayDate}T00:00:00+08:00`
-  const timeMax = `${todayDate}T23:59:59+08:00`
+  const timeMin = `${today()}T00:00:00${prettyTzOffset}`
+  const timeMax = `${today()}T23:59:59${prettyTzOffset}`
 
   const events = await listEvents(auth, { timeMin, timeMax })
 
   console.log(events)
 }
 
-module.exports = { authorize, listEvents }
+export default { authorize, listEvents }

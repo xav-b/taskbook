@@ -1,10 +1,18 @@
 ## Things to build
 
+### Make dates awesome
+ 
+- `reschedule` command
+
 ### Next
 
+- [ ] TECH `My Board` is annoying with that space - make it configuable and default to `backlog`
+- [ ] FEAT calendar sync:
+      - Use `schedule` for task ordering on `calendar`
+      - `event.reschedule` command
+      - Support calendar description as task comment, and `--notebook`
+      - `event.schedule` command for a task
 - [ ] IDEA Improve `focus`: use glow for the comment, clickable link, merge with `begin` and `do`
-- [ ] FEAT Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
-           that automatically adds to today todo
 - [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
            when reviewed and automatically uncheck according to schedule (maybe add a
            flag). Bind it to `@flashcard.{deck}`
@@ -14,6 +22,10 @@
 
 ### Backlog
 
+- [ ] FEAT Have task link rendered and clickable
+- [ ] FEAT Calendar
+        - Re-sync idempotent and update changes
+        - FIX syncing before 8am (i guess it's a timezone thing)
 - [ ] FEAT ZSH Autocompletion (take example of the existing one)
 - [ ] FEAT Storage: implement drizzle, sqlite and turso
 - [ ] FEAT Undo previous action
@@ -22,7 +34,8 @@
 - [ ] FEAT [Rename boards](https://github.com/klaudiosinani/taskbook/pull/73/files)
 - [ ] FEAT Support ids range in the form of 3..7
 - [ ] FEAT Support due date [PR #69](https://github.com/klaudiosinani/taskbook/pull/69)
-- [ ] FEAT Have task link rendered and clickable
+- [ ] FEAT Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
+           that automatically adds to today todo
 
 - [ ] IDEA Use taskbook to track those items, in the open on Github
 - [ ] IDEA Exports/convert/import: json (done), markdown (for github sharing), sqlite dumb
@@ -32,8 +45,6 @@
 - [ ] IDEA `schedule` command to put a task on the calendar (as event) (or `tb mv 2 @calendar --schedule 2pm`)
 - [ ] IDEA Time boxing and pomodoro timer
 - [ ] IDEA Hook system to implement a plugin system (post-delete, post-create, ...)
-- [ ] IDEA Schedule to understand time: entering `10am` should show up as `10:00am`
-           and rightly align. Tehn fix ordering
 - [ ] IDEA Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
 
 - [ ] FIXME Running `tb estimate` twice may create 2 t-shirt sizes
@@ -45,7 +56,6 @@
 - [ ] TECH More performant - should be a feature
 - [ ] TECH _groupByX should belong to Catalog
 - [ ] TECH Make board names stored lower case, displayed title case (case insensitive basically)
-- [ ] TECH `My Board` is annoying with that space
 - [ ] TECH `theme` from config (`grey` and `board title`)
 
 ---
@@ -90,6 +100,7 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - would/should/must + stash (up next) + backlog (that also includes notes, i.e.
   ideas that are not tasks) + blocked (...blocked) + evergreen (more for forever notes)
 - `brag` tag to remember what to brag about
+- `frog` and `s xs` tags to _eat the frog_ and tackle small things
 
 
 ---
@@ -105,6 +116,8 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [x] Blocked stage with visual cue (also dimmed, but different icon, and not affected by clear) (use `tbblock` alias)
 - [x] Brag about tasks (use `tb c x y z +brag`)
 
+- [x] FEAT `tb t --notebook` will create the task AND open the comment
+- [x] Sync today events from google calendar
 - [x] FEAT Improve search: look into archive
 - [x] FEAT Use estimates to compute unreasonable timeline (visual clue in the footer) - should be configurable
 - [x] Support output json (task only now `--json`)

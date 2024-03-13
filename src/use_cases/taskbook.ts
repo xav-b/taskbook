@@ -38,7 +38,7 @@ class Taskbook {
     this._data = this._storage.get()
   }
 
-  _save(data: Catalog) {
+  _save(data: Catalog = this._data) {
     this._storage.set(data.all())
   }
 
@@ -299,7 +299,13 @@ class Taskbook {
     render.markIncomplete(unchecked)
   }
 
-  createTask(desc: string[], cliEstimate?: number, link?: string, renderJSON?: boolean) {
+  createTask(
+    desc: string[],
+    cliEstimate?: number,
+    link?: string,
+    notebook?: boolean,
+    renderJSON?: boolean
+  ) {
     const { boards, tags, description, priority, estimate } = parseOptions(desc, {
       defaultBoard: this._configuration.defaultBoard,
     })
@@ -322,6 +328,8 @@ class Taskbook {
 
     if (renderJSON) console.log(JSON.stringify({ id: task.id, created: task.toJSON() }))
     else render.successCreate(task)
+
+    if (notebook) this.comment(String(id))
   }
 
   deleteItems(ids: string[]) {
@@ -662,14 +670,17 @@ class Taskbook {
     const editor = this._configuration.editor
 
     const { _data } = this
+    const item = _data.get(itemId)
 
     const tmpFile = tmp.fileSync({ mode: 0o644, prefix: 'taskbook-', postfix: '.md' })
 
-    let initContent = `# ID ${itemId} - ${_data.get(itemId).description}
+    let initContent = `# ID ${itemId} - ${item.description}
 
 > _write content here..._
 `
-    if (_data.get(itemId).comment)
+    if (item.link) initContent += `\n🔗 [Resource](${item.link})\n`
+
+    if (item.comment)
       // initialise the file with the existing comment
       initContent = Buffer.from(_data.get(itemId).comment as string, 'base64').toString('ascii')
     fs.writeFileSync(tmpFile.fd, initContent)
@@ -680,7 +691,7 @@ class Taskbook {
 
     const encoded = Buffer.from(comment).toString('base64')
 
-    _data.get(itemId).comment = encoded
+    item.comment = encoded
 
     this._save(_data)
 

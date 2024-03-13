@@ -1,12 +1,34 @@
 import chalk from 'chalk'
 
 import Printer, { SignaleLogConfig, wait, success } from '../../interfaces/printer'
-import { ItemProperties } from '../../domain/item'
+import { TaskProperties } from '../../domain/task'
+import { UnixTimestamp } from '../../types'
 import Task from '../../domain/task'
 
-export interface EventProperties extends ItemProperties {
-  schedule: string
-  estimate: number
+/**
+ * Render a unix timestamp to, e.g., 10:30am
+ */
+function prettyToday(ts: UnixTimestamp) {
+  const dt = new Date(ts)
+
+  // TODO: we could make it configurable to show either 04:00pm or 16:00
+  const startH = dt.getHours()
+  const startHStr = startH < 10 ? `0${startH}` : String(startH)
+
+  const startM = dt.getMinutes()
+  const startMStr = startM < 10 ? `0${startM}` : String(startM)
+
+  const xm = startH >= 12 ? 'pm' : 'am'
+
+  return `${startHStr}:${startMStr}${xm}`
+}
+
+/*
+ * Logically, an event is a scheduled task.
+ */
+export interface EventProperties extends TaskProperties {
+  // timestamp as an epoch ms (to make it consistent with the `createdAt` etc...)
+  schedule: UnixTimestamp
 }
 
 const { custom } = Printer('⏲')
@@ -18,7 +40,7 @@ const grey = chalk.cyan.dim
  * They may have priorities, and they can be done, in progress, etc...
  */
 export default class EventTask extends Task {
-  schedule: string
+  schedule: UnixTimestamp
 
   _type = 'event'
 
@@ -30,9 +52,11 @@ export default class EventTask extends Task {
   }
 
   display(signaleObj: SignaleLogConfig) {
+    const prettyTime = prettyToday(this.schedule)
     const color = this.isComplete ? grey.strikethrough : chalk.blue
     // prefix message with scheduled time
-    signaleObj.message = `${color(this.schedule)} ${signaleObj.message}`
+    // FIXME: this.schedule is a timestamp now
+    signaleObj.message = `${color(prettyTime)} ${signaleObj.message}`
 
     if (this.duration) signaleObj.suffix = grey(String(this.duration))
 
