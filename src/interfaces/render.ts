@@ -1,13 +1,12 @@
 import chalk from 'chalk'
 import { parse, compareAsc } from 'date-fns'
 
-import { sortByPriorities } from '../shared/utils'
+import { sortByPriorities, msToMinutes } from '../shared/utils'
 // TODO: import { Item, Note, Goal, Task } from '../domain'
 import Item from '../domain/item'
 import Task, { TaskPriority } from '../domain/task'
 import { CatalogStats } from '../domain/catalog'
 import { error, log, success, warn } from './printer'
-import { Maybe } from '../types'
 import config, { IConfig } from '../config'
 
 const { blue, green, magenta, red, yellow } = chalk
@@ -35,33 +34,6 @@ const theme = {
   warning: yellow,
 }
  */
-
-// credits: https://www.codingbeautydev.com/blog/javascript-convert-minutes-to-hours-and-minutes
-function toHoursAndMinutes(totalMinutes: number) {
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-
-  return `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}`
-}
-
-/**
- * Convert Unix milliseconds timestamp to human friendly minutes or hours
- *
- * TODO: in utils, but I'm almost sure I had it somewhere
- */
-function msToMinutes(unixTs: Maybe<number>): string {
-  if (!unixTs) return 'n.a.'
-
-  const minutes = unixTs / 60 / 1000
-
-  // More than 1h can be displayed in partial hours
-  if (minutes > 60) {
-    return toHoursAndMinutes(minutes)
-  }
-
-  // else just round up at the minute
-  return `${Math.round(minutes)}m`
-}
 
 function _getItemStats(items: Item[]) {
   let [tasks, complete, notes] = [0, 0, 0]
@@ -104,6 +76,12 @@ class Render {
 
   _getCommentHint(item: Item) {
     return item.comment ? blue('✎') : ''
+  }
+
+  _getLinkHint(item: Item) {
+    // TODO: that's where it would be so cool to have a clickable link
+    // NOTE: link and globe ascii just seem too much
+    return item.link ? blue.bold('@') : ''
   }
 
   _buildTitle(key: string, items: Item[]) {
@@ -162,6 +140,7 @@ class Render {
     const age = item.age()
     const star = this._getStar(item)
     const comment = this._getCommentHint(item)
+    const link = this._getLinkHint(item)
     const suffix = []
     let message = ''
 
@@ -172,6 +151,7 @@ class Render {
 
     if (age !== 0) suffix.push(grey(`${age}d`))
     if (star) suffix.push(star)
+    if (link) suffix.push(link)
     if (comment.length > 0) suffix.push(comment)
 
     if (item instanceof Task) {
@@ -459,8 +439,9 @@ class Render {
 
   successCopyToClipboard(ids: string[]) {
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
-    const message = `Copied the ${ids.length > 1 ? 'descriptions of items' : 'description of item'
-      }:`
+    const message = `Copied the ${
+      ids.length > 1 ? 'descriptions of items' : 'description of item'
+    }:`
     success({ prefix, message, suffix })
   }
 

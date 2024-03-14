@@ -1,14 +1,14 @@
 {
   "name": "taskbook",
   "productName": "Taskbook",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "description": "Tasks, boards & notes for the command-line habitat",
   "repository": "klaussinani/taskbook",
   "license": "MIT",
   "author": {
-    "name": "Klaus Sinani",
-    "email": "klaussinani@gmail.com",
-    "url": "https://klaussinani.github.io"
+    "name": "Xavier Bruhiere",
+    "email": "xavier.bruhiere@gmail.com",
+    "url": "https://xavierbruhiere.com"
   },
   "bin": {
     "tb": "dist/src/interfaces/cli.js"

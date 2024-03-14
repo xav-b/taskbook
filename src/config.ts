@@ -78,7 +78,11 @@ class Config {
       displayProgressOverview: true,
       displayWarnings: true,
       enableCopyID: false,
-      defaultBoard: 'My Board',
+      // note `taskbook` was previously using `My board` but that space and
+      // capital letter is no longer supported. There were special handlers of
+      // `myboard` that ultimately we could try to support (slugify for
+      // storage)
+      defaultBoard: 'backlog',
       eventBoard: 'calendar',
       goalsBoard: 'goals',
       // NOTE: will have to do with theming if implemented

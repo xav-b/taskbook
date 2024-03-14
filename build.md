@@ -6,13 +6,6 @@
 
 ### Next
 
-- [ ] TECH `My Board` is annoying with that space - make it configuable and default to `backlog`
-- [ ] FEAT calendar sync:
-      - Use `schedule` for task ordering on `calendar`
-      - `event.reschedule` command
-      - Support calendar description as task comment, and `--notebook`
-      - `event.schedule` command for a task
-- [ ] IDEA Improve `focus`: use glow for the comment, clickable link, merge with `begin` and `do`
 - [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
            when reviewed and automatically uncheck according to schedule (maybe add a
            flag). Bind it to `@flashcard.{deck}`
@@ -22,14 +15,17 @@
 
 ### Backlog
 
+- [ ] FEAT calendar sync:
+      - Fix tz issue of sync (running at 6 brings yesterday events)
+      - Use `schedule` for task ordering on `calendar`
+      - `event.reschedule` command
+      - Support calendar description as task comment, and `--notebook`
+      - `event.schedule` command for a task
+      - Support multiple calendars
 - [ ] FEAT Have task link rendered and clickable
-- [ ] FEAT Calendar
-        - Re-sync idempotent and update changes
-        - FIX syncing before 8am (i guess it's a timezone thing)
 - [ ] FEAT ZSH Autocompletion (take example of the existing one)
 - [ ] FEAT Storage: implement drizzle, sqlite and turso
 - [ ] FEAT Undo previous action
-- [ ] FEAT reschedule events
 - [ ] FEAT [Filter by priority](https://github.com/klaudiosinani/taskbook/pull/136)
 - [ ] FEAT [Rename boards](https://github.com/klaudiosinani/taskbook/pull/73/files)
 - [ ] FEAT Support ids range in the form of 3..7
@@ -55,7 +51,7 @@
 
 - [ ] TECH More performant - should be a feature
 - [ ] TECH _groupByX should belong to Catalog
-- [ ] TECH Make board names stored lower case, displayed title case (case insensitive basically)
+- [ ] TECH Make board names stored lower case, displayed title case (case insensitive basically) (`My Board` -> `my-board`)
 - [ ] TECH `theme` from config (`grey` and `board title`)
 
 ---
@@ -116,6 +112,7 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [x] Blocked stage with visual cue (also dimmed, but different icon, and not affected by clear) (use `tbblock` alias)
 - [x] Brag about tasks (use `tb c x y z +brag`)
 
+- [x] FEAT `print` task to json and markdown
 - [x] FEAT `tb t --notebook` will create the task AND open the comment
 - [x] Sync today events from google calendar
 - [x] FEAT Improve search: look into archive

@@ -2,6 +2,7 @@
 
 import { Command } from 'commander'
 import updateNotifier from 'update-notifier'
+const debug = require('debug')('tb:cli')
 
 import pkg from '../../package.json'
 import render from '../interfaces/render'
@@ -10,9 +11,12 @@ import EventPlugin from '../plugins/bb-domain-event/plugin'
 import GoalPlugin from '../plugins/bb-domain-goal/plugin'
 import Taskbook from '../use_cases/taskbook'
 
+debug('instantiating commander')
 const program = new Command()
+debug('instantiating Taskbook')
 const taskbook = new Taskbook()
 
+debug('registering commands')
 // TODO: group commands logically together
 program
   .name(pkg.name)
@@ -195,14 +199,14 @@ program
 
 // work --------------------------------------------------------------------------------
 
-// TODO: merge with begin
 program
-  .command('focus')
-  .alias('F')
-  .description('Start working on a task')
+  .command('print')
+  .alias('p')
+  .description('display task details')
   .argument('task')
+  .option('-f, --format [duration]', 'output format', 'markdown')
   .option('-a, --archive', 'use achive instead of normal storage')
-  .action((task, opts) => taskbook.focus(task, opts.archive))
+  .action((task, opts) => taskbook.printTask(task, opts.format, opts.archive))
 
 program
   .command('begin')
@@ -239,6 +243,8 @@ program
 new EventPlugin().register(program, taskbook)
 new GoalPlugin().register(program, taskbook)
 
+debug('checking on updates')
 updateNotifier({ pkg }).notify()
 
+debug('parsing command line')
 program.parse()

@@ -1,5 +1,7 @@
+import { formatDistance } from 'date-fns'
 import Item, { ItemProperties } from './item'
 import { Maybe, UnixTimestamp } from '../types'
+import { msToMinutes } from '../shared/utils'
 import { SignaleLogConfig, wait, success, pending } from '../interfaces/printer'
 import config from '../config'
 
@@ -144,5 +146,44 @@ export default class Task extends Item {
     if (this.isComplete) success(signaleObj)
     else if (this.inProgress) wait(signaleObj)
     else pending(signaleObj)
+  }
+
+  decodeComment(): Maybe<string> {
+    if (!this.comment) return null
+
+    return Buffer.from(this.comment, 'base64').toString('ascii')
+  }
+
+  /**
+   * Display task details in markdown format.
+   */
+  toMarkdown() {
+    const comment = this.decodeComment()
+    const ago = formatDistance(new Date(this._createdAt), new Date(), { addSuffix: true })
+    // saving an interesting past feature, pulling tasks from the comments
+    // const subtasksDone = (decoded.match(/\[x\]/g) || []).length
+    // const subtasksTodo = (decoded.match(/\[\s\]/g) || []).length
+
+    console.log(`\n## ${this.id} - ${this.description}\n`)
+
+    console.log(`
+| Meta | Value |
+| ---- | ----- |
+| UID | ${this._uid} |
+| Created | ${ago} |
+| Priority | ${TaskPriority[this.priority]} |
+| Estimate | ${msToMinutes(this.estimate)} |
+`)
+
+    if (this.comment) {
+      console.log(`\n---\n`)
+      console.log(comment)
+    }
+
+    console.log('\n---\n')
+    if (this.tags.length > 0) console.log(`> **tags**:   \`${this.tags.join('` • `')}\``)
+    if (this.boards.length > 0) console.log(`> **boards**: \`${this.boards.join('` • `')}\``)
+    if (this.link) console.log(`> [Resource](${this.link})`)
+    console.log()
   }
 }

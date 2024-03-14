@@ -4,6 +4,7 @@ import tmp from 'tmp'
 
 import { prompt } from 'enquirer'
 import clipboardy from 'clipboardy'
+const debug = require('debug')('tb:core:taskbook')
 
 import { Maybe } from '../types'
 import config, { IConfig } from '../config'
@@ -16,8 +17,6 @@ import { parseOptions, isBoardOpt } from '../shared/parser'
 import Catalog, { CatalogInnerData } from '../domain/catalog'
 import Item from '../domain/item'
 import Task, { TaskPriority } from '../domain/task'
-// FIXME: i should not need to know about Goal plugin here
-import Goal from '../plugins/bb-domain-goal/goal'
 import Note from '../domain/note'
 import Logger from '../shared/logger'
 
@@ -30,9 +29,11 @@ class Taskbook {
   _archive: Catalog
 
   constructor() {
-    log.info('initialising taskbook')
+    debug('initialising taskbook')
 
+    debug('loading configuration')
     this._configuration = config.get()
+    debug(`loading archive and items (ctx ${this._configuration.defaultContext})`)
     this._storage = new LocalStorage(this._configuration.defaultContext)
     this._archive = this._storage.getArchive()
     this._data = this._storage.get()
@@ -42,7 +43,7 @@ class Taskbook {
     this._storage.set(data.all())
   }
 
-  _saveArchive(data: Catalog) {
+  _saveArchive(data: Catalog = this._archive) {
     this._storage.setArchive(data.all())
   }
 
@@ -470,8 +471,8 @@ class Taskbook {
 
       if (storedTags.indexOf(`+${x}`) >= 0) tags.push(`+${x}`)
 
-      // final condition
-      return x === 'myboard' ? boards.push(this._configuration.defaultBoard) : attributes.push(x)
+      // everything else is a filtering attribute
+      return attributes.push(x)
     })
     boards = removeDuplicates(boards)
     tags = removeDuplicates(tags)
@@ -493,8 +494,8 @@ class Taskbook {
     let ids: string[] = []
     let boards: string[] = []
 
-    input.filter(isBoardOpt).forEach((x) => {
-      boards.push(x === 'myboard' ? this._configuration.defaultBoard : x)
+    input.filter(isBoardOpt).forEach((board) => {
+      boards.push(board)
     })
 
     if (boards.length === 0) {
@@ -595,7 +596,7 @@ class Taskbook {
     this.deleteItems(ids)
   }
 
-  async focus(taskId: string, useArchive = false) {
+  async printTask(taskId: string, format: string, useArchive = false) {
     ;[taskId] = this._validateIDs([taskId])
 
     log.debug(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
@@ -605,39 +606,15 @@ class Taskbook {
 
     if (task === null) throw new Error(`item ${taskId} is not a task`)
 
-    // TODO: not sure about that focus thing. We need to either scratch the per
-    // item rendering, or expose it like `display` per type method
-    // implementation. But as it is now, the value is pretty limited and it
-    // does make the plugin system a bit harder to implement.
-    if (task instanceof Goal) {
-      // TODO: `task.board()` to abstract that logic in one place?
-      const goalTag = `+${task.description.replace(' ', '')}`
-      const subtasks = Object.values(store.all()).filter((t) => t.tags.includes(goalTag))
-      render._displayTitle(task.description, subtasks)
-      subtasks.forEach((t) => render.displayItemByBoard(t))
-    } else {
-      const boards = task.boards.join(' • ')
-      render._displayTitle(boards, [task])
-      render.displayItemByBoard(task)
-    }
-
-    if (task.comment) {
-      const decoded = Buffer.from(task.comment, 'base64').toString('ascii')
-
-      const subtasksDone = (decoded.match(/\[x\]/g) || []).length
-      const subtasksTodo = (decoded.match(/\[\s\]/g) || []).length
-
-      // console.log(`\n${marked.parse('---')}`)
-      // console.log(marked.parse(decoded))
-      // console.log(marked.parse('---'))
-      console.log(`\n--- ${task.link || ''}`)
-      console.log(decoded)
-      console.log('---')
-
-      render.displayStats({ complete: subtasksDone, pending: subtasksTodo, notes: 1 })
-    } else {
-      console.log(`\n--- ${task.link || ''}\n`)
-    }
+    // TODO: html
+    if (format === 'markdown') task.toMarkdown()
+    // we stringify it so it interoperates better with unix tools like jq. One
+    // could combine `jq` and a templating language for example to do pretty
+    // cool stuff
+    else if (format === 'json') console.log(JSON.stringify(task.toJSON()))
+    // should be enforced impossible by the cli or at least caught earlier
+    // AND/OR should be pretty printed
+    else throw new Error(`unsupported export format: ${format}`)
   }
 
   beginTask(id: string) {
