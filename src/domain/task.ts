@@ -17,6 +17,7 @@ export interface TaskProperties extends ItemProperties {
   isComplete?: boolean
   inProgress?: boolean
   priority?: TaskPriority
+  repeat?: string
   _startedAt?: UnixTimestamp
 }
 
@@ -39,6 +40,7 @@ export default class Task extends Item {
   isComplete: boolean
   inProgress: boolean
   priority: TaskPriority
+  repeat: Maybe<string>
 
   _type = 'task'
 
@@ -51,7 +53,7 @@ export default class Task extends Item {
     // parsed and loaded existing items from storage, and they are all
     // re-initialised. This is detected by checking _uid, which doesn't exist
     // when creating a new instance, but has been generated once stored. An
-    // alternative cool be to offer 2 different consutructors, especially if
+    // alternative coold be to offer 2 different consutructors, especially if
     // custom logic grows. `estimate` is a good example, it is stored and
     // re-passed at init as ms. But we otherwise want to be able to receive
     // human-friendly values, and the current approach will be a problem.
@@ -65,6 +67,10 @@ export default class Task extends Item {
     this.inProgress = options.inProgress || false
     this.isStarred = options.isStarred || false
     this.priority = options.priority || 1
+    // we store and read the raw user repeat. The parsing structure looks
+    // pretty complicated and so we leave it to the actual use cases to do
+    // their parsing.
+    this.repeat = options.repeat || null
 
     // that line is redundant with the function but makes typescript happy,
     // having the constructor to explicitely set `this.estimate` to a valid

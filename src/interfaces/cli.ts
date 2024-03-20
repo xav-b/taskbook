@@ -92,7 +92,8 @@ program
   .option('-e, --estimate [estimate]', 'estimated time to complete, in minutes')
   .option('-l, --link [link]', 'Bind a clickable link to the task')
   .option('-n, --notebook', 'Open editor to also insert a comment')
-  .option('-j, --json', 'json output instead of console rendering')
+  .option('-j, --json', 'JSON output instead of console rendering')
+  .option('-r, --repeat [repeat]', 'Make the task recurrent')
   .action((description, options) => {
     const estimate = parseDuration(options.estimate)
     // the `undefined` trick just avoids the function to manage both null and
@@ -102,7 +103,8 @@ program
       estimate || undefined,
       options.link,
       options.notebook,
-      options.json
+      options.json,
+      options.repeat
     )
   })
 

@@ -26,6 +26,7 @@ export interface IConfig {
   tshirtSizes: boolean
   plannedHoursWarn: number
   plannedHoursError: number
+  greetings: boolean
 }
 
 const log = Logger()
@@ -96,6 +97,7 @@ class Config {
       tshirtSizes: true,
       plannedHoursWarn: 6,
       plannedHoursError: 8,
+      greetings: true,
     }
   }
 

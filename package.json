@@ -1,7 +1,7 @@
 {
   "name": "taskbook",
   "productName": "Taskbook",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Tasks, boards & notes for the command-line habitat",
   "repository": "klaussinani/taskbook",
   "license": "MIT",
@@ -46,6 +46,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@breejs/later": "^4.2.0",
     "@google-cloud/local-auth": "2.1.0",
     "chalk": "4.1.0",
     "clipboardy": "2.3.0",
@@ -55,9 +56,6 @@
     "enquirer": "^2.4.1",
     "env-paths": "^3.0.0",
     "googleapis": "105",
-    "marked": "^10.0.0",
-    "marked-terminal": "^6.1.0",
-    "meow": "^12.1.1",
     "nanoid": "3",
     "signale": "1.4.0",
     "tmp": "^0.2.1",
@@ -66,9 +64,10 @@
     "update-notifier": "5.0.1"
   },
   "devDependencies": {
+    "@types/breejs__later": "^4",
     "@types/chalk": "^2.2.0",
     "@types/debug": "^4",
-    "@types/marked-terminal": "^6.0.1",
+    "@types/lodash": "^4.17.0",
     "@types/node": "^20.9.1",
     "@types/signale": "^1.4.7",
     "@types/tmp": "^0.2.6",

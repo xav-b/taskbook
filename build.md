@@ -1,11 +1,8 @@
 ## Things to build
 
-### Make dates awesome
- 
-- `reschedule` command
-
 ### Next
 
+- [ ] FEAT Recurrent tasks
 - [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
            when reviewed and automatically uncheck according to schedule (maybe add a
            flag). Bind it to `@flashcard.{deck}`
@@ -17,11 +14,13 @@
 
 - [ ] FEAT calendar sync:
       - Fix tz issue of sync (running at 6 brings yesterday events)
+      - Fix token renewal (grant refused crash)
       - Use `schedule` for task ordering on `calendar`
-      - `event.reschedule` command
+      - `event.reschedule` command, to update the datetime
       - Support calendar description as task comment, and `--notebook`
-      - `event.schedule` command for a task
+      - `event.schedule` command to put a task on the calendar
       - Support multiple calendars
+- [ ] FEAT `tb begin --timer` will countdown the estimate with regular nudges
 - [ ] FEAT Have task link rendered and clickable
 - [ ] FEAT ZSH Autocompletion (take example of the existing one)
 - [ ] FEAT Storage: implement drizzle, sqlite and turso
@@ -33,6 +32,7 @@
 - [ ] FEAT Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
            that automatically adds to today todo
 
+- [ ] IDEA There should be `archive` (stuff done) and `trash` (stuff deleted)
 - [ ] IDEA Use taskbook to track those items, in the open on Github
 - [ ] IDEA Exports/convert/import: json (done), markdown (for github sharing), sqlite dumb
 - [ ] IDEA `archive` and `timeline` to support same filters as `tb list`
@@ -56,17 +56,6 @@
 
 ---
 
-### Focus/begin/do
-
-Fancy - in place ov visual distraction, can i use an event plugin + TTS system
-to have regular heads up of the time left from estimate
-
-There should be one command `tb do` that works like `tb todo` except:
-- Add task `link` in the comment
-- `--notebook` to open the comment
-- start/Fork a process to countdown from estimate
-- support `--pomodoro 25` to split work and breaks
-
 
 ### Library/Plugin system
 
@@ -83,7 +72,7 @@ We would also ship:
 Bullet Journal, and `extensive` bundling everything in the mono repo)
 
 - [ ] Merge each `plugin.config` into a config singleton that is easy to import
-- [ ] FIXME: `focus` command is aware of `Goal`
+- [x] FIXME: `focus` command is aware of `Goal`
 - [ ] FIXME: `storage` is aware of every types
 - [ ] Migrate Task and Note (but no need for packages, built-in)
 - [ ] Make localjson a storage plugin
@@ -97,7 +86,17 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
   ideas that are not tasks) + blocked (...blocked) + evergreen (more for forever notes)
 - `brag` tag to remember what to brag about
 - `frog` and `s xs` tags to _eat the frog_ and tackle small things
+- `pin` for stuff to always keep around
 
+### Implementing habits
+
+- [x] `tb task --repeat "everyday"` (check that scheduling nodejs that uses many human cron inputs)
+- [ ] Habits: just tag them, or `everyday` automatically gets the `habit` tag
+- [x] Have a way to detect first run of the day
+- [ ] Go through all the tasks having a `repeat`, and create those of today that
+      are not there already (+ have something fun about it, like a quote or whatever)
+- [ ] Experiment with a daily "day planning" task
+- [ ] Support trash vs archive
 
 ---
 

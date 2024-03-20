@@ -9,6 +9,7 @@ const debug = require('debug')('tb:core:taskbook')
 import { Maybe } from '../types'
 import config, { IConfig } from '../config'
 import Storage from '../store'
+import cacheStorage from '../store/localcache'
 import LocalStorage from '../store/localjson'
 import help from '../interfaces/help'
 import render from '../interfaces/render'
@@ -21,8 +22,44 @@ import Note from '../domain/note'
 import Logger from '../shared/logger'
 
 const log = Logger()
+const cache = cacheStorage.init()
+
+function goodDay() {
+  const quote = 'Make that day Phenomenal.'
+  console.log(`
+
+
+
+
+
+                                    ██   ██    ██
+                                   ██    ██   ██
+                                   ██   ██    ██
+                                    ██  ██     ██
+                                    ██    ██   ██
+
+                                  █████████████████
+                                  ██              ██████
+                                  ██              ██  ██
+                                  ██              ██  ██
+                                  ██              ██████
+                                   ██            ██
+                                ██████████████████████
+                                 ██                ██
+                                  ██████████████████
+
+
+                               ${quote}
+
+
+
+
+
+`)
+}
 
 class Taskbook {
+  isNewDay: boolean
   _storage: Storage
   _configuration: IConfig
   _data: Catalog
@@ -37,6 +74,19 @@ class Taskbook {
     this._storage = new LocalStorage(this._configuration.defaultContext)
     this._archive = this._storage.getArchive()
     this._data = this._storage.get()
+
+    this.isNewDay = false
+    const last = cache.get('root.lastOpen')
+    if (last !== null) {
+      this.isNewDay = new Date(last).getDate() !== new Date().getDate()
+      if (this.isNewDay && this._configuration.greetings) {
+        goodDay()
+      }
+    }
+    cache.set('root.lastOpen', new Date().toLocaleString())
+
+    // TODO: if (thos.isNewDay)
+    if (this.isNewDay) this.scheduleRecurrentTasks()
   }
 
   _save(data: Catalog = this._data) {
@@ -63,6 +113,53 @@ class Taskbook {
     })
 
     return inputIDs
+  }
+
+  /**
+   * Look through recurrent tasks, and if:
+   *  - their schedule makes them needed today
+   *  - and they don't exist yet
+   * Then create a new task
+   */
+  scheduleRecurrentTasks() {
+    debug('scheduling today recurrent tasks')
+    const today = new Date()
+
+    // 1. look for all archived task having `repeat`
+    const recurrents = this._archive.todayTasks()
+
+    const added: string[] = []
+    recurrents.ids().forEach((taskId) => {
+      const task = recurrents.task(taskId)
+      if (task === null)
+        throw new Error(`impossible, this should be a task, but typescript disagrees`)
+      if (added.includes(task.description))
+        return debug(`task ${taskId} already added ${task.description}`)
+
+      const existing = this._data.search([task.description])
+      if (existing.ids().length > 0) return debug(`task ${taskId} already scheduled`)
+      // Check we also didn't check it today already. This is normally guarded
+      // because this function only runs the first time of the day, but this is
+      // done outside and so it should not matter here.
+      if (new Date(task.updatedAt).getDate() === today.getDate())
+        return debug(`task ${taskId} already completed today`)
+      else {
+        // very much a new task
+        const todayTask = new Task({
+          id: this._data.generateID(),
+          description: task.description,
+          boards: task.boards,
+          tags: task.tags,
+          priority: task.priority,
+          link: task.link || undefined,
+          estimate: task.estimate || undefined,
+        })
+        this._data.set(todayTask.id, todayTask)
+        added.push(task.description)
+      }
+    })
+
+    this._save(this._data)
   }
 
   switchContext(name: string) {
@@ -305,11 +402,16 @@ class Taskbook {
     cliEstimate?: number,
     link?: string,
     notebook?: boolean,
-    renderJSON?: boolean
+    renderJSON?: boolean,
+    repeat?: string
   ) {
     const { boards, tags, description, priority, estimate } = parseOptions(desc, {
       defaultBoard: this._configuration.defaultBoard,
     })
+
+    // NOTE: do we want to automatically tag 'every day' and 'every weekday'
+    // +habits?
+
     const id = this._data.generateID()
     const task = new Task({
       id,
@@ -319,6 +421,7 @@ class Taskbook {
       priority,
       link,
       estimate: estimate || cliEstimate,
+      repeat,
     })
     const { _data } = this
 

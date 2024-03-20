@@ -1,3 +1,5 @@
+import later from '@breejs/later'
+
 import Item from './item'
 import Task from './task'
 import { hasTerms } from '../shared/parser'
@@ -153,6 +155,37 @@ export default class Catalog {
   tasks(): Catalog {
     const items = _filter(this._items, (item) => !item.isTask)
     return new Catalog(items)
+  }
+
+  todayTasks(): Catalog {
+    const tasks = _filter(this._items, (t) => {
+      // not a task
+      if (!t.isTask) return true
+      // not recurrent
+      if ((t as Task).repeat === null) return true
+
+      // so now we have a recurrent task - let's check if it is due today
+      const repeat = (t as Task).repeat
+      const schedule = later.parse.text(repeat || '')
+      if (schedule.error >= 0) throw new Error(`Error while parsing '${repeat}'`)
+      if (schedule.schedules.length === 0) throw new Error(`Unsupported schedule '${repeat}'`)
+
+      const today = new Date()
+      // TODO: handle more properites of `later`
+      // TODO: handle schedule.exceptions
+      // TODO: handle the whole array
+      // `d` is the day of the week, `D` is the day of the month
+      const { D, d } = schedule.schedules[0]
+      if (d && d.includes(today.getDay() + 1)) return false
+      if (D && D.includes(today.getDate())) return false
+      // this seems to mean 'every day'
+      if (D && D.includes(1)) return false
+
+      // exclude the rest
+      return true
+    })
+
+    return new Catalog(tasks)
   }
 
   pending(): Catalog {
