@@ -69,6 +69,10 @@ export default class Catalog {
     return Object.values(this.all()).find((each) => each._uid === uid) !== undefined
   }
 
+  get length() {
+    return Object.keys(this._items).length
+  }
+
   private _isComplete(item: Item) {
     return item instanceof Task && item.isComplete
   }

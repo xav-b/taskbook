@@ -85,7 +85,7 @@ class Taskbook {
     }
     cache.set('root.lastOpen', new Date().toLocaleString())
 
-    // TODO: if (thos.isNewDay)
+    debug(`${this.isNewDay ? 'checking' : 'skipping check of'} recurrent tasks`)
     if (this.isNewDay) this.scheduleRecurrentTasks()
   }
 
@@ -127,6 +127,7 @@ class Taskbook {
 
     // 1. look for all archived task having `repeat`
     const recurrents = this._archive.todayTasks()
+    debug(`found ${recurrents.length} tasks to repeat today`)
 
     const added: string[] = []
     recurrents.ids().forEach((taskId) => {
@@ -137,13 +138,14 @@ class Taskbook {
         return debug(`task ${taskId} already added ${task.description}`)
 
       const existing = this._data.search([task.description])
-      if (existing.ids().length > 0) return debug(`task ${taskId} already scheduled`)
+      if (existing.ids().length > 0) return debug(`task id:${taskId} already scheduled`)
       // Check we also didn't check it today already. This is normally guarded
       // because this function only runs the first time of the day, but this is
       // done outside and so it should not matter here.
       if (new Date(task.updatedAt).getDate() === today.getDate())
-        return debug(`task ${taskId} already completed today`)
+        return debug(`task id:${taskId} already completed today`)
       else {
+        debug(`rescheduling recurrent task id:${taskId} (${task.repeat})`)
         // very much a new task
         const todayTask = new Task({
           id: this._data.generateID(),
@@ -522,16 +524,14 @@ class Taskbook {
   }
 
   findItems(terms: string[], inArchive: Maybe<boolean>) {
-    let result: Catalog | undefined
-    if (inArchive) result = this._archive.search(terms)
-    else this._data.search(terms)
-
     if (inArchive) {
+      const result = this._archive.search(terms)
       // searching through archive makes more sense to display by date
       // (we are sure about the type given the `else` above)
       const groups = this._groupByDate(result as Catalog)
       render.displayByDate(groups)
     } else {
+      const result = this._data.search(terms)
       const groups = this._groupByBoard(result)
       render.displayByBoard(groups)
     }

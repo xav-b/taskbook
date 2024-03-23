@@ -2,7 +2,9 @@
 
 ### Next
 
-- [ ] FEAT Recurrent tasks
+- [ ] FEAT Recurrent
+  - [x] Recurrent tasks
+  - [ ] Recurrent events
 - [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
            when reviewed and automatically uncheck according to schedule (maybe add a
            flag). Bind it to `@flashcard.{deck}`
