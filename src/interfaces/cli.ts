@@ -137,8 +137,9 @@ program
   .alias('d')
   .alias('rm')
   .description('Delete items')
+  .option('-t, --trash', 'send to trash bin instead of archive')
   .argument('<items...>')
-  .action((items) => taskbook.deleteItems(items))
+  .action((items, trash) => taskbook.deleteItems(items, trash))
 
 program
   .command('check')
@@ -162,7 +163,7 @@ program
 
 program
   .command('estimate')
-  .alias('s')
+  .alias('E')
   .description('Set task estimate in minutes')
   .argument('taskid')
   .argument('estimate')
@@ -203,7 +204,7 @@ program
 
 program
   .command('print')
-  .alias('p')
+  .alias('P')
   .description('display task details')
   .argument('task')
   .option('-f, --format [duration]', 'output format', 'markdown')

@@ -61,9 +61,6 @@ async function syncGCal(board: Taskbook) {
   const auth = await gcal.authorize()
   const events = await todayEvents(auth)
 
-  // TODO: should not be, implement proper typing
-  if (events === undefined) throw new Error('failed to retrieve events')
-
   // now we want to:
   // - create new events
   // - update existing ones

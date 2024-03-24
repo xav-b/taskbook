@@ -107,7 +107,7 @@ async function listEvents(auth, opts) {
   // handle failures modes
   if (!res.data.items || res.data.items.length === 0) {
     debug('no upcoming events found')
-    return
+    return []
   }
 
   return res.data.items

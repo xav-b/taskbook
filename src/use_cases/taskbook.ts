@@ -64,6 +64,7 @@ class Taskbook {
   _configuration: IConfig
   _data: Catalog
   _archive: Catalog
+  _bin: Catalog
 
   constructor() {
     debug('initialising taskbook')
@@ -73,6 +74,7 @@ class Taskbook {
     debug(`loading archive and items (ctx ${this._configuration.defaultContext})`)
     this._storage = new LocalStorage(this._configuration.defaultContext)
     this._archive = this._storage.getArchive()
+    this._bin = this._storage.getBin()
     this._data = this._storage.get()
 
     this.isNewDay = false
@@ -253,11 +255,24 @@ class Taskbook {
     const { _data, _archive } = this
 
     const archiveID = _archive.generateID()
-    log.info(`archiving item under id ${archiveID}`)
+    debug(`archiving item under id ${archiveID}`)
 
     _archive.set(archiveID, item)
 
     this._saveArchive(_archive)
+
+    _data.delete(item.id)
+  }
+
+  _saveItemToTrashBin(item: Item) {
+    const { _data, _bin } = this
+
+    const trashID = _bin.generateID()
+    debug(`trashing item under id ${trashID}`)
+
+    _bin.set(trashID, item)
+
+    this._storage.setBin(_bin.all())
 
     _data.delete(item.id)
   }
@@ -438,14 +453,15 @@ class Taskbook {
     if (notebook) this.comment(String(id))
   }
 
-  deleteItems(ids: string[]) {
+  deleteItems(ids: string[], toTrash = false) {
     ids = this._validateIDs(ids)
 
     const { _data } = this
 
     ids.forEach((id) => {
       // the operation will also delete `id` from `_data`
-      this._saveItemToArchive(_data.get(id))
+      if (toTrash) this._saveItemToTrashBin(_data.get(id))
+      else this._saveItemToArchive(_data.get(id))
     })
 
     this._save(_data)
@@ -464,7 +480,7 @@ class Taskbook {
 
     const groups = this._groupByDate(this._archive)
 
-    render.displayByDate(groups)
+    render.displayByDate(groups, true)
   }
 
   _groupByDate(data: Catalog) {

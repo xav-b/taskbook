@@ -25,7 +25,6 @@ export default class EventPlugin extends BulletBoardPlugin {
     // NOTE: support duration as a markup? Like `last:30m`
     program
       .command('event')
-      .alias('E')
       .description('Create event')
       .argument('time')
       .argument('estimate')

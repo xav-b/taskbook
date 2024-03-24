@@ -37,6 +37,7 @@ class LocalJSONStorage implements Storage {
   _archiveDir: string
   _tempDir: string
   _archiveFile: string
+  _binFile: string
   _mainStorageFile: string
 
   constructor(workspace?: string) {
@@ -50,6 +51,7 @@ class LocalJSONStorage implements Storage {
     this._archiveDir = join(this._mainAppDir, workspace, 'archive')
     this._tempDir = join(this._mainAppDir, workspace, '.temp')
     this._archiveFile = join(this._archiveDir, 'archive.json')
+    this._binFile = join(this._archiveDir, 'bin.json')
     this._mainStorageFile = join(this._storageDir, 'storage.json')
 
     this._ensureDirectories()
@@ -101,6 +103,10 @@ class LocalJSONStorage implements Storage {
     return this.get(this._archiveFile)
   }
 
+  getBin(): Catalog {
+    return this.get(this._binFile)
+  }
+
   set(data: CatalogInnerData, storageFile = this._mainStorageFile) {
     log.info(`saving catalog to storage: ${storageFile}`)
     const serialized = JSON.stringify(data, null, 4)
@@ -112,6 +118,10 @@ class LocalJSONStorage implements Storage {
 
   setArchive(data: CatalogInnerData) {
     this.set(data, this._archiveFile)
+  }
+
+  setBin(data: CatalogInnerData) {
+    this.set(data, this._binFile)
   }
 }
 

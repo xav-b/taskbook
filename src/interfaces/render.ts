@@ -105,7 +105,7 @@ class Render {
     return prefix.join(' ')
   }
 
-  _buildTaskMessage(item: Task): string {
+  _buildTaskMessage(item: Task, isArchive = false): string {
     const message = []
 
     const { isComplete, description } = item
@@ -114,8 +114,14 @@ class Render {
       const style = this._configuration.priorities[item.priority]
       message.push(style(description))
     } else {
+      // message.push(isComplete ? grey(description) : description)
       message.push(isComplete ? grey(description) : description)
     }
+
+    // a task not completed and archived means it was deleted. Make it a
+    // "little" more obvious when printing the archive. Of course this may not
+    // work for non-task items like notes
+    if (!isComplete && item.isTask && isArchive) message.unshift(chalk.bold.red('CANCELLED'))
 
     // NOTE: alternatively we could leave the actual description as-is, and
     // simply add a prefix to indicate urgency
@@ -168,13 +174,13 @@ class Render {
     item.display(msgObj)
   }
 
-  _displayItemByDate(item: Item) {
+  _displayItemByDate(item: Item, isArchive = false) {
     const boards = item.boards.filter((x) => x !== this._configuration.defaultBoard)
     const star = this._getStar(item)
 
     const prefix = this._buildPrefix(item)
     let message = ''
-    if (item instanceof Task) message = this._buildTaskMessage(item)
+    if (item instanceof Task) message = this._buildTaskMessage(item, isArchive)
     else message = this._buildNoteMessage(item)
 
     const suffix = []
@@ -210,7 +216,7 @@ class Render {
     })
   }
 
-  displayByDate(data: Record<string, Item[]>) {
+  displayByDate(data: Record<string, Item[]>, isArchive = false) {
     Object.keys(data)
       // we move it to 11pm because otherwise the library considers it to be
       // midnight and subtract to go to UTC+0, effectivelymoving to the
@@ -237,7 +243,7 @@ class Render {
             return
           }
 
-          this._displayItemByDate(item)
+          this._displayItemByDate(item, isArchive)
         })
       })
   }
