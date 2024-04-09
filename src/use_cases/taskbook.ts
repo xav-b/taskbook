@@ -79,12 +79,16 @@ class Taskbook {
 
     this.isNewDay = false
     const last = cache.get('root.lastOpen')
+    debug(`last taskbook run: ${last}`)
+
     if (last !== null) {
       this.isNewDay = new Date(last).getDate() !== new Date().getDate()
       if (this.isNewDay && this._configuration.greetings) {
         goodDay()
       }
     }
+
+    // keep track of the last time we ran taskbook
     cache.set('root.lastOpen', new Date().toLocaleString())
 
     debug(`${this.isNewDay ? 'checking' : 'skipping check of'} recurrent tasks`)
@@ -163,6 +167,7 @@ class Taskbook {
       }
     })
 
+    debug(`done - comitting new recurrent tasks`)
     this._save(this._data)
   }
 
@@ -473,7 +478,7 @@ class Taskbook {
    * display wher the date is the board.
    */
   displayArchive() {
-    log.debug('displaying the whole archive, by dates ASC')
+    debug('displaying the whole archive, by dates ASC')
 
     // first we want to group items by day, in a way that can be the ordered
     // (so don't go to UI-friendly yet)
@@ -718,12 +723,12 @@ class Taskbook {
   async printTask(taskId: string, format: string, useArchive = false) {
     ;[taskId] = this._validateIDs([taskId])
 
-    log.debug(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
+    debug(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
 
     const store = useArchive ? this._archive : this._data
-    const task = store.task(taskId)
+    const task = store.get(taskId)
 
-    if (task === null) throw new Error(`item ${taskId} is not a task`)
+    if (task === null) throw new Error(`no item with id #${taskId} found`)
 
     // TODO: html
     if (format === 'markdown') task.toMarkdown()

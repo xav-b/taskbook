@@ -12,10 +12,12 @@ const DEFAULT_EVENT_DURATION_MS = 30 * 60 * 1000
 
 async function todayEvents(auth: any) {
   // get today events
-  const todayDate = new Date().toISOString().replace(/T.*/, '')
+  // Canada locale string format is what we want: YYYY-MM-DD
+  const todayDate = new Date().toLocaleDateString('en-CA')
   const timeMin = `${todayDate}T00:00:00+08:00`
   const timeMax = `${todayDate}T23:59:59+08:00`
 
+  debug(`searching events: ${timeMin} -> ${timeMax}`)
   return await gcal.listEvents(auth, {
     timeMin,
     timeMax,
@@ -57,8 +59,8 @@ function upsert(
 }
 
 // FIXME: don't recreate events if running twice
-async function syncGCal(board: Taskbook) {
-  const auth = await gcal.authorize()
+async function syncGCal(board: Taskbook, name?: string | null) {
+  const auth = await gcal.authorize(name)
   const events = await todayEvents(auth)
 
   // now we want to:

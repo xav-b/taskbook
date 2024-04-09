@@ -1,3 +1,4 @@
+import { formatDistance } from 'date-fns'
 import { nanoid } from 'nanoid'
 import { SignaleLogConfig } from '../interfaces/printer'
 import { Maybe, UnixTimestamp } from '../types'
@@ -81,6 +82,12 @@ export default abstract class Item {
     if (!this.tags.includes(tag)) this.tags.push(tag)
   }
 
+  decodeComment(): Maybe<string> {
+    if (!this.comment) return null
+
+    return Buffer.from(this.comment, 'base64').toString('ascii')
+  }
+
   public toJSON(): Record<string, any> {
     const jsonObj: Record<string, any> = {}
 
@@ -90,5 +97,36 @@ export default abstract class Item {
     })
 
     return jsonObj
+  }
+
+  /**
+   * Display task details in markdown format.
+   */
+  public toMarkdown() {
+    const comment = this.decodeComment()
+    const ago = formatDistance(new Date(this._createdAt), new Date(), { addSuffix: true })
+    // saving an interesting past feature, pulling tasks from the comments
+    // const subtasksDone = (decoded.match(/\[x\]/g) || []).length
+    // const subtasksTodo = (decoded.match(/\[\s\]/g) || []).length
+
+    console.log(`\n## ${this.id} - ${this.description}\n`)
+
+    console.log(`
+| Meta | Value |
+| ---- | ----- |
+| UID | ${this._uid} |
+| Created | ${ago} |
+`)
+
+    if (this.comment) {
+      console.log(`\n---\n`)
+      console.log(comment)
+    }
+
+    console.log('\n---\n')
+    if (this.tags.length > 0) console.log(`> **tags**:   \`${this.tags.join('` • `')}\``)
+    if (this.boards.length > 0) console.log(`> **boards**: \`${this.boards.join('` • `')}\``)
+    if (this.link) console.log(`> [Resource](${this.link})`)
+    console.log()
   }
 }

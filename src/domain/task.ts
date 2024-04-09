@@ -154,14 +154,10 @@ export default class Task extends Item {
     else pending(signaleObj)
   }
 
-  decodeComment(): Maybe<string> {
-    if (!this.comment) return null
-
-    return Buffer.from(this.comment, 'base64').toString('ascii')
-  }
-
   /**
    * Display task details in markdown format.
+   * NOTE: too bad we have to re-implement item.toMarkdown() just to add
+   * `priority` and `estimate` meta keys
    */
   toMarkdown() {
     const comment = this.decodeComment()

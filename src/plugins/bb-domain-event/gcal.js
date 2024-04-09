@@ -17,24 +17,31 @@ import { today, prettyTzOffset } from './utils'
 const CALENDAR_VERSION = 'v3'
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
-// The file token.json stores the user's access and refresh tokens, and is
-// created automatically when the authorization flow completes for the first
-// time.
-// TODO: const TOKEN_PATH = path.join(process.cwd(), 'gapi-token.json')
-const TOKEN_PATH = path.join(process.cwd(), 'gapi-token.json')
 const CREDENTIALS_PATH = path.join(process.cwd(), 'gapi-credentials.json')
+
+/**
+ * The token file stores the user's access and refresh tokens, and is
+ * created automatically when the authorization flow completes for the first
+ * time.
+ * Unlike the crendetials which are tied to the app and remain persistent, it
+ * will change for different calendars and will need to be renewed.
+ */
+const tokenPath = (calendar) => path.join(process.cwd(), `gapi-token.${calendar || 'default'}.json`)
 
 /**
  * Reads previously authorized credentials from the save file.
  *
  * @return {Promise<OAuth2Client|null>}
  */
-async function loadSavedCredentialsIfExist() {
+async function loadSavedCredentialsIfExist(calendar) {
+  const savedTokenPath = tokenPath(calendar)
   try {
-    const content = await fs.readFile(TOKEN_PATH)
+    debug(`attempting to read saved google credentials from '${savedTokenPath}'`)
+    const content = await fs.readFile(savedTokenPath)
     const credentials = JSON.parse(content)
     return google.auth.fromJSON(credentials)
   } catch (err) {
+    debug(`failed to authenticate from JSON file '${savedTokenPath}': ${err}`)
     return null
   }
 }
@@ -45,7 +52,7 @@ async function loadSavedCredentialsIfExist() {
  * @param {OAuth2Client} client
  * @return {Promise<void>}
  */
-async function saveCredentials(client) {
+async function saveCredentials(client, calendar) {
   const content = await fs.readFile(CREDENTIALS_PATH)
   const keys = JSON.parse(content)
   const key = keys.installed || keys.web
@@ -55,18 +62,20 @@ async function saveCredentials(client) {
     client_secret: key.client_secret,
     refresh_token: client.credentials.refresh_token,
   })
-  await fs.writeFile(TOKEN_PATH, payload)
+  await fs.writeFile(tokenPath(calendar), payload)
 }
 
 /**
  * Load or request or authorization to call APIs.
  *
  */
-async function authorize() {
-  debug('tentatively loading credentials')
-  let client = await loadSavedCredentialsIfExist()
+async function authorize(calendarName) {
+  debug(`tentatively loading credentials (calendar=${calendarName})`)
+  let client = await loadSavedCredentialsIfExist(calendarName)
+
+  // TODO: detect expired credentials
   if (client) {
-    debug('got them - authenticated')
+    debug('credentials found - authenticated')
     return client
   }
 
@@ -77,9 +86,9 @@ async function authorize() {
   })
 
   if (client.credentials) {
-    debug('saving credentials')
-    await saveCredentials(client)
-  }
+    debug('saving auth (refresh) token')
+    await saveCredentials(client, calendarName)
+  } else throw new Error('no auth token found')
 
   debug('authentication successfully completed')
   return client

@@ -2,20 +2,24 @@
 
 ### Next
 
+- [ ] FIXME Restore of notes seem to move ids around and duplicate, if working at all
+- [ ] FIXME Archive gets lost
 - [ ] FEAT `tb begin --timer` will countdown the estimate with regular nudges
 - [ ] FEAT Recurrent
+  - [x] Everyday it misses on the scheduling
   - [x] Recurrent tasks
   - [ ] Recurrent events
-- [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
-           when reviewed and automatically uncheck according to schedule (maybe add a
-           flag). Bind it to `@flashcard.{deck}`
+  - [ ] Validate value at creation (`on Mondays` parsing for example crashes)
 - [ ] TECH Implement the library + plugin architecture
 
 ### Todo
 
 ### Backlog
 
+- [ ] `tb link [taskId] [url]`
+- [ ] FEAT Have a way for `tb clear` to not clear notes
 - [ ] FEAT calendar sync:
+      - Fix calendar keeps refreshing
       - Fix tz issue of sync (running at 6 brings yesterday events)
       - Fix token renewal (grant refused crash)
       - Use `schedule` for task ordering on `calendar`
@@ -34,6 +38,10 @@
 - [ ] FEAT Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
            that automatically adds to today todo
 
+- [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
+           when reviewed and automatically uncheck according to schedule (maybe add a
+           flag). Bind it to `@flashcard.{deck}`
+- [ ] IDEA the `@tmp` board is automatically cleaned everyday
 - [ ] IDEA Logger should both use `DEBUG` AND record stuff on file (rotating)
 - [ ] IDEA Use taskbook to track those items, in the open on Github
 - [ ] IDEA Exports/convert/import: json (done), markdown (for github sharing), sqlite dumb
@@ -115,6 +123,7 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [x] Blocked stage with visual cue (also dimmed, but different icon, and not affected by clear) (use `tbblock` alias)
 - [x] Brag about tasks (use `tb c x y z +brag`)
 
+- [x] FEAT Have a recurrent icon hint
 - [x] IDEA There should be `archive` (stuff done) and `trash` (stuff deleted)
 - [x] FEAT `print` task to json and markdown
 - [x] FEAT `tb t --notebook` will create the task AND open the comment

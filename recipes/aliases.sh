@@ -39,3 +39,7 @@ function tbdo() {
   echo -e "task ${taskid} configured - starting working on it"
   tb begin "${taskid}"
 }
+
+function tbp() {
+  tb print $1 | glow
+}

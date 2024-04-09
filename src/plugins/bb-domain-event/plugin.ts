@@ -40,6 +40,13 @@ export default class EventPlugin extends BulletBoardPlugin {
         commands.upsert(board, dt.getTime(), description, estimateMs)
       })
 
-    program.command('event.sync').action(async () => await commands.syncGCal(board))
+    program
+      .command('event.sync')
+      .option(
+        '-c, --calendar [calendar]',
+        'name the calendar credentials that will be saved',
+        'default'
+      )
+      .action(async (opts) => await commands.syncGCal(board, opts.calendar))
   }
 }

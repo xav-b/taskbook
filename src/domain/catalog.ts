@@ -171,7 +171,9 @@ export default class Catalog {
       // so now we have a recurrent task - let's check if it is due today
       const repeat = (t as Task).repeat
       const schedule = later.parse.text(repeat || '')
-      if (schedule.error >= 0) throw new Error(`Error while parsing '${repeat}'`)
+      // FIXME: don't know how the error system works, can be `6` and works,
+      // for `every day` for example
+      // if (schedule.error >= 0) throw new Error(`Error while parsing '${repeat}'`)
       if (schedule.schedules.length === 0) throw new Error(`Unsupported schedule '${repeat}'`)
 
       const today = new Date()

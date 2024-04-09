@@ -33,7 +33,39 @@ const theme = {
   error: red,
   warning: yellow,
 }
- */
+*/
+
+function buildNoteMessage(item: Item): string {
+  return item.description
+}
+
+function colorBoards(boards: string[]) {
+  return boards.map((x) => grey(x)).join(' ')
+}
+
+function isBoardComplete(items: Item[]) {
+  const { tasks, complete, notes } = _getItemStats(items)
+  return tasks === complete && notes === 0
+}
+
+function getStar(item: Item) {
+  return item.isStarred ? yellow('★') : ''
+}
+
+function getCommentHint(item: Item) {
+  return item.comment ? blue('✎') : ''
+}
+
+function getLinkHint(item: Item) {
+  // TODO: that's where it would be so cool to have a clickable link
+  // NOTE: link and globe ascii just seem too much
+  return item.link ? blue('@') : ''
+}
+
+function getRepeatHint(task: Task) {
+  return task.repeat ? blue('∞') : ''
+  // return task.repeat ? blue('◌') : ''
+}
 
 function _getItemStats(items: Item[]) {
   let [tasks, complete, notes] = [0, 0, 0]
@@ -59,29 +91,6 @@ class Render {
 
   constructor() {
     this._configuration = config.get()
-  }
-
-  _colorBoards(boards: string[]) {
-    return boards.map((x) => grey(x)).join(' ')
-  }
-
-  _isBoardComplete(items: Item[]) {
-    const { tasks, complete, notes } = _getItemStats(items)
-    return tasks === complete && notes === 0
-  }
-
-  private _getStar(item: Item) {
-    return item.isStarred ? yellow('★') : ''
-  }
-
-  _getCommentHint(item: Item) {
-    return item.comment ? blue('✎') : ''
-  }
-
-  _getLinkHint(item: Item) {
-    // TODO: that's where it would be so cool to have a clickable link
-    // NOTE: link and globe ascii just seem too much
-    return item.link ? blue.bold('@') : ''
   }
 
   _buildTitle(key: string, items: Item[]) {
@@ -131,10 +140,6 @@ class Render {
     return message.join(' ')
   }
 
-  _buildNoteMessage(item: Item): string {
-    return item.description
-  }
-
   _displayTitle(board: string, items: Item[]) {
     const { title: message, correlation: suffix } = this._buildTitle(board, items)
     const titleObj = { prefix: '\n ', message, suffix }
@@ -144,20 +149,24 @@ class Render {
 
   async displayItemByBoard(item: Item) {
     const age = item.age()
-    const star = this._getStar(item)
-    const comment = this._getCommentHint(item)
-    const link = this._getLinkHint(item)
+    const star = getStar(item)
+    const comment = getCommentHint(item)
+    const link = getLinkHint(item)
+    let repeat = null
     const suffix = []
     let message = ''
 
     const prefix = this._buildPrefix(item)
 
-    if (item instanceof Task) message = this._buildTaskMessage(item)
-    else message = this._buildNoteMessage(item)
+    if (item instanceof Task) {
+      message = this._buildTaskMessage(item)
+      repeat = getRepeatHint(item)
+    } else message = buildNoteMessage(item)
 
     if (age !== 0) suffix.push(grey(`${age}d`))
     if (star) suffix.push(star)
     if (link) suffix.push(link)
+    if (repeat) suffix.push(repeat)
     if (comment.length > 0) suffix.push(comment)
 
     if (item instanceof Task) {
@@ -176,12 +185,12 @@ class Render {
 
   _displayItemByDate(item: Item, isArchive = false) {
     const boards = item.boards.filter((x) => x !== this._configuration.defaultBoard)
-    const star = this._getStar(item)
+    const star = getStar(item)
 
     const prefix = this._buildPrefix(item)
     let message = ''
     if (item instanceof Task) message = this._buildTaskMessage(item, isArchive)
-    else message = this._buildNoteMessage(item)
+    else message = buildNoteMessage(item)
 
     const suffix = []
 
@@ -190,7 +199,7 @@ class Render {
         suffix.push(grey(`${Math.ceil(item.duration / (1000 * 60))}m`))
     }
 
-    suffix.push(this._colorBoards(boards))
+    suffix.push(colorBoards(boards))
     suffix.push(star)
 
     const msgObj = { prefix, message, suffix: suffix.join(' ') }
@@ -200,7 +209,7 @@ class Render {
 
   displayByBoard(data: Record<string, Item[]>, displayTasks = true) {
     Object.keys(data).forEach((board: string) => {
-      if (this._isBoardComplete(data[board]) && !this._configuration.displayCompleteTasks) return
+      if (isBoardComplete(data[board]) && !this._configuration.displayCompleteTasks) return
 
       this._displayTitle(board, data[board])
 
@@ -229,8 +238,7 @@ class Render {
         const prettyDt = date.toDateString()
         const indexDt = date.toLocaleDateString('en-UK')
 
-        if (this._isBoardComplete(data[indexDt]) && !this._configuration.displayCompleteTasks)
-          return
+        if (isBoardComplete(data[indexDt]) && !this._configuration.displayCompleteTasks) return
 
         this._displayTitle(prettyDt, data[indexDt])
 
@@ -445,9 +453,8 @@ class Render {
 
   successCopyToClipboard(ids: string[]) {
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
-    const message = `Copied the ${
-      ids.length > 1 ? 'descriptions of items' : 'description of item'
-    }:`
+    const message = `Copied the ${ids.length > 1 ? 'descriptions of items' : 'description of item'
+      }:`
     success({ prefix, message, suffix })
   }
 
