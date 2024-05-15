@@ -218,7 +218,8 @@ program
   .alias('b')
   .description('Start/pause task')
   .argument('task')
-  .action((task) => taskbook.beginTask(task))
+  .option('-t, --timer', 'block and start a countdown')
+  .action((task, opts) => taskbook.beginTask(task, opts.timer))
 
 program
   .command('copy')

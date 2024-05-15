@@ -1,10 +1,9 @@
+import { Signale } from 'signale'
 import fs from 'fs'
 import childProcess from 'child_process'
 import tmp from 'tmp'
-
 import { prompt } from 'enquirer'
 import clipboardy from 'clipboardy'
-const debug = require('debug')('tb:core:taskbook')
 
 import { Maybe } from '../types'
 import config, { IConfig } from '../config'
@@ -20,9 +19,16 @@ import Item from '../domain/item'
 import Task, { TaskPriority } from '../domain/task'
 import Note from '../domain/note'
 import Logger from '../shared/logger'
+import events from '../use_cases/events'
+
+const POMODORO_STRATEGY = 25 // minutes
 
 const log = Logger()
 const cache = cacheStorage.init()
+const debug = require('debug')('tb:core:taskbook')
+
+// blocking logger to record steps of the timer
+const interactive = new Signale({ interactive: true, scope: 'task.timer' })
 
 function goodDay() {
   const quote = 'Make that day Phenomenal.'
@@ -741,13 +747,14 @@ class Taskbook {
     else throw new Error(`unsupported export format: ${format}`)
   }
 
-  beginTask(id: string) {
+  beginTask(id: string, useTimer: boolean) {
     ;[id] = this._validateIDs([id])
 
     const { _data } = this
     const started: string[] = []
     const paused: string[] = []
 
+    // TODO: else render error
     if (_data.get(id).isTask) {
       const task = _data.task(id)
       // TODO: handle the UI of it
@@ -757,18 +764,65 @@ class Taskbook {
 
       if (task.inProgress) started.push(id)
       else paused.push(id)
+
+      this._save(_data)
+
+      if (started.length > 0) render.markStarted(started)
+      if (paused.length > 0) render.markPaused(paused)
+
+      // this only makes sense when starting to work
+      if (useTimer && started.length > 0) {
+        // first estimate how long we will block
+        // TODO: take into account what has been worked on already (`task.duration`?)
+        // TODO: make the tick configurable
+        const estimate = task.estimate ? task.estimate / 1000 / 60 : POMODORO_STRATEGY
+        const msg = `working on: ${task.description} (#${task.id})`
+
+        // capture CTRL-C to gracefully handle it
+        process.on('SIGINT', () => {
+          // console.log('Caught interrupt signal')
+
+          // TODO: change back the task status to stopped
+          // TODO: capture how long has elapsed and update task worked on
+          interactive.success(`[timer] interrupted, wrapping up`)
+          events.close()
+
+          // NOTE: should i cleanup timeouts?
+          process.exit(0)
+        })
+
+        // each minute we will update the display
+        interactive.await(`[%d/${estimate}] - ${msg}`, 0)
+        for (let i = 0; i < estimate; i++) {
+          setTimeout(
+            () => {
+              interactive.await(`[%d/${estimate}] - ${msg}`, i + 1)
+
+              // publish vent
+              const payload = { command: 'begin', msg, args: { i, estimate } }
+              events.fire('begin.timer', payload)
+
+              if (i >= estimate) {
+                interactive.success(`[${estimate}/${estimate}] - completed`)
+
+                // TODO: ask if the task was completed or if more time is needed
+
+                // while udp is connection-less, it seems necessary to close
+                // the event loop
+                events.close()
+              }
+            },
+            // wait for a minute before next tick
+            i * 1000 * 60
+          )
+        }
+      }
     }
-    // TODO: else render error
-
-    this._save(_data)
-
-    if (started.length > 0) render.markStarted(started)
-    if (paused.length > 0) render.markPaused(paused)
   }
 
   comment(itemId: string) {
     // TODO: _validateIDs
-    const editor = this._configuration.editor
+    const { editor } = this._configuration
 
     const { _data } = this
     const item = _data.get(itemId)

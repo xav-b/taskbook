@@ -30,7 +30,7 @@ export default function Printer(badge: string, name?: string) {
       // But if we end up supporting several ones (which doesn't sound
       // unlikely) then it will become necessary.
       [name || 'custom']: {
-        badge: badge,
+        badge,
         // TODO: support customisation (package in an `opts`)
         color: 'blue',
         // using it kind of an `id` but has no effect, just mandatory by type

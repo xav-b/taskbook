@@ -2,9 +2,14 @@
 
 ### Next
 
-- [ ] FIXME Restore of notes seem to move ids around and duplicate, if working at all
-- [ ] FIXME Archive gets lost
-- [ ] FEAT `tb begin --timer` will countdown the estimate with regular nudges
+- [ ] FIXME `tb b --timer` never completes
+- [ ] FIXME: `--timer` capture CTRL-C and gracefully record the time spent.
+- [ ] FEAT Support syncing multiple calendars and have them in their respective `calendar` 
+           and `calendar.{name}` boards (or use tags?) - sorting should also work
+- [ ] FIXME `tb delete` put things in bin instead of archive
+- [ ] FEAT Add `--notebook` to `tb note`
+- [ ] FIXME new day and `tb clear` as first command probably don't play nicely together
+- [ ] TECH Abstract logger to both use debug and file write
 - [ ] FEAT Recurrent
   - [x] Everyday it misses on the scheduling
   - [x] Recurrent tasks
@@ -16,8 +21,10 @@
 
 ### Backlog
 
-- [ ] `tb link [taskId] [url]`
+- [ ] FEAT At init, auto-check events from previous days
+- [ ] FEAT `tb link [taskId] [url]`
 - [ ] FEAT Have a way for `tb clear` to not clear notes
+- [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
 - [ ] FEAT calendar sync:
       - Fix calendar keeps refreshing
       - Fix tz issue of sync (running at 6 brings yesterday events)
@@ -25,8 +32,8 @@
       - Use `schedule` for task ordering on `calendar`
       - `event.reschedule` command, to update the datetime
       - Support calendar description as task comment, and `--notebook`
-      - `event.schedule` command to put a task on the calendar
-      - Support multiple calendars (`--calendar xx`) and use a different token file
+      - [x] `event.schedule` command to put a task on the calendar
+      - [x] Support multiple calendars (`--calendar xx`) and use a different token file
 - [ ] FEAT Have task link rendered and clickable
 - [ ] FEAT ZSH Autocompletion (take example of the existing one)
 - [ ] FEAT Storage: implement drizzle, sqlite and turso
@@ -35,8 +42,6 @@
 - [ ] FEAT [Rename boards](https://github.com/klaudiosinani/taskbook/pull/73/files)
 - [ ] FEAT Support ids range in the form of 3..7
 - [ ] FEAT Support due date [PR #69](https://github.com/klaudiosinani/taskbook/pull/69)
-- [ ] FEAT Recurring tasks/habits: shall we use `@Tuesday`, ... and just have a command
-           that automatically adds to today todo
 
 - [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
            when reviewed and automatically uncheck according to schedule (maybe add a
@@ -53,6 +58,7 @@
 - [ ] IDEA Hook system to implement a plugin system (post-delete, post-create, ...)
 - [ ] IDEA Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
 
+- [ ] FIXME Restore of notes seem to move ids around and duplicate, if working at all
 - [ ] FIXME install latest dependencies of chalk, clipboard and update-notifier
 - [ ] FIXME Running `tb estimate` twice may create 2 t-shirt sizes
 - [ ] FIXME Typing a wrong command and having all the boards returned is not helpful nor intuitive
@@ -123,6 +129,7 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [x] Blocked stage with visual cue (also dimmed, but different icon, and not affected by clear) (use `tbblock` alias)
 - [x] Brag about tasks (use `tb c x y z +brag`)
 
+- [x] FEAT `tb begin --timer` will countdown the estimate with regular nudges
 - [x] FEAT Have a recurrent icon hint
 - [x] IDEA There should be `archive` (stuff done) and `trash` (stuff deleted)
 - [x] FEAT `print` task to json and markdown

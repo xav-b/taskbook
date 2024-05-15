@@ -26,6 +26,7 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'warn',
     'import/no-extraneous-dependencies': 'warn',
     '@typescript-eslint/triple-slash-reference': 'warn',
+    'no-plusplus': ['error', { allowForLoopAfterthoughts: true }]
   },
   root: true,
 }
