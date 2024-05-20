@@ -316,7 +316,7 @@ class Taskbook {
     render.successEdit(ids.join(', '))
   }
 
-  createNote(desc: string[]) {
+  createNote(desc: string[], notebook?: boolean) {
     const { _data } = this
     const storedBoards = _data.boards()
     const storedTags = this._data.tags()
@@ -341,6 +341,8 @@ class Taskbook {
     if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
 
     render.successCreate(note)
+
+    if (notebook) this.comment(String(id))
   }
 
   copyToClipboard(ids: string[]) {

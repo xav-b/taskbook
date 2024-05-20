@@ -2,36 +2,34 @@
 
 ### Next
 
+- [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
+           when reviewed and automatically uncheck according to schedule (maybe add a
+           flag). Bind it to `@flashcard.{deck}`
+        - [ ] Review system
+        - [ ] `card:decks` command to list decks (or can i hack on tb list?)
+        - [ ] Replace `next: 3d` by last review
 - [ ] FIXME `tb b --timer` never completes
 - [ ] FIXME: `--timer` capture CTRL-C and gracefully record the time spent.
 - [ ] FEAT Support syncing multiple calendars and have them in their respective `calendar` 
            and `calendar.{name}` boards (or use tags?) - sorting should also work
-- [ ] FIXME `tb delete` put things in bin instead of archive
-- [ ] FEAT Add `--notebook` to `tb note`
+- [ ] TECH Document recurrent values, and check why it's not reliable
 - [ ] FIXME new day and `tb clear` as first command probably don't play nicely together
-- [ ] TECH Abstract logger to both use debug and file write
-- [ ] FEAT Recurrent
-  - [x] Everyday it misses on the scheduling
-  - [x] Recurrent tasks
-  - [ ] Recurrent events
-  - [ ] Validate value at creation (`on Mondays` parsing for example crashes)
 - [ ] TECH Implement the library + plugin architecture
+  - [ ] Global config refactoring
 
 ### Todo
 
 ### Backlog
 
-- [ ] FEAT At init, auto-check events from previous days
+- [ ] FEAT At init, or `tb clear`, auto-check events from previous days
 - [ ] FEAT `tb link [taskId] [url]`
-- [ ] FEAT Have a way for `tb clear` to not clear notes
 - [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
 - [ ] FEAT calendar sync:
-      - Fix calendar keeps refreshing
-      - Fix tz issue of sync (running at 6 brings yesterday events)
-      - Fix token renewal (grant refused crash)
-      - Use `schedule` for task ordering on `calendar`
-      - `event.reschedule` command, to update the datetime
-      - Support calendar description as task comment, and `--notebook`
+      - [ ] Fix token renewal (grant refused crash)
+      - [ ] Use `schedule` for task ordering on `calendar`
+      - [ ] `event.reschedule` command, to update the datetime
+      - [ ] Support calendar description as task comment, and `--notebook`
+      - [ ] Also sync back to gcal
       - [x] `event.schedule` command to put a task on the calendar
       - [x] Support multiple calendars (`--calendar xx`) and use a different token file
 - [ ] FEAT Have task link rendered and clickable
@@ -42,11 +40,13 @@
 - [ ] FEAT [Rename boards](https://github.com/klaudiosinani/taskbook/pull/73/files)
 - [ ] FEAT Support ids range in the form of 3..7
 - [ ] FEAT Support due date [PR #69](https://github.com/klaudiosinani/taskbook/pull/69)
+- [ ] FEAT Recurrent
+  - [x] Everyday it misses on the scheduling
+  - [x] Recurrent tasks
+  - [ ] Recurrent events
+  - [ ] Validate value at creation (`on Mondays` parsing for example crashes)
 
-- [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
-           when reviewed and automatically uncheck according to schedule (maybe add a
-           flag). Bind it to `@flashcard.{deck}`
-- [ ] IDEA the `@tmp` board is automatically cleaned everyday
+- [ ] IDEA the `@tmp` board is automatically cleaned with `tb clear`
 - [ ] IDEA Logger should both use `DEBUG` AND record stuff on file (rotating)
 - [ ] IDEA Use taskbook to track those items, in the open on Github
 - [ ] IDEA Exports/convert/import: json (done), markdown (for github sharing), sqlite dumb
@@ -58,6 +58,8 @@
 - [ ] IDEA Hook system to implement a plugin system (post-delete, post-create, ...)
 - [ ] IDEA Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
 
+- [ ] FIXME storage loads by data types and must be modified for a new type
+- [ ] FIXME boards and tags don't need to be stored with their `@` and `+`
 - [ ] FIXME Restore of notes seem to move ids around and duplicate, if working at all
 - [ ] FIXME install latest dependencies of chalk, clipboard and update-notifier
 - [ ] FIXME Running `tb estimate` twice may create 2 t-shirt sizes
@@ -129,6 +131,7 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [x] Blocked stage with visual cue (also dimmed, but different icon, and not affected by clear) (use `tbblock` alias)
 - [x] Brag about tasks (use `tb c x y z +brag`)
 
+- [x] FEAT Add `--notebook` to `tb note`
 - [x] FEAT `tb begin --timer` will countdown the estimate with regular nudges
 - [x] FEAT Have a recurrent icon hint
 - [x] IDEA There should be `archive` (stuff done) and `trash` (stuff deleted)

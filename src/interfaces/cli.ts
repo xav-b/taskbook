@@ -9,6 +9,7 @@ import render from '../interfaces/render'
 import { parseDuration, parseDate } from '../shared/parser'
 import EventPlugin from '../plugins/bb-domain-event/plugin'
 import GoalPlugin from '../plugins/bb-domain-goal/plugin'
+import CardPlugin from '../plugins/bb-domain-card/plugin'
 import Taskbook from '../use_cases/taskbook'
 
 debug('instantiating commander')
@@ -82,7 +83,8 @@ program
   .alias('n')
   .description('Create note')
   .argument('<description...>')
-  .action((description) => taskbook.createNote(description))
+  .option('-n, --notebook', 'Open editor to also insert a comment')
+  .action((description, options) => taskbook.createNote(description, options.notebook))
 
 program
   .command('task')
@@ -139,7 +141,7 @@ program
   .description('Delete items')
   .option('-t, --trash', 'send to trash bin instead of archive')
   .argument('<items...>')
-  .action((items, trash) => taskbook.deleteItems(items, trash))
+  .action((items, options) => taskbook.deleteItems(items, options.trash))
 
 program
   .command('check')
@@ -246,6 +248,7 @@ program
 // register plugins
 new EventPlugin().register(program, taskbook)
 new GoalPlugin().register(program, taskbook)
+new CardPlugin().register(program, taskbook)
 
 debug('checking on updates')
 updateNotifier({ pkg }).notify()
