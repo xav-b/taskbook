@@ -42,6 +42,12 @@ program
   .argument('context')
   .action((context: string) => taskbook.switchContext(context))
 
+program
+  .command('hello')
+  .alias('bonjour')
+  .description('Initialise your day')
+  .action((context: string) => taskbook.hello())
+
 // visualise tasks ---------------------------------------------------------------------
 
 program

@@ -19,7 +19,7 @@ import Item from '../domain/item'
 import Task, { TaskPriority } from '../domain/task'
 import Note from '../domain/note'
 import Logger from '../shared/logger'
-import events from '../use_cases/events'
+import events from './events'
 
 const POMODORO_STRATEGY = 25 // minutes
 
@@ -66,10 +66,15 @@ function goodDay() {
 
 class Taskbook {
   isNewDay: boolean
+
   _storage: Storage
+
   _configuration: IConfig
+
   _data: Catalog
+
   _archive: Catalog
+
   _bin: Catalog
 
   constructor() {
@@ -83,22 +88,27 @@ class Taskbook {
     this._bin = this._storage.getBin()
     this._data = this._storage.get()
 
+    // determine if this is the first run of the day
     this.isNewDay = false
     const last = cache.get('root.lastOpen')
     debug(`last taskbook run: ${last}`)
 
     if (last !== null) {
       this.isNewDay = new Date(last).getDate() !== new Date().getDate()
-      if (this.isNewDay && this._configuration.greetings) {
-        goodDay()
-      }
     }
 
     // keep track of the last time we ran taskbook
     cache.set('root.lastOpen', new Date().toLocaleString())
+  }
 
-    debug(`${this.isNewDay ? 'checking' : 'skipping check of'} recurrent tasks`)
-    if (this.isNewDay) this.scheduleRecurrentTasks()
+  hello() {
+    if (this.isNewDay && this._configuration.greetings) {
+      goodDay()
+    }
+
+    debug('checking recurrent tasks')
+    // the operation is idempotent
+    this.scheduleRecurrentTasks()
   }
 
   _save(data: Catalog = this._data) {
@@ -155,7 +165,7 @@ class Taskbook {
       // because this function only runs the first time of the day, but this is
       // done outside and so it should not matter here.
       if (new Date(task.updatedAt).getDate() === today.getDate())
-        return debug(`task id:${taskId} already completed today`)
+        debug(`task id:${taskId} already completed today`)
       else {
         debug(`rescheduling recurrent task id:${taskId} (${task.repeat})`)
         // very much a new task
@@ -170,6 +180,8 @@ class Taskbook {
         })
         this._data.set(todayTask.id, todayTask)
         added.push(task.description)
+
+        render.successCreate(todayTask, true)
       }
     })
 

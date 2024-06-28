@@ -411,12 +411,14 @@ class Render {
     warn({ message: yellow(message), suffix })
   }
 
-  successCreate(item: Item) {
+  successCreate(item: Item, showDescription = false) {
     const [prefix, suffix] = ['\n', grey(String(item.id))]
     // FIXME: in most cases `typeof Item` is `Object`, but that alternative is
     // a pretty poor UX
     // const message = `Created ${typeof item}`
-    const message = `Created ${item.constructor.name}`
+    let message = `Created ${item.constructor.name}`
+    if (showDescription) message += `: ${item.description}`
+
     success({ prefix, message, suffix })
   }
 

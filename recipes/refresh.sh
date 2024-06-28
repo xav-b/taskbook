@@ -7,7 +7,7 @@
 # trap the Control-C signal and break out of the loop
 trap break INT
 
-REFRESH_SECONDS=10
+REFRESH_SECONDS=100
 
 while true; do
   clear
