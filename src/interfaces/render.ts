@@ -194,8 +194,10 @@ class Render {
 
     const suffix = []
 
+    // FIXME: calendar won't pretty print this one
     if (item instanceof Task) {
       if (item.duration && item.duration > 0 && item.isComplete)
+        // FIXME: pretty rendering duration should be a task method
         suffix.push(grey(`${Math.ceil(item.duration / (1000 * 60))}m`))
     }
 
@@ -228,10 +230,10 @@ class Render {
   displayByDate(data: Record<string, Item[]>, isArchive = false) {
     Object.keys(data)
       // we move it to 11pm because otherwise the library considers it to be
-      // midnight and subtract to go to UTC+0, effectivelymoving to the
-      // previous day
+      // midnight and subtract to go to UTC+0, effectively moving to the
+      // previous day.
       // Initially this was parsed using the local timezone, so there should
-      // not be any new conversion, just use the day
+      // not be any new conversion, just use the day.
       .map((dt) => parse(`${dt} 23`, 'dd/MM/yyyy HH', new Date()))
       .sort(compareAsc)
       .forEach((date) => {
@@ -411,12 +413,14 @@ class Render {
     warn({ message: yellow(message), suffix })
   }
 
-  successCreate(item: Item) {
+  successCreate(item: Item, showDescription = false) {
     const [prefix, suffix] = ['\n', grey(String(item.id))]
     // FIXME: in most cases `typeof Item` is `Object`, but that alternative is
     // a pretty poor UX
     // const message = `Created ${typeof item}`
-    const message = `Created ${item.constructor.name}`
+    let message = `Created ${item.constructor.name}`
+    if (showDescription) message += `: ${item.description}`
+
     success({ prefix, message, suffix })
   }
 
@@ -453,8 +457,9 @@ class Render {
 
   successCopyToClipboard(ids: string[]) {
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
-    const message = `Copied the ${ids.length > 1 ? 'descriptions of items' : 'description of item'
-      }:`
+    const message = `Copied the ${
+      ids.length > 1 ? 'descriptions of items' : 'description of item'
+    }:`
     success({ prefix, message, suffix })
   }
 

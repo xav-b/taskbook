@@ -2,25 +2,32 @@
 
 ### Next
 
+Change object/type base items to either golang style interface or functional
+practice. Right now the core code has to know about all the types of items, and
+there are checks everywhere. This makes the plugin system failing and slow down
+development, lower quality.
+
+- [ ] FIXME Completed events have elapsed time in timestamp
+- [ ] FIXME: `--timer` capture CTRL-C and gracefully record the time spent.
+- [ ] FIXME `tb b --timer` never completes
+- [ ] TECH Document recurrent values, and check why it's not reliable
 - [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
            when reviewed and automatically uncheck according to schedule (maybe add a
            flag). Bind it to `@flashcard.{deck}`
+        - [x] Create a card type
         - [ ] Review system
         - [ ] `card:decks` command to list decks (or can i hack on tb list?)
         - [ ] Replace `next: 3d` by last review
-- [ ] FIXME `tb b --timer` never completes
-- [ ] FIXME: `--timer` capture CTRL-C and gracefully record the time spent.
 - [ ] FEAT Support syncing multiple calendars and have them in their respective `calendar` 
            and `calendar.{name}` boards (or use tags?) - sorting should also work
-- [ ] TECH Document recurrent values, and check why it's not reliable
-- [ ] FIXME new day and `tb clear` as first command probably don't play nicely together
 - [ ] TECH Implement the library + plugin architecture
-  - [ ] Global config refactoring
+      - [ ] Global config refactoring
 
 ### Todo
 
 ### Backlog
 
+- [ ] FEAT Support `tb delegate` which is like `delete` but keep track it was instead delegated, not cancelled
 - [ ] FEAT At init, or `tb clear`, auto-check events from previous days
 - [ ] FEAT `tb link [taskId] [url]`
 - [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
@@ -106,17 +113,6 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - `brag` tag to remember what to brag about
 - `frog` and `s xs` tags to _eat the frog_ and tackle small things
 - `pin` for stuff to always keep around
-- `card` `--repeat "every day"` (temporary) to record flashcards
-
-### Implementing habits
-
-- [x] `tb task --repeat "everyday"` (check that scheduling nodejs that uses many human cron inputs)
-- [ ] Habits: just tag them, or `everyday` automatically gets the `habit` tag
-- [x] Have a way to detect first run of the day
-- [ ] Go through all the tasks having a `repeat`, and create those of today that
-      are not there already (+ have something fun about it, like a quote or whatever)
-- [ ] Experiment with a daily "day planning" task
-- [ ] Support trash vs archive
 
 ---
 
@@ -131,6 +127,15 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [x] Blocked stage with visual cue (also dimmed, but different icon, and not affected by clear) (use `tbblock` alias)
 - [x] Brag about tasks (use `tb c x y z +brag`)
 
+- [x] Implementing habits
+  - [x] `tb task --repeat "everyday"` (check that scheduling nodejs that uses many human cron inputs)
+  - [x] Habits: just tag them, or `everyday` automatically gets the `habit` tag
+  - [x] Have a way to detect first run of the day
+  - [x] Go through all the tasks having a `repeat`, and create those of today that
+        are not there already (+ have something fun about it, like a quote or whatever)
+  - [x] Experiment with a daily "day planning" task
+
+- [x] `created task ##` could also show the description
 - [x] FEAT Add `--notebook` to `tb note`
 - [x] FEAT `tb begin --timer` will countdown the estimate with regular nudges
 - [x] FEAT Have a recurrent icon hint

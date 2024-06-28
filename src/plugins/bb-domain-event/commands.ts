@@ -55,7 +55,7 @@ function upsert(
   if (board._configuration.enableCopyID) clipboardy.writeSync(String(id))
 
   if (existing) render.successEdit(String(id))
-  else render.successCreate(event)
+  else render.successCreate(event, true)
 }
 
 // FIXME: don't recreate events if running twice
