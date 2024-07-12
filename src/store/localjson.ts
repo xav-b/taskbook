@@ -7,6 +7,7 @@ import Task from '../domain/task'
 import Note from '../domain/note'
 import CalendarEvent from '../plugins/bb-domain-event/event'
 import Goal from '../plugins/bb-domain-goal/goal'
+import Flashcard from '../plugins/bb-domain-card/card'
 import Catalog, { CatalogInnerData } from '../domain/catalog'
 import Logger from '../shared/logger'
 import { randomHexString, ensureDir } from '../shared/utils'
@@ -20,11 +21,13 @@ const DEFAULT_WORKSPACE = 'default'
 function parseJson(data: any): Catalog {
   const catalog: CatalogInnerData = {}
 
+  // FIXME: there shouldn't be any knowledge of the plugins here
   Object.keys(data).forEach((id: string) => {
     if (data[id]._type === 'task') catalog[id] = new Task(data[id])
     else if (data[id]._type === 'note') catalog[id] = new Note(data[id])
     else if (data[id]._type === 'event') catalog[id] = new CalendarEvent(data[id])
     else if (data[id]._type === 'goal') catalog[id] = new Goal(data[id])
+    else if (data[id]._type === 'flashcard') catalog[id] = new Flashcard(data[id])
     else log.error(`[warning] unknown item type: ${data[id]._type}`)
   })
 
