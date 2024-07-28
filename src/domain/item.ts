@@ -26,17 +26,27 @@ export default abstract class Item {
   // rething how ids are managed between different kind of storage.
   // (restore management of ids is probaably related)
   id: number
+
   _uid: string
+
   protected _createdAt: UnixTimestamp
+
   static _type: string
+
   abstract isTask: boolean
 
   updatedAt: UnixTimestamp
+
   description: string
+
   comment: Maybe<string>
+
   isStarred: boolean
+
   boards: string[]
+
   tags: string[]
+
   link: string | null
 
   abstract display(signaleObj: SignaleLogConfig): void
@@ -60,8 +70,8 @@ export default abstract class Item {
     this.updatedAt = options.updatedAt || now.getTime()
 
     this.description = options.description
-    // NOTE: we culd have it a protected `_comment` and expose a `comment()`
-    // method that deos the base64 decode
+    // NOTE: we could have it a protected `_comment` and expose a `comment()`
+    // method that does the base64 decode
     this.comment = options.comment || null
     this.isStarred = options.isStarred || false
     this.boards = options.boards || []

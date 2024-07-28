@@ -7,10 +7,10 @@ practice. Right now the core code has to know about all the types of items, and
 there are checks everywhere. This makes the plugin system failing and slow down
 development, lower quality.
 
-- [ ] FIXME Completed events have elapsed time in timestamp
+- [ ] IDEA Move done tasks at the bottom of the boards show (settings though?)
+- [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
 - [ ] FIXME: `--timer` capture CTRL-C and gracefully record the time spent.
 - [ ] FIXME `tb b --timer` never completes
-- [ ] TECH Document recurrent values, and check why it's not reliable
 - [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
            when reviewed and automatically uncheck according to schedule (maybe add a
            flag). Bind it to `@flashcard.{deck}`
@@ -30,7 +30,6 @@ development, lower quality.
 - [ ] FEAT Support `tb delegate` which is like `delete` but keep track it was instead delegated, not cancelled
 - [ ] FEAT At init, or `tb clear`, auto-check events from previous days
 - [ ] FEAT `tb link [taskId] [url]`
-- [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
 - [ ] FEAT calendar sync:
       - [ ] Fix token renewal (grant refused crash)
       - [ ] Use `schedule` for task ordering on `calendar`
@@ -53,6 +52,7 @@ development, lower quality.
   - [ ] Recurrent events
   - [ ] Validate value at creation (`on Mondays` parsing for example crashes)
 
+- [ ] IDEA When moving tsomething to `@blocked`, indicate reason or other task(s) reference
 - [ ] IDEA the `@tmp` board is automatically cleaned with `tb clear`
 - [ ] IDEA Logger should both use `DEBUG` AND record stuff on file (rotating)
 - [ ] IDEA Use taskbook to track those items, in the open on Github
@@ -65,6 +65,7 @@ development, lower quality.
 - [ ] IDEA Hook system to implement a plugin system (post-delete, post-create, ...)
 - [ ] IDEA Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
 
+- [ ] FIXME Completed events have elapsed time in timestamp
 - [ ] FIXME storage loads by data types and must be modified for a new type
 - [ ] FIXME boards and tags don't need to be stored with their `@` and `+`
 - [ ] FIXME Restore of notes seem to move ids around and duplicate, if working at all
@@ -135,6 +136,7 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
         are not there already (+ have something fun about it, like a quote or whatever)
   - [x] Experiment with a daily "day planning" task
 
+- [x] `tb edit <property> <value...>` if nothing matches existing property, edit the title
 - [x] `created task ##` could also show the description
 - [x] FEAT Add `--notebook` to `tb note`
 - [x] FEAT `tb begin --timer` will countdown the estimate with regular nudges

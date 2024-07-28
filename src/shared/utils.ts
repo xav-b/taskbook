@@ -1,8 +1,7 @@
 import fs from 'fs'
 import crypto from 'crypto'
 import { Maybe } from '../types'
-import Item from '../domain/item'
-import Task from '../domain/task'
+import IBullet from '../domain/ibullet'
 
 export function randomHexString(length = 8) {
   return crypto
@@ -13,16 +12,19 @@ export function randomHexString(length = 8) {
 
 export const removeDuplicates = (x: string[]): string[] => [...new Set(x)]
 
-export function sortByPriorities(t1: Item, t2: Item, pushNullDown = true): number {
+export function sortByPriorities(t1: IBullet, t2: IBullet, pushNullDown = true): number {
   const orderNull = pushNullDown ? -1 : 1
   // we want to have top priorities first, down to lowest so here the highest
   // priority should come as "lower" than the lowest ones
-  if (t1 instanceof Task && t2 instanceof Task) return t2.priority - t1.priority
+  // TODO: `isTask` could be generalised by just checking if the item has a
+  // priority or not, it doesn't have to be a task, a goal could work out too,
+  // for example.
+  if (t1.isTask && t2.isTask) return t2.priority - t1.priority
   // if we are here, one of the 2 items is not a task. The behaviour we want is
   // to a) not affect the sorting of tasks with priorities, and b) push
   // downward/upward (depending on flag)
-  else if (t1 instanceof Task) return orderNull
-  else if (t2 instanceof Task) return -orderNull
+  if (t1.isTask) return orderNull
+  if (t2.isTask) return -orderNull
 
   // none of the items are a task, stand still
   return 0

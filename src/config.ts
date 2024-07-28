@@ -6,7 +6,7 @@ import chalk from 'chalk'
 import Logger from './shared/logger'
 import pkg from '../package.json'
 
-// for self-documentation, should use from ./domain/task
+// for self-documentation, should use from ./domain/ibullet:Priority
 type PriorityLevel = 1 | 2 | 3
 
 export interface IConfig {
@@ -36,6 +36,7 @@ const CONFIG_DIR = '.config'
 
 class Config {
   private _configPath: string
+
   private _configFile: string
 
   constructor() {

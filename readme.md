@@ -166,6 +166,10 @@ $ tb --help
       $ tb --timeline
 ```
 
+### Repeat
+
+- On <a day>, every weekday, every day
+
 ## Views
 
 ### Board View

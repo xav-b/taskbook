@@ -2,15 +2,16 @@
 
 import { Command } from 'commander'
 import updateNotifier from 'update-notifier'
-const debug = require('debug')('tb:cli')
 
 import pkg from '../../package.json'
-import render from '../interfaces/render'
+import render from './render'
 import { parseDuration, parseDate } from '../shared/parser'
 import EventPlugin from '../plugins/bb-domain-event/plugin'
 import GoalPlugin from '../plugins/bb-domain-goal/plugin'
 import CardPlugin from '../plugins/bb-domain-card/plugin'
 import Taskbook from '../use_cases/taskbook'
+
+const debug = require('debug')('tb:cli')
 
 debug('instantiating commander')
 const program = new Command()
@@ -205,8 +206,22 @@ program
   .alias('e')
   .description('Edit item description')
   .argument('task')
+  .argument('property')
   .argument('<description...>')
-  .action((task, description) => taskbook.editDescription([`@${task}`].concat(description)))
+  .action((task, property, description) => {
+    // NOTE: should we support tag?
+    // TODO: duration, repeat
+    // the properties not mentioned can be edited with more explicit/direct commands,
+    // like `tb tag` or `tb estimate`
+    const ITEM_PROPERTIES = ['description', 'link']
+    if (!ITEM_PROPERTIES.includes(property)) {
+      // We only edit the description, even allowind parsing like @board and
+      // p:2, ... kind of a no-learning-curve shorthand
+      property = 'description'
+      description = [property].concat(description)
+    }
+    taskbook.editItemProperty(task, property, description)
+  })
 
 // work --------------------------------------------------------------------------------
 

@@ -1,7 +1,7 @@
 import chalk from 'chalk'
 
 import Printer, { SignaleLogConfig, wait, success } from '../../interfaces/printer'
-import { TaskProperties } from '../../domain/task'
+import { IBulletOptions } from '../../domain/ibullet'
 import { UnixTimestamp } from '../../types'
 import Task from '../../domain/task'
 
@@ -25,8 +25,11 @@ function prettyToday(ts: UnixTimestamp) {
 
 /*
  * Logically, an event is a scheduled task.
+ *
+ * TODO: this would be logical to add `schedule` to the `Task` or even
+ * `IBullet` domains. Even a note or a goal could very much be scheduled.
  */
-export interface EventProperties extends TaskProperties {
+export interface EventProperties extends IBulletOptions {
   // timestamp as an epoch ms (to make it consistent with the `createdAt` etc...)
   schedule: UnixTimestamp
 }

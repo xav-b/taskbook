@@ -1,5 +1,5 @@
 import { set, addDays } from 'date-fns'
-import { TaskPriority } from '../domain/task'
+import { Priority } from '../domain/ibullet'
 import { Maybe } from '../types'
 
 const DEFAULT_TASK_PRIORITY = 1
@@ -12,7 +12,7 @@ interface ILineStruct {
   boards: string[]
   tags: string[]
   description: string
-  priority: TaskPriority
+  priority: Priority
   estimate: number | null
 }
 
@@ -50,7 +50,7 @@ export function getEstimate(desc: string[]): number | null {
   return null
 }
 
-export function getPriority(desc: string[]): TaskPriority {
+export function getPriority(desc: string[]): Priority {
   const opt = desc.find((x) => isPriorityOpt(x))
   return opt ? parseInt(opt[opt.length - 1]) : DEFAULT_TASK_PRIORITY
 }

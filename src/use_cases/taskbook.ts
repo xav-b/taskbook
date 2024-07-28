@@ -15,13 +15,14 @@ import render from '../interfaces/render'
 import { removeDuplicates } from '../shared/utils'
 import { parseOptions, isBoardOpt } from '../shared/parser'
 import Catalog, { CatalogInnerData } from '../domain/catalog'
-import Item from '../domain/item'
-import Task, { TaskPriority } from '../domain/task'
+import IBullet, { Priority } from '../domain/ibullet'
+import Task from '../domain/task'
 import Note from '../domain/note'
 import Logger from '../shared/logger'
 import events from './events'
 
-const POMODORO_STRATEGY = 25 // minutes
+// TODO: config, some works it out differently
+const POMODORO_STRATEGY = 25 // minutes - default task estimate
 
 const log = Logger()
 const cache = cacheStorage.init()
@@ -244,7 +245,7 @@ class Taskbook {
   }
 
   _groupByBoard(data = this._data, boards = this._data.boards()) {
-    const grouped: Record<string, Item[]> = {}
+    const grouped: Record<string, IBullet[]> = {}
 
     // NOTE: can `boards` be null?
     if (boards === null || boards.length === 0) boards = this._data.boards()
@@ -253,19 +254,15 @@ class Taskbook {
       boards.forEach((board: string) => {
         if (data.get(id).boards.includes(board) || data.get(id).tags?.includes(board)) {
           // we already have this board with items, append to it
-          if (Array.isArray(grouped[board])) return grouped[board].push(data.get(id))
-
+          if (Array.isArray(grouped[board])) grouped[board].push(data.get(id))
           // initialise that `board` group
-          grouped[board] = [data.get(id)]
-
-          return
+          else grouped[board] = [data.get(id)]
         }
-        return
       })
     })
 
     // re-order the way `boards` were given
-    const orderInit: Record<string, Item[]> = {}
+    const orderInit: Record<string, IBullet[]> = {}
     const ordered = boards.reduce((obj, key) => {
       if (grouped[key]) obj[key] = grouped[key]
       return obj
@@ -274,7 +271,7 @@ class Taskbook {
     return ordered
   }
 
-  _saveItemToArchive(item: Item) {
+  _saveItemToArchive(item: IBullet) {
     const { _data, _archive } = this
 
     const archiveID = _archive.generateID()
@@ -287,7 +284,7 @@ class Taskbook {
     _data.delete(item.id)
   }
 
-  _saveItemToTrashBin(item: Item) {
+  _saveItemToTrashBin(item: IBullet) {
     const { _data, _bin } = this
 
     const trashID = _bin.generateID()
@@ -300,7 +297,7 @@ class Taskbook {
     _data.delete(item.id)
   }
 
-  _saveItemToStorage(item: Item) {
+  _saveItemToStorage(item: IBullet) {
     const { _data, _archive } = this
     const restoreID = _data.generateID()
 
@@ -320,7 +317,7 @@ class Taskbook {
 
     ids
       .map((each) => _data.get(each))
-      .forEach((item: Item) => {
+      .forEach((item: IBullet) => {
         item.tags = removeDuplicates(tags.concat(item.tags || []))
       })
 
@@ -371,11 +368,14 @@ class Taskbook {
   }
 
   async checkTasks(ids: string[], duration: Maybe<number>, doneAt: Maybe<Date>) {
+    debug(`striking tasks ${ids.join(', ')}`)
+
     // another gymnastics to allow tags in the list of ids
     const { description, tags } = parseOptions(ids, {
       defaultBoard: this._configuration.defaultBoard,
     })
     ids = this._validateIDs(description.split(' '))
+    debug(`task ids verified: ${ids}`)
 
     const { _data } = this
     const checked: Task[] = []
@@ -426,7 +426,7 @@ class Taskbook {
 
         // else invalid item id
         // TODO: log and print something
-        return
+        return null
       })
     )
 
@@ -509,7 +509,7 @@ class Taskbook {
   }
 
   _groupByDate(data: Catalog) {
-    const grouped: Record<string, Item[]> = {}
+    const grouped: Record<string, IBullet[]> = {}
 
     data.ids().forEach((id) => {
       const item = data.get(id)
@@ -535,33 +535,25 @@ class Taskbook {
     render.displayStats(data.stats())
   }
 
-  editDescription(input: string[]) {
-    const targets = input.filter(isBoardOpt)
+  editItemProperty(itemId: string, property: string, input: string[]) {
+    this._validateIDs([itemId])
 
-    if (targets.length === 0) {
-      render.missingID()
-      process.exit(1)
-    }
+    // TODO: parse input to allow boards, tags, etc...
 
-    if (targets.length > 1) {
-      render.invalidIDsNumber()
-      process.exit(1)
-    }
-
-    const [target] = targets
-    const [id] = this._validateIDs([target.slice(1)])
-    const newDesc = input.filter((x) => x !== target).join(' ')
-
-    if (newDesc.length === 0) {
+    if (input.length === 0) {
       render.missingDesc()
       process.exit(1)
     }
 
     const { _data } = this
-    _data.get(id).description = newDesc
-    this._save(_data)
 
-    render.successEdit(id)
+    const item = _data.get(itemId)
+    if (property === 'description') item.description = input.join(' ')
+    // // eslint-disable-next-line prefer-destructuring
+    if (property === 'link') item.link = input[0]
+
+    this._save(_data)
+    render.successEdit(itemId)
   }
 
   findItems(terms: string[], inArchive: Maybe<boolean>) {
@@ -585,10 +577,7 @@ class Taskbook {
       boards.forEach((board: string) => {
         if (data.get(id).boards.includes(board) || data.get(id).tags?.includes(board)) {
           filtered[id] = data.get(id)
-
-          return
         }
-        return
       })
     })
 
@@ -708,7 +697,7 @@ class Taskbook {
     render.successEdit(taskid)
   }
 
-  updatePriority(priority: TaskPriority, taskids: string[]) {
+  updatePriority(priority: Priority, taskids: string[]) {
     const { _data } = this
 
     const ids = this._validateIDs(taskids)
@@ -741,11 +730,12 @@ class Taskbook {
   }
 
   async printTask(taskId: string, format: string, useArchive = false) {
-    ;[taskId] = this._validateIDs([taskId])
+    const store = useArchive ? this._archive : this._data
+
+    ;[taskId] = this._validateIDs([taskId], store.ids())
 
     debug(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
 
-    const store = useArchive ? this._archive : this._data
     const task = store.get(taskId)
 
     if (task === null) throw new Error(`no item with id #${taskId} found`)

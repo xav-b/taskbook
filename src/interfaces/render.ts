@@ -3,8 +3,8 @@ import { parse, compareAsc } from 'date-fns'
 
 import { sortByPriorities, msToMinutes } from '../shared/utils'
 // TODO: import { Item, Note, Goal, Task } from '../domain'
-import Item from '../domain/item'
-import Task, { TaskPriority } from '../domain/task'
+import IBullet, { Priority } from '../domain/ibullet'
+import Task from '../domain/task'
 import { CatalogStats } from '../domain/catalog'
 import { error, log, success, warn } from './printer'
 import config, { IConfig } from '../config'
@@ -35,7 +35,7 @@ const theme = {
 }
 */
 
-function buildNoteMessage(item: Item): string {
+function buildNoteMessage(item: IBullet): string {
   return item.description
 }
 
@@ -43,20 +43,20 @@ function colorBoards(boards: string[]) {
   return boards.map((x) => grey(x)).join(' ')
 }
 
-function isBoardComplete(items: Item[]) {
+function isBoardComplete(items: IBullet[]) {
   const { tasks, complete, notes } = _getItemStats(items)
   return tasks === complete && notes === 0
 }
 
-function getStar(item: Item) {
+function getStar(item: IBullet) {
   return item.isStarred ? yellow('★') : ''
 }
 
-function getCommentHint(item: Item) {
+function getCommentHint(item: IBullet) {
   return item.comment ? blue('✎') : ''
 }
 
-function getLinkHint(item: Item) {
+function getLinkHint(item: IBullet) {
   // TODO: that's where it would be so cool to have a clickable link
   // NOTE: link and globe ascii just seem too much
   return item.link ? blue('@') : ''
@@ -67,7 +67,7 @@ function getRepeatHint(task: Task) {
   // return task.repeat ? blue('◌') : ''
 }
 
-function _getItemStats(items: Item[]) {
+function _getItemStats(items: IBullet[]) {
   let [tasks, complete, notes] = [0, 0, 0]
 
   items.forEach((item) => {
@@ -93,7 +93,7 @@ class Render {
     this._configuration = config.get()
   }
 
-  _buildTitle(key: string, items: Item[]) {
+  _buildTitle(key: string, items: IBullet[]) {
     let title = this._configuration.highlightTitle(key)
     if (key === new Date().toDateString()) title += ` ${grey('[Today]')}`
 
@@ -103,7 +103,7 @@ class Render {
     return { title, correlation }
   }
 
-  _buildPrefix(item: Item) {
+  _buildPrefix(item: IBullet) {
     const prefix = []
 
     const { id } = item
@@ -140,14 +140,14 @@ class Render {
     return message.join(' ')
   }
 
-  _displayTitle(board: string, items: Item[]) {
+  _displayTitle(board: string, items: IBullet[]) {
     const { title: message, correlation: suffix } = this._buildTitle(board, items)
     const titleObj = { prefix: '\n ', message, suffix }
 
     return log(titleObj)
   }
 
-  async displayItemByBoard(item: Item) {
+  async displayItemByBoard(item: IBullet) {
     const age = item.age()
     const star = getStar(item)
     const comment = getCommentHint(item)
@@ -183,7 +183,7 @@ class Render {
     item.display(msgObj)
   }
 
-  _displayItemByDate(item: Item, isArchive = false) {
+  _displayItemByDate(item: IBullet, isArchive = false) {
     const boards = item.boards.filter((x) => x !== this._configuration.defaultBoard)
     const star = getStar(item)
 
@@ -209,7 +209,7 @@ class Render {
     item.display(msgObj)
   }
 
-  displayByBoard(data: Record<string, Item[]>, displayTasks = true) {
+  displayByBoard(data: Record<string, IBullet[]>, displayTasks = true) {
     Object.keys(data).forEach((board: string) => {
       if (isBoardComplete(data[board]) && !this._configuration.displayCompleteTasks) return
 
@@ -227,7 +227,7 @@ class Render {
     })
   }
 
-  displayByDate(data: Record<string, Item[]>, isArchive = false) {
+  displayByDate(data: Record<string, IBullet[]>, isArchive = false) {
     Object.keys(data)
       // we move it to 11pm because otherwise the library considers it to be
       // midnight and subtract to go to UTC+0, effectively moving to the
@@ -413,7 +413,7 @@ class Render {
     warn({ message: yellow(message), suffix })
   }
 
-  successCreate(item: Item, showDescription = false) {
+  successCreate(item: IBullet, showDescription = false) {
     const [prefix, suffix] = ['\n', grey(String(item.id))]
     // FIXME: in most cases `typeof Item` is `Object`, but that alternative is
     // a pretty poor UX
@@ -442,7 +442,7 @@ class Render {
     success({ prefix, message, suffix })
   }
 
-  successPriority(id: string, level: TaskPriority) {
+  successPriority(id: string, level: Priority) {
     const prefix = '\n'
     const message = `Updated priority of task: ${grey(id)} to`
     const suffix = level === 3 ? red('high') : level === 2 ? yellow('medium') : green('normal')
