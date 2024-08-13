@@ -27,6 +27,7 @@ export interface IConfig {
   plannedHoursWarn: number
   plannedHoursError: number
   greetings: boolean
+  doneLast: boolean
 }
 
 const log = Logger()
@@ -99,6 +100,7 @@ class Config {
       plannedHoursWarn: 6,
       plannedHoursError: 8,
       greetings: true,
+      doneLast: true,
     }
   }
 

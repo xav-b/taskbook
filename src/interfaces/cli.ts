@@ -47,7 +47,7 @@ program
   .command('hello')
   .alias('bonjour')
   .description('Initialise your day')
-  .action((context: string) => taskbook.hello())
+  .action(() => taskbook.hello())
 
 // visualise tasks ---------------------------------------------------------------------
 
@@ -204,21 +204,24 @@ program
 program
   .command('edit')
   .alias('e')
-  .description('Edit item description')
+  .description('Edit item description/link/duration')
   .argument('task')
   .argument('property')
-  .argument('<description...>')
+  .argument('<description...>') // description | link | duration (in minutes)
   .action((task, property, description) => {
-    // NOTE: should we support tag?
-    // TODO: duration, repeat
+    // NOTE: we don't intend to support all fields, like tags. That's because
+    // a) they have their own command and b) it's unclear how e.g. boards
+    // should be merged. And that complexity is more annoying than the small
+    // benefit of editing several things at once (never useful to me)
+    // TODO: duration
     // the properties not mentioned can be edited with more explicit/direct commands,
     // like `tb tag` or `tb estimate`
-    const ITEM_PROPERTIES = ['description', 'link']
+    const ITEM_PROPERTIES = ['description', 'link', 'duration']
+    // equivalent of not specifying the property, which used to be the default
+    // taskbook behaviour and a common use case
     if (!ITEM_PROPERTIES.includes(property)) {
-      // We only edit the description, even allowind parsing like @board and
-      // p:2, ... kind of a no-learning-curve shorthand
-      property = 'description'
       description = [property].concat(description)
+      property = 'description'
     }
     taskbook.editItemProperty(task, property, description)
   })

@@ -47,6 +47,6 @@ export default class EventPlugin extends BulletBoardPlugin {
         'name the calendar credentials that will be saved',
         'default'
       )
-      .action(async (opts) => await commands.syncGCal(board, opts.calendar))
+      .action(async (opts) => commands.syncGCal(board, opts.calendar))
   }
 }

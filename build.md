@@ -7,19 +7,20 @@ practice. Right now the core code has to know about all the types of items, and
 there are checks everywhere. This makes the plugin system failing and slow down
 development, lower quality.
 
-- [ ] IDEA Move done tasks at the bottom of the boards show (settings though?)
+- [ ] IDEA Can i integrate the idea (or even base the project) on [outline speedrunning](https://learnhowtolearn.org/how-to-build-extremely-quickly/)
+           Maybe just show how this can be used by using a board or tag and priorities
+
 - [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
-- [ ] FIXME: `--timer` capture CTRL-C and gracefully record the time spent.
+- [ ] FIXME `--timer` capture CTRL-C and gracefully record the time spent.
 - [ ] FIXME `tb b --timer` never completes
+
 - [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
            when reviewed and automatically uncheck according to schedule (maybe add a
            flag). Bind it to `@flashcard.{deck}`
         - [x] Create a card type
         - [ ] Review system
-        - [ ] `card:decks` command to list decks (or can i hack on tb list?)
+        - [ ] `card:decks` command to list decks (or can i hack on tb list? Using `tb list deck.*` fuzzy)
         - [ ] Replace `next: 3d` by last review
-- [ ] FEAT Support syncing multiple calendars and have them in their respective `calendar` 
-           and `calendar.{name}` boards (or use tags?) - sorting should also work
 - [ ] TECH Implement the library + plugin architecture
       - [ ] Global config refactoring
 
@@ -27,6 +28,7 @@ development, lower quality.
 
 ### Backlog
 
+- [ ] FEAT `tb edit` with no valid field should support any 
 - [ ] FEAT Support `tb delegate` which is like `delete` but keep track it was instead delegated, not cancelled
 - [ ] FEAT At init, or `tb clear`, auto-check events from previous days
 - [ ] FEAT `tb link [taskId] [url]`
@@ -52,20 +54,19 @@ development, lower quality.
   - [ ] Recurrent events
   - [ ] Validate value at creation (`on Mondays` parsing for example crashes)
 
+- [ ] IDEA Prompt mode: shorten command (no more `tb`) and refresh on every input
 - [ ] IDEA When moving tsomething to `@blocked`, indicate reason or other task(s) reference
 - [ ] IDEA the `@tmp` board is automatically cleaned with `tb clear`
 - [ ] IDEA Logger should both use `DEBUG` AND record stuff on file (rotating)
 - [ ] IDEA Use taskbook to track those items, in the open on Github
 - [ ] IDEA Exports/convert/import: json (done), markdown (for github sharing), sqlite dumb
 - [ ] IDEA `archive` and `timeline` to support same filters as `tb list`
-- [ ] IDEA `edit` command to consolidate description, comment, tag, board, estimate, duration, ...
 - [ ] IDEA `tb list` with dynamic sorting (prority, estimate (both should actually still combine))
 - [ ] IDEA `schedule` command to put a task on the calendar (as event) (or `tb mv 2 @calendar --schedule 2pm`)
 - [ ] IDEA Time boxing and pomodoro timer
 - [ ] IDEA Hook system to implement a plugin system (post-delete, post-create, ...)
 - [ ] IDEA Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
 
-- [ ] FIXME Completed events have elapsed time in timestamp
 - [ ] FIXME storage loads by data types and must be modified for a new type
 - [ ] FIXME boards and tags don't need to be stored with their `@` and `+`
 - [ ] FIXME Restore of notes seem to move ids around and duplicate, if working at all
@@ -136,6 +137,7 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
         are not there already (+ have something fun about it, like a quote or whatever)
   - [x] Experiment with a daily "day planning" task
 
+- [x] IDEA Move done tasks at the bottom of the boards show (settings though?)
 - [x] `tb edit <property> <value...>` if nothing matches existing property, edit the title
 - [x] `created task ##` could also show the description
 - [x] FEAT Add `--notebook` to `tb note`
@@ -182,6 +184,9 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [x] Order boards in the order I list them
 - [x] Make commands positional arguments
 - [x] Support calendar timeline
+- [x] FEAT Support syncing multiple calendars
+  - [x] have them in their respective `calendar` `calendar.{name}` boards (or use tags?) 
+  - [x] Sorting should also work
 
 ---
 

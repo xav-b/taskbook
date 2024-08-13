@@ -1,7 +1,7 @@
 import chalk from 'chalk'
 
 import Printer, { SignaleLogConfig, wait, success } from '../../interfaces/printer'
-import { IBulletOptions } from '../../domain/ibullet'
+import IBullet, { IBulletOptions } from '../../domain/ibullet'
 import { UnixTimestamp } from '../../types'
 import Task from '../../domain/task'
 
@@ -58,13 +58,21 @@ export default class EventTask extends Task {
     const prettyTime = prettyToday(this.schedule)
     const color = this.isComplete ? grey.strikethrough : chalk.blue
     // prefix message with scheduled time
-    // FIXME: this.schedule is a timestamp now
     signaleObj.message = `${color(prettyTime)} ${signaleObj.message}`
-
-    if (this.duration) signaleObj.suffix = grey(String(this.duration))
 
     if (this.isComplete) success(signaleObj)
     else if (this.inProgress) wait(signaleObj)
     else custom(signaleObj)
+  }
+
+  sort(other: IBullet): number {
+    // make no assumption if we're not comparing against an event
+    // push the calendar event down
+    // NOTE: EXPERIMENTAL
+    if (!(other instanceof EventTask)) return 1
+
+    // otherwise sort by timestamp ASC (meaning oldest event at the top)
+    // if the current task is older, it will be negative, pushing it first as we want
+    return this.schedule - other.schedule
   }
 }

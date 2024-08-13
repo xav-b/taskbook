@@ -4,6 +4,8 @@
  * Copy/pasted from https://developers.google.com/calendar/api/quickstart/nodejs?authuser=1
  */
 
+import { today, prettyTzOffset } from './utils'
+
 const fs = require('fs').promises
 const path = require('path')
 const process = require('process')
@@ -11,8 +13,6 @@ const process = require('process')
 const debug = require('debug')('tb:plugin:event:gcal')
 const { authenticate } = require('@google-cloud/local-auth')
 const { google } = require('googleapis')
-
-import { today, prettyTzOffset } from './utils'
 
 const CALENDAR_VERSION = 'v3'
 // If modifying these scopes, delete token.json.
@@ -102,6 +102,7 @@ async function listEvents(auth, opts) {
   const calendar = google.calendar({ version: CALENDAR_VERSION, auth })
 
   const res = await calendar.events.list({
+    // TODO: how to access the `family` one?
     calendarId: 'primary',
     timeMin: new Date().toISOString(),
     maxResults: 10,

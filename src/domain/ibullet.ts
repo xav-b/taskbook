@@ -114,6 +114,8 @@ export default interface IBullet {
   check: (duration: Maybe<number>, tags?: string[]) => void
 
   uncheck: () => void
+
+  sort: (other: IBullet) => number
 }
 
 /**
@@ -236,6 +238,11 @@ export abstract class BasicBullet implements IBullet {
     })
 
     return jsonObj
+  }
+
+  // default to sort by ID ASC (which should be newest first)
+  public sort(other: IBullet) {
+    return this.id - other.id
   }
 
   /**

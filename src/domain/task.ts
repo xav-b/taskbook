@@ -1,5 +1,5 @@
 import { formatDistance } from 'date-fns'
-import { BasicBullet, IBulletOptions, Priority } from './ibullet'
+import IBullet, { BasicBullet, IBulletOptions, Priority } from './ibullet'
 import { Maybe, UnixTimestamp } from '../types'
 import { msToMinutes } from '../shared/utils'
 import { SignaleLogConfig, wait, success, pending } from '../interfaces/printer'
@@ -112,6 +112,34 @@ export default class Task extends BasicBullet {
     if (this.isComplete) success(signaleObj)
     else if (this.inProgress) wait(signaleObj)
     else pending(signaleObj)
+  }
+
+  // Sort by task priority
+  public sort(other: IBullet) {
+    // TODO: make that configurable
+    const orderNull = -1
+    const orderCompleted = -1
+
+    // we want to have top priorities first, down to lowest so here the highest
+    // priority should come as "lower" than the lowest ones
+    // TODO: `isTask` could be generalised by just checking if the item has a
+    // priority or not, it doesn't have to be a task, a goal could work out too,
+    // for example.
+    if (this.isTask && other.isTask) {
+      if (this.isComplete && other.isComplete) return 0
+      if (this.isComplete) return -orderNull
+      if (other.isComplete) return orderNull
+
+      return other.priority - this.priority
+    }
+    // if we are here, one of the 2 items is not a task. The behaviour we want is
+    // to a) not affect the sorting of tasks with priorities, and b) push
+    // downward/upward (depending on flag)
+    if (this.isTask) return orderCompleted
+    if (other.isTask) return -orderCompleted
+
+    // none of the items are a task, stand still
+    return 0
   }
 
   /**

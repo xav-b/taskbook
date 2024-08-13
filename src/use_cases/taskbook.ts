@@ -65,6 +65,20 @@ function goodDay() {
 `)
 }
 
+function groupByDate(data: Catalog) {
+  const grouped: Record<string, IBullet[]> = {}
+
+  data.ids().forEach((id) => {
+    const item = data.get(id)
+    const dt = new Date(item.updatedAt).toLocaleDateString('en-UK')
+
+    if (grouped.hasOwnProperty(dt)) grouped[dt].push(item)
+    else grouped[dt] = [item]
+  })
+
+  return grouped
+}
+
 class Taskbook {
   isNewDay: boolean
 
@@ -490,6 +504,7 @@ class Taskbook {
     })
 
     this._save(_data)
+
     render.successDelete(ids)
   }
 
@@ -503,23 +518,9 @@ class Taskbook {
     // first we want to group items by day, in a way that can be the ordered
     // (so don't go to UI-friendly yet)
 
-    const groups = this._groupByDate(this._archive)
+    const groups = groupByDate(this._archive)
 
     render.displayByDate(groups, true)
-  }
-
-  _groupByDate(data: Catalog) {
-    const grouped: Record<string, IBullet[]> = {}
-
-    data.ids().forEach((id) => {
-      const item = data.get(id)
-      const dt = new Date(item.updatedAt).toLocaleDateString('en-UK')
-
-      if (grouped.hasOwnProperty(dt)) grouped[dt].push(item)
-      else grouped[dt] = [item]
-    })
-
-    return grouped
   }
 
   displayByBoard() {
@@ -528,7 +529,7 @@ class Taskbook {
 
   // expose the render method to our business logic there
   displayByDate() {
-    render.displayByDate(this._groupByDate(this._data))
+    render.displayByDate(groupByDate(this._data))
   }
 
   displayStats(data = this._data) {
@@ -548,9 +549,13 @@ class Taskbook {
     const { _data } = this
 
     const item = _data.get(itemId)
+    // TODO: display something if property is none of those fields
+    // TODO: validate `input[0]` depending on the cases
     if (property === 'description') item.description = input.join(' ')
-    // // eslint-disable-next-line prefer-destructuring
-    if (property === 'link') item.link = input[0]
+    // eslint-disable-next-line prefer-destructuring
+    else if (property === 'link') item.link = input[0]
+    // eslint-disable-next-line prefer-destructuring
+    else if (property === 'duration') item.duration = parseInt(input[0], 10) * 60 * 1000
 
     this._save(_data)
     render.successEdit(itemId)
@@ -561,7 +566,7 @@ class Taskbook {
       const result = this._archive.search(terms)
       // searching through archive makes more sense to display by date
       // (we are sure about the type given the `else` above)
-      const groups = this._groupByDate(result as Catalog)
+      const groups = groupByDate(result as Catalog)
       render.displayByDate(groups)
     } else {
       const result = this._data.search(terms)

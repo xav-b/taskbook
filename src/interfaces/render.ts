@@ -1,7 +1,7 @@
 import chalk from 'chalk'
 import { parse, compareAsc } from 'date-fns'
 
-import { sortByPriorities, msToMinutes } from '../shared/utils'
+import { msToMinutes } from '../shared/utils'
 // TODO: import { Item, Note, Goal, Task } from '../domain'
 import IBullet, { Priority } from '../domain/ibullet'
 import Task from '../domain/task'
@@ -34,6 +34,10 @@ const theme = {
   warning: yellow,
 }
 */
+
+export function itemSorter(t1: IBullet, t2: IBullet): number {
+  return t1.sort(t2)
+}
 
 function buildNoteMessage(item: IBullet): string {
   return item.description
@@ -169,11 +173,9 @@ class Render {
     if (repeat) suffix.push(repeat)
     if (comment.length > 0) suffix.push(comment)
 
-    if (item instanceof Task) {
-      const { duration, isComplete } = item
-      if (duration && duration > 0 && isComplete) {
-        suffix.push(grey(msToMinutes(duration)))
-      }
+    const { duration, isComplete } = item
+    if (duration && duration > 0 && isComplete) {
+      suffix.push(grey(msToMinutes(duration)))
     }
 
     if (item.tags?.length > 0) suffix.push(grey(item.tags.join(' ')))
@@ -215,8 +217,9 @@ class Render {
 
       this._displayTitle(board, data[board])
 
-      // TODO: allow other sorting strategies (default by id)
-      data[board].sort(sortByPriorities).forEach((item) => {
+      // TODO: allow other sorting strategies
+      // data[board].sort(sortByPriorities).forEach((item) => {
+      data[board].sort(itemSorter).forEach((item) => {
         if (!displayTasks) return
 
         if (item instanceof Task && item.isComplete && !this._configuration.displayCompleteTasks)
