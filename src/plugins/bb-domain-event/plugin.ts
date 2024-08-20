@@ -14,12 +14,6 @@ function parseScheduleTime(time: string): Date {
 }
 
 export default class EventPlugin extends BulletBoardPlugin {
-  // mapping set here will be accessible under `board.config.event.{key}`
-  // the value specified is the default
-  config = {
-    eventBoard: 'calendar',
-  }
-
   register(program: Command, board: Taskbook) {
     // add event commands to bullet board cli
     // NOTE: support duration as a markup? Like `last:30m`

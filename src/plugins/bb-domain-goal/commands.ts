@@ -5,6 +5,8 @@ import render from '../../interfaces/render'
 import config from '../../config'
 import Goal from './goal'
 
+const goalsBoard = config.plugins?.goals?.board || 'goals'
+
 function create(board: Taskbook, desc: string[]) {
   const { description, priority, tags } = parseOptions(desc, {
     defaultBoard: config.local.defaultBoard,
@@ -12,7 +14,7 @@ function create(board: Taskbook, desc: string[]) {
   const id = board._data.generateID()
   // we don't parse goals but instead assign it right away to the predefined
   // `goals` one.
-  const boards = [`@${config.plugins.goals.board}`]
+  const boards = [`@${goalsBoard}`]
 
   const goal = new Goal({ id, description, boards, priority, tags })
   const { _data } = board

@@ -10,7 +10,6 @@ import config from '../config'
 
 const { blue, green, magenta, red, yellow } = chalk
 const { grey } = config.theme
-// const grey = chalk.cyan.dim
 
 /**
  * TODO: Road to configurable theme

@@ -22,7 +22,6 @@ interface UserConfig extends JsonMap {
   displayProgressOverview: boolean
   displayWarnings: boolean
   enableCopyID: boolean
-  eventBoard: string
   defaultBoard: string
   editor: string
   suspiciousDuration: number
@@ -38,9 +37,9 @@ type PluginConfig = Record<string, AnyJson>
 type AliasConfig = Record<string, string>
 
 interface ThemeConfig {
-  priorities: Record<PriorityLevel, Function>
-  highlightTitle: Function
-  grey: Function
+  priorities: Record<PriorityLevel, chalk.Chalk>
+  highlightTitle: chalk.Chalk
+  grey: chalk.Chalk
 }
 
 // TODO: make it multi-platform and comply more with standards
@@ -63,7 +62,6 @@ const userDefaults: UserConfig = {
   // `myboard` that ultimately we could try to support (slugify for
   // storage)
   defaultBoard: 'backlog',
-  eventBoard: 'calendar',
   editor: process.env.EDITOR || 'vi',
   suspiciousDuration: 3 /* hours */,
   defaultContext: 'default',
@@ -107,18 +105,19 @@ function parseUserlandConfig(): {
     encoding: ENCODING,
   })
   const parsed = TOML.parse(data)
-  // return parsed as UserConfig
+
+  // `local` needs all properties to be set, so we need to handle the case user
+  // has removed properties
+  const withDefaults = { ...userDefaults, ...(parsed.taskbook as UserConfig) }
   return {
-    local: parsed.taskbook as UserConfig,
+    local: withDefaults,
     plugins: parsed.plugin as Record<string, PluginConfig>,
     aliases: parsed.alias as AliasConfig,
   }
 }
 
 // TODO: re-test initial generation
-// TODO: merge user config with defaults
-// TODO: add to the initial default some comments, like the plugin section
-// TODO: support aliases
+// TODO: merge user config with defaults after loading
 export class IConfig {
   public local: UserConfig
 

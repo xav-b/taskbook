@@ -4,6 +4,7 @@ import Printer, { SignaleLogConfig, wait, success } from '../../interfaces/print
 import IBullet, { IBulletOptions } from '../../domain/ibullet'
 import { UnixTimestamp } from '../../types'
 import Task from '../../domain/task'
+import config from '../../config'
 
 /**
  * Render a unix timestamp to, e.g., 10:30am
@@ -35,8 +36,7 @@ export interface EventProperties extends IBulletOptions {
 }
 
 const { custom } = Printer('⏲')
-// TODO: reading from config once ready
-const grey = chalk.cyan.dim
+const { grey } = config.theme
 
 /**
  * Events are tasks to accomplish at the end.

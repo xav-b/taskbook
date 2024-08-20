@@ -11,6 +11,7 @@ import gcal from './gcal'
 const debug = require('debug')('tb:plugin:event:commands')
 
 const DEFAULT_EVENT_DURATION_MS = 30 * 60 * 1000
+const calendarBoard = config.plugins?.calendar?.board || 'calendar'
 
 async function todayEvents(auth: any) {
   // get today events
@@ -37,7 +38,7 @@ function upsert(
 ) {
   const { _data } = board
 
-  const boards = [`@${config.local.eventBoard}`]
+  const boards = [`@${calendarBoard}`]
   const { description, tags } = parseOptions(desc, {
     defaultBoard: config.local.defaultBoard,
   })
