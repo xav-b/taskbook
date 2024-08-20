@@ -6,7 +6,6 @@ import { prompt } from 'enquirer'
 import clipboardy from 'clipboardy'
 
 import { Maybe } from '../types'
-import config, { IConfig } from '../config'
 import Storage from '../store'
 import cacheStorage from '../store/localcache'
 import LocalStorage from '../store/localjson'
@@ -20,6 +19,7 @@ import Task from '../domain/task'
 import Note from '../domain/note'
 import Logger from '../shared/logger'
 import events from './events'
+import config from '../config'
 
 // TODO: config, some works it out differently
 const POMODORO_STRATEGY = 25 // minutes - default task estimate
@@ -84,8 +84,6 @@ class Taskbook {
 
   _storage: Storage
 
-  _configuration: IConfig
-
   _data: Catalog
 
   _archive: Catalog
@@ -96,9 +94,8 @@ class Taskbook {
     debug('initialising taskbook')
 
     debug('loading configuration')
-    this._configuration = config.get()
-    debug(`loading archive and items (ctx ${this._configuration.defaultContext})`)
-    this._storage = new LocalStorage(this._configuration.defaultContext)
+    debug(`loading archive and items (ctx ${config.local.defaultContext})`)
+    this._storage = new LocalStorage(config.local.defaultContext)
     this._archive = this._storage.getArchive()
     this._bin = this._storage.getBin()
     this._data = this._storage.get()
@@ -117,7 +114,7 @@ class Taskbook {
   }
 
   hello() {
-    if (this.isNewDay && this._configuration.greetings) {
+    if (this.isNewDay && config.local.greetings) {
       goodDay()
     }
 
@@ -206,7 +203,7 @@ class Taskbook {
 
   switchContext(name: string) {
     log.info(`switching to context ${name}`)
-    config.set('defaultContext', name)
+    config.update('defaultContext', name)
 
     render.successSwitchContext(name)
   }
@@ -345,7 +342,7 @@ class Taskbook {
     const storedTags = this._data.tags()
 
     const { description, tags, boards } = parseOptions(desc, {
-      defaultBoard: this._configuration.defaultBoard,
+      defaultBoard: config.local.defaultBoard,
     })
     const id = _data.generateID()
     const note = new Note({ id, description, tags, boards })
@@ -361,7 +358,7 @@ class Taskbook {
     _data.set(id, note)
     this._save(_data)
 
-    if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
+    if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 
     render.successCreate(note)
 
@@ -386,7 +383,7 @@ class Taskbook {
 
     // another gymnastics to allow tags in the list of ids
     const { description, tags } = parseOptions(ids, {
-      defaultBoard: this._configuration.defaultBoard,
+      defaultBoard: config.local.defaultBoard,
     })
     ids = this._validateIDs(description.split(' '))
     debug(`task ids verified: ${ids}`)
@@ -413,7 +410,7 @@ class Taskbook {
             task.isComplete &&
             task.duration &&
             // configured as hours so comapre this in ms
-            task.duration > this._configuration.suspiciousDuration * 60 * 60 * 1000
+            task.duration > config.local.suspiciousDuration * 60 * 60 * 1000
           ) {
             // @ts-ignore
             const { isYes } = await prompt({
@@ -462,7 +459,7 @@ class Taskbook {
     repeat?: string
   ) {
     const { boards, tags, description, priority, estimate } = parseOptions(desc, {
-      defaultBoard: this._configuration.defaultBoard,
+      defaultBoard: config.local.defaultBoard,
     })
 
     // NOTE: do we want to automatically tag 'every day' and 'every weekday'
@@ -484,7 +481,7 @@ class Taskbook {
     _data.set(id, task)
     this._save(_data)
 
-    if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
+    if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 
     if (renderJSON) console.log(JSON.stringify({ id: task.id, created: task.toJSON() }))
     else render.successCreate(task)
@@ -695,7 +692,7 @@ class Taskbook {
 
     if (task === null) throw new Error(`item ${taskid} is not a task`)
 
-    task.setEstimate(estimate, this._configuration.tshirtSizes)
+    task.setEstimate(estimate, config.local.tshirtSizes)
 
     this._save(this._data)
 
@@ -831,7 +828,7 @@ class Taskbook {
 
   comment(itemId: string) {
     // TODO: _validateIDs
-    const { editor } = this._configuration
+    const { editor } = config.local
 
     const { _data } = this
     const item = _data.get(itemId)

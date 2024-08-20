@@ -1,21 +1,13 @@
 import fs from 'fs'
 import path from 'path'
-import crypto, { BinaryLike } from 'crypto'
+import { BinaryLike } from 'crypto'
 
 import config from '../config'
-import { ensureDir } from '../shared/utils'
+import { ensureDir, sha256 } from '../shared/utils'
 
 interface CacheOpts {
   path: string
   encoding?: BufferEncoding
-}
-
-const sha256 = (key: BinaryLike) => crypto.createHash('sha256').update(key).digest('hex')
-
-function init(): LocalCache {
-  const root = config.get().taskbookDirectory
-  const storagePath = path.join(root, 'cache')
-  return new LocalCache({ path: storagePath })
 }
 
 /**
@@ -24,6 +16,7 @@ function init(): LocalCache {
  */
 class LocalCache {
   rootPath: string
+
   encoding: BufferEncoding
 
   constructor(options: CacheOpts) {
@@ -47,6 +40,12 @@ class LocalCache {
     const datumPath = path.join(this.rootPath, sha256(key))
     fs.writeFileSync(datumPath, value, 'utf8')
   }
+}
+
+function init(): LocalCache {
+  const root = config.local.taskbookDirectory
+  const storagePath = path.join(root, 'cache')
+  return new LocalCache({ path: storagePath })
 }
 
 export default { init }

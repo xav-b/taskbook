@@ -3,6 +3,7 @@ import clipboardy from 'clipboardy'
 import Taskbook from '../../use_cases/taskbook'
 import { parseOptions } from '../../shared/parser'
 import render from '../../interfaces/render'
+import config from '../../config'
 import FlashcardTask from './card'
 
 const debug = require('debug')('tb:plugin:card:commands')
@@ -15,13 +16,13 @@ const debug = require('debug')('tb:plugin:card:commands')
 function createCard(board: Taskbook, front: string[], link?: string) {
   const { _data } = board
 
-  // const boards = [`@${board._configuration.cardBoard}`]
+  // const boards = [`@${config.local.cardBoard}`]
   const { description, tags, boards } = parseOptions(front, {
     // automatically push to the global board for all flashcards
-    defaultBoard: board._configuration.defaultBoard,
+    defaultBoard: config.local.defaultBoard,
   })
 
-  // FIXME: boards.push(`@${board._configuration.cardBoard}`)
+  // FIXME: boards.push(`@${config.local.cardBoard}`)
   // TODO: use config
   const deckBoards = boards.map((b: string) => `@deck.${b.replace('@', '')}`)
   // an easy way to list them all by using `tb list srr`
@@ -49,7 +50,7 @@ function createCard(board: Taskbook, front: string[], link?: string) {
   // can save it in one go.
   board.comment(String(id))
 
-  if (board._configuration.enableCopyID) clipboardy.writeSync(String(id))
+  if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 }
 
 export default { createCard }

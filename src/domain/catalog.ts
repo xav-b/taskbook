@@ -4,7 +4,7 @@ import IBullet from './ibullet'
 import Task from './task'
 import { hasTerms } from '../shared/parser'
 import { Maybe } from '../types'
-import config, { IConfig } from '../config'
+import config from '../config'
 
 // base layout of items is { itemId: IBullet, .... }
 export type CatalogInnerData = Record<string, IBullet>
@@ -38,11 +38,8 @@ function _filter(data: CatalogInnerData, exclude: FilterOutLogic): CatalogInnerD
 export default class Catalog {
   protected _items: CatalogInnerData
 
-  protected _configuration: IConfig
-
   constructor(items: CatalogInnerData) {
     this._items = items
-    this._configuration = config.get()
   }
 
   public generateID(): number {
@@ -86,7 +83,7 @@ export default class Catalog {
    * Pull and de-duplicate all items' boards
    */
   public boards(): string[] {
-    const boards = [this._configuration.defaultBoard]
+    const boards = [config.local.defaultBoard]
 
     this.ids().forEach((id: string) => {
       boards.push(...this.get(id).boards.filter((x: string) => boards.indexOf(x) === -1))

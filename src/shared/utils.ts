@@ -1,5 +1,5 @@
 import fs from 'fs'
-import crypto from 'crypto'
+import crypto, { BinaryLike } from 'crypto'
 import { Maybe } from '../types'
 import IBullet from '../domain/ibullet'
 
@@ -86,3 +86,5 @@ export function msToMinutes(unixTs: Maybe<number>): string {
   // else just round up at the minute
   return `${Math.round(minutes)}m`
 }
+
+export const sha256 = (key: BinaryLike) => crypto.createHash('sha256').update(key).digest('hex')

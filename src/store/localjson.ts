@@ -37,10 +37,15 @@ function parseJson(data: any): Catalog {
 class LocalJSONStorage implements Storage {
   // local storage is all about directories and files
   _storageDir: string
+
   _archiveDir: string
+
   _tempDir: string
+
   _archiveFile: string
+
   _binFile: string
+
   _mainStorageFile: string
 
   constructor(workspace?: string) {
@@ -63,7 +68,7 @@ class LocalJSONStorage implements Storage {
   }
 
   get _mainAppDir(): string {
-    return config.get().taskbookDirectory
+    return config.local.taskbookDirectory
   }
 
   _ensureDirectories() {

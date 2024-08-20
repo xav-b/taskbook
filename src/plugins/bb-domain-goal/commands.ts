@@ -2,15 +2,17 @@ import clipboardy from 'clipboardy'
 import Taskbook from '../../use_cases/taskbook'
 import { parseOptions } from '../../shared/parser'
 import render from '../../interfaces/render'
+import config from '../../config'
 import Goal from './goal'
 
 function create(board: Taskbook, desc: string[]) {
   const { description, priority, tags } = parseOptions(desc, {
-    defaultBoard: board._configuration.defaultBoard,
+    defaultBoard: config.local.defaultBoard,
   })
   const id = board._data.generateID()
-  // we don't parse goals but instead assign it right away to the predefined `goals` one.
-  const boards = [`@${board._configuration.goalsBoard}`]
+  // we don't parse goals but instead assign it right away to the predefined
+  // `goals` one.
+  const boards = [`@${config.plugins.goals.board}`]
 
   const goal = new Goal({ id, description, boards, priority, tags })
   const { _data } = board
@@ -18,7 +20,7 @@ function create(board: Taskbook, desc: string[]) {
   _data.set(id, goal)
   board._save(_data)
 
-  if (board._configuration.enableCopyID) clipboardy.writeSync(String(id))
+  if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 
   render.successCreate(goal)
 }
@@ -39,11 +41,10 @@ function link(board: Taskbook, goalID: string, taskIDs: string[]) {
     // depart from the goal in its lifetime, but we still enjoy the boards/'
     // benefits, like listing goal's tasks together with a simple `tb list
     // <mygoal>`
-    const tags = _data.get(taskID).tags
+    const { tags } = _data.get(taskID)
     if (!tags.includes(goalTag)) tags.push(goalTag)
   })
 
-  // we use a star to indicate this is linked to a goal
   // FIXME: board.starItems(taskIDs) won't save it
   render.markStarred(taskIDs)
 

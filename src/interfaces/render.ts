@@ -2,16 +2,15 @@ import chalk from 'chalk'
 import { parse, compareAsc } from 'date-fns'
 
 import { msToMinutes } from '../shared/utils'
-// TODO: import { Item, Note, Goal, Task } from '../domain'
 import IBullet, { Priority } from '../domain/ibullet'
 import Task from '../domain/task'
 import { CatalogStats } from '../domain/catalog'
 import { error, log, success, warn } from './printer'
-import config, { IConfig } from '../config'
+import config from '../config'
 
 const { blue, green, magenta, red, yellow } = chalk
-// TODO: should be accessible from configuration
-const grey = chalk.cyan.dim
+const { grey } = config.theme
+// const grey = chalk.cyan.dim
 
 /**
  * TODO: Road to configurable theme
@@ -91,14 +90,8 @@ function _getItemStats(items: IBullet[]) {
 }
 
 class Render {
-  _configuration: IConfig
-
-  constructor() {
-    this._configuration = config.get()
-  }
-
   _buildTitle(key: string, items: IBullet[]) {
-    let title = this._configuration.highlightTitle(key)
+    let title = config.theme.highlightTitle(key)
     if (key === new Date().toDateString()) title += ` ${grey('[Today]')}`
 
     const { tasks, complete } = _getItemStats(items)
@@ -124,7 +117,7 @@ class Render {
     const { isComplete, description } = item
 
     if (!isComplete && item.priority > 1) {
-      const style = this._configuration.priorities[item.priority]
+      const style = config.theme.priorities[item.priority]
       message.push(style(description))
     } else {
       // message.push(isComplete ? grey(description) : description)
@@ -186,7 +179,7 @@ class Render {
   }
 
   _displayItemByDate(item: IBullet, isArchive = false) {
-    const boards = item.boards.filter((x) => x !== this._configuration.defaultBoard)
+    const boards = item.boards.filter((x) => x !== config.local.defaultBoard)
     const star = getStar(item)
 
     const prefix = this._buildPrefix(item)
@@ -213,7 +206,7 @@ class Render {
 
   displayByBoard(data: Record<string, IBullet[]>, displayTasks = true) {
     Object.keys(data).forEach((board: string) => {
-      if (isBoardComplete(data[board]) && !this._configuration.displayCompleteTasks) return
+      if (isBoardComplete(data[board]) && !config.local.displayCompleteTasks) return
 
       this._displayTitle(board, data[board])
 
@@ -222,8 +215,7 @@ class Render {
       data[board].sort(itemSorter).forEach((item) => {
         if (!displayTasks) return
 
-        if (item instanceof Task && item.isComplete && !this._configuration.displayCompleteTasks)
-          return
+        if (item instanceof Task && item.isComplete && !config.local.displayCompleteTasks) return
 
         this.displayItemByBoard(item)
       })
@@ -243,16 +235,12 @@ class Render {
         const prettyDt = date.toDateString()
         const indexDt = date.toLocaleDateString('en-UK')
 
-        if (isBoardComplete(data[indexDt]) && !this._configuration.displayCompleteTasks) return
+        if (isBoardComplete(data[indexDt]) && !config.local.displayCompleteTasks) return
 
         this._displayTitle(prettyDt, data[indexDt])
 
         data[indexDt].forEach((item) => {
-          if (
-            item instanceof Task &&
-            item.isComplete &&
-            !this._configuration.displayCompleteTasks
-          ) {
+          if (item instanceof Task && item.isComplete && !config.local.displayCompleteTasks) {
             return
           }
 
@@ -262,7 +250,7 @@ class Render {
   }
 
   displayStats(opts: CatalogStats) {
-    if (!this._configuration.displayProgressOverview) return
+    if (!config.local.displayProgressOverview) return
 
     const complete = opts.complete || 0
     const inProgress = opts.inProgress || 0
@@ -276,9 +264,8 @@ class Render {
       percent >= 75 ? green(`${percent}%`) : percent >= 50 ? yellow(`${percent}%`) : `${percent}%`
 
     let estimateWarning = blue
-    if (estimate / (1000 * 60 * 60) > this._configuration.plannedHoursError) estimateWarning = red
-    else if (estimate / (1000 * 60 * 60) > this._configuration.plannedHoursWarn)
-      estimateWarning = yellow
+    if (estimate / (1000 * 60 * 60) > config.local.plannedHoursError) estimateWarning = red
+    else if (estimate / (1000 * 60 * 60) > config.local.plannedHoursWarn) estimateWarning = yellow
     const timings = [
       `${green(msToMinutes(duration))} ${grey('worked')}`,
       `${estimateWarning(msToMinutes(estimate))} ${grey('estimated')}`,
@@ -410,7 +397,7 @@ class Render {
   }
 
   warning(id: number, message: string) {
-    if (!this._configuration.displayWarnings) return
+    if (!config.local.displayWarnings) return
 
     const suffix = grey(String(id))
     warn({ message: yellow(message), suffix })

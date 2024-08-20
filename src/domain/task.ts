@@ -32,11 +32,9 @@ export default class Task extends BasicBullet {
     // human-friendly values, and the current approach will be a problem.
     const isNew = options._uid === undefined
 
-    const conf = config.get()
-
     super(options)
 
-    this.setEstimate(options.estimate || null, isNew && conf.tshirtSizes)
+    this.setEstimate(options.estimate || null, isNew && config.local.tshirtSizes)
   }
 
   public setEstimate(estimate: Maybe<number>, withSize: boolean) {

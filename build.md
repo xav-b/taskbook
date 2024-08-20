@@ -7,9 +7,14 @@ practice. Right now the core code has to know about all the types of items, and
 there are checks everywhere. This makes the plugin system failing and slow down
 development, lower quality.
 
+- [ ] FIXME Logging to file was smarter. Either wway abstract it in `shared`
+- [ ] IDEA Support git alias (and therefore custom workflows, like hiding)
 - [ ] IDEA Can i integrate the idea (or even base the project) on [outline speedrunning](https://learnhowtolearn.org/how-to-build-extremely-quickly/)
            Maybe just show how this can be used by using a board or tag and priorities
 
+- [ ] IDEA Implement `tb queue 1 2 3 5 ...` (create a board Queue and uses `queue` param to order them)
+      -> `queue` new property integer
+      -> `queue` command 
 - [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
 - [ ] FIXME `--timer` capture CTRL-C and gracefully record the time spent.
 - [ ] FIXME `tb b --timer` never completes
@@ -28,13 +33,14 @@ development, lower quality.
 
 ### Backlog
 
-- [ ] FEAT `tb edit` with no valid field should support any 
 - [ ] FEAT Support `tb delegate` which is like `delete` but keep track it was instead delegated, not cancelled
 - [ ] FEAT At init, or `tb clear`, auto-check events from previous days
-- [ ] FEAT `tb link [taskId] [url]`
 - [ ] FEAT calendar sync:
+      - [ ] Auto-set to complete past events
+      - [ ] Show time for event + tag t-short size
+      - [ ] Implement `tb event:convert <task id> <schedule> [estimate]`
       - [ ] Fix token renewal (grant refused crash)
-      - [ ] Use `schedule` for task ordering on `calendar`
+      - [x] Use `schedule` for task ordering on `calendar`
       - [ ] `event.reschedule` command, to update the datetime
       - [ ] Support calendar description as task comment, and `--notebook`
       - [ ] Also sync back to gcal
@@ -66,6 +72,7 @@ development, lower quality.
 - [ ] IDEA Time boxing and pomodoro timer
 - [ ] IDEA Hook system to implement a plugin system (post-delete, post-create, ...)
 - [ ] IDEA Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
+- [ ] IDEA The current output is just one FE - support TUI
 
 - [ ] FIXME storage loads by data types and must be modified for a new type
 - [ ] FIXME boards and tags don't need to be stored with their `@` and `+`
@@ -187,6 +194,7 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [x] FEAT Support syncing multiple calendars
   - [x] have them in their respective `calendar` `calendar.{name}` boards (or use tags?) 
   - [x] Sorting should also work
+- [x] FEAT `tb edit` with no valid field should support any 
 
 ---
 

@@ -4,6 +4,7 @@ import Taskbook from '../../use_cases/taskbook'
 import { UnixTimestamp } from '../../types'
 import { parseOptions } from '../../shared/parser'
 import render from '../../interfaces/render'
+import config from '../../config'
 import EventTask from './event'
 import gcal from './gcal'
 
@@ -36,9 +37,9 @@ function upsert(
 ) {
   const { _data } = board
 
-  const boards = [`@${board._configuration.eventBoard}`]
+  const boards = [`@${config.local.eventBoard}`]
   const { description, tags } = parseOptions(desc, {
-    defaultBoard: board._configuration.defaultBoard,
+    defaultBoard: config.local.defaultBoard,
   })
 
   const existing = eventID !== undefined ? board._data.uget(eventID) : null
@@ -53,7 +54,7 @@ function upsert(
   _data.set(id, event)
   board._save()
 
-  if (board._configuration.enableCopyID) clipboardy.writeSync(String(id))
+  if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 
   if (existing) render.successEdit(String(id))
   else render.successCreate(event, true)
@@ -72,7 +73,7 @@ async function syncGCal(board: Taskbook, name?: string | null) {
   // first pull existing events we have
   // TODO: `@calendar` from config or constants
   const todayExistingEvents = Object.values(board._data.all()).filter((each) =>
-    each.boards.includes(`@${board._configuration.defaultBoard}`)
+    each.boards.includes(`@${config.local.defaultBoard}`)
   )
 
   // anything that's no longer on the calendar?
