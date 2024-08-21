@@ -4,12 +4,10 @@ import path from 'path'
 
 import chalk from 'chalk'
 import TOML, { AnyJson, JsonMap } from '@iarna/toml'
+import { Priority } from '../domain/ibullet'
 import PKG from '../../package.json'
 
 const debug = require('debug')('tb:config')
-
-// TODO: for self-documentation, should use from ./domain/ibullet:Priority
-type PriorityLevel = 1 | 2 | 3
 
 /**
  * User facing configuration.
@@ -37,7 +35,7 @@ type PluginConfig = Record<string, AnyJson>
 type AliasConfig = Record<string, string>
 
 interface ThemeConfig {
-  priorities: Record<PriorityLevel, chalk.Chalk>
+  priorities: Record<Priority, chalk.Chalk>
   highlightTitle: chalk.Chalk
   grey: chalk.Chalk
 }
@@ -78,6 +76,7 @@ const defaultThemeConfig = (): ThemeConfig => ({
   grey: chalk.cyan.dim,
 })
 
+// TODO: re-test initial generation
 function ensureUserConfig(): void {
   debug('verifying config file')
   if (fs.existsSync(CONFIG_FILE)) return
@@ -116,8 +115,6 @@ function parseUserlandConfig(): {
   }
 }
 
-// TODO: re-test initial generation
-// TODO: merge user config with defaults after loading
 export class IConfig {
   public local: UserConfig
 
@@ -138,11 +135,13 @@ export class IConfig {
     this.theme = defaultThemeConfig()
   }
 
+  // FIXME: this method deletes the comments - overall this might just be a bad
+  // idea and mutable state should live elswhere
   public update(key: keyof UserConfig, value: AnyJson) {
     this.local[key] = value
 
     debug(`updating user config: ${key}=${value}`)
-    const data = TOML.stringify({ local: this.local, plugin: this.plugins })
+    const data = TOML.stringify({ taskbook: this.local, plugin: this.plugins, alias: this.aliases })
     fs.writeFileSync(CONFIG_FILE, data, ENCODING)
   }
 }

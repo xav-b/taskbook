@@ -66,7 +66,6 @@ function getLinkHint(item: IBullet) {
 
 function getRepeatHint(task: Task) {
   return task.repeat ? blue('∞') : ''
-  // return task.repeat ? blue('◌') : ''
 }
 
 function _getItemStats(items: IBullet[]) {
@@ -188,7 +187,6 @@ class Render {
 
     const suffix = []
 
-    // FIXME: calendar won't pretty print this one
     if (item instanceof Task) {
       if (item.duration && item.duration > 0 && item.isComplete)
         // FIXME: pretty rendering duration should be a task method
@@ -209,8 +207,6 @@ class Render {
 
       this._displayTitle(board, data[board])
 
-      // TODO: allow other sorting strategies
-      // data[board].sort(sortByPriorities).forEach((item) => {
       data[board].sort(itemSorter).forEach((item) => {
         if (!displayTasks) return
 
@@ -340,9 +336,7 @@ class Render {
   }
 
   markStarted(ids: string[]) {
-    if (ids.length === 0) {
-      return
-    }
+    if (ids.length === 0) return
 
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
     const message = `Started ${ids.length > 1 ? 'tasks' : 'task'}:`
@@ -358,9 +352,7 @@ class Render {
   }
 
   markStarred(ids: string[]) {
-    if (ids.length === 0) {
-      return
-    }
+    if (ids.length === 0) return
 
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
     const message = `Starred ${ids.length > 1 ? 'items' : 'item'}:`
@@ -368,9 +360,7 @@ class Render {
   }
 
   markUnstarred(ids: string[]) {
-    if (ids.length === 0) {
-      return
-    }
+    if (ids.length === 0) return
 
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
     const message = `Unstarred ${ids.length > 1 ? 'items' : 'item'}:`

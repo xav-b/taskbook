@@ -2,16 +2,11 @@
 
 ### Next
 
-Change object/type base items to either golang style interface or functional
-practice. Right now the core code has to know about all the types of items, and
-there are checks everywhere. This makes the plugin system failing and slow down
-development, lower quality.
-
-- [ ] FIXME Logging to file was smarter. Either wway abstract it in `shared`
-- [ ] IDEA Support git alias (and therefore custom workflows, like hiding)
 - [ ] IDEA Can i integrate the idea (or even base the project) on [outline speedrunning](https://learnhowtolearn.org/how-to-build-extremely-quickly/)
            Maybe just show how this can be used by using a board or tag and priorities
 
+- [ ] FIXME replace config.update by a separation of mutatble state and static config
+- [ ] FIXME config: if no `alias` section it crashes
 - [ ] IDEA Implement `tb queue 1 2 3 5 ...` (create a board Queue and uses `queue` param to order them)
       -> `queue` new property integer
       -> `queue` command 
@@ -26,8 +21,6 @@ development, lower quality.
         - [ ] Review system
         - [ ] `card:decks` command to list decks (or can i hack on tb list? Using `tb list deck.*` fuzzy)
         - [ ] Replace `next: 3d` by last review
-- [ ] TECH Implement the library + plugin architecture
-      - [ ] Global config refactoring
 
 ### Todo
 
@@ -74,6 +67,7 @@ development, lower quality.
 - [ ] IDEA Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
 - [ ] IDEA The current output is just one FE - support TUI
 
+- [ ] FIXME Logging to file was smarter. Either wway abstract it in `shared`
 - [ ] FIXME storage loads by data types and must be modified for a new type
 - [ ] FIXME boards and tags don't need to be stored with their `@` and `+`
 - [ ] FIXME Restore of notes seem to move ids around and duplicate, if working at all
@@ -195,6 +189,10 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
   - [x] have them in their respective `calendar` `calendar.{name}` boards (or use tags?) 
   - [x] Sorting should also work
 - [x] FEAT `tb edit` with no valid field should support any 
+- [x] TECH Implement the library + plugin architecture
+  - [x] Global config refactoring
+- [x] IDEA Support git alias (and therefore custom workflows, like hiding)
+- [x] IDEA Support multi line task creation(using quotes `tb t @must +tag "multi line comment"`)
 
 ---
 

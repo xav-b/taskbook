@@ -465,28 +465,39 @@ class Taskbook {
     // NOTE: do we want to automatically tag 'every day' and 'every weekday'
     // +habits?
 
-    const id = this._data.generateID()
-    const task = new Task({
-      id,
-      description,
-      boards,
-      tags,
-      priority,
-      link,
-      estimate: estimate || cliEstimate,
-      repeat,
-    })
     const { _data } = this
 
-    _data.set(id, task)
-    this._save(_data)
+    // NOTE: not sure that's multi-platform
+    // we support multi-line strings to batch create multiple tasks
+    const lines = description.split('\n')
+    const isMultiple = lines.length > 1
+    lines.forEach((line: string) => {
+      const id = this._data.generateID()
+      const task = new Task({
+        id,
+        description: line,
+        boards,
+        tags,
+        priority,
+        link,
+        estimate: estimate || cliEstimate,
+        repeat,
+      })
 
-    if (config.local.enableCopyID) clipboardy.writeSync(String(id))
+      _data.set(id, task)
 
-    if (renderJSON) console.log(JSON.stringify({ id: task.id, created: task.toJSON() }))
-    else render.successCreate(task)
+      this._save(_data)
 
-    if (notebook) this.comment(String(id))
+      if (config.local.enableCopyID && !isMultiple) clipboardy.writeSync(String(id))
+
+      if (renderJSON) console.log(JSON.stringify({ id: task.id, created: task.toJSON() }))
+      else render.successCreate(task)
+
+      // FIXME: this whole workflow is pretty bad as we read and write several
+      // times to disk. We should set the comment without having to re-read and
+      // write + we should create all the task and only commit at the end
+      if (notebook && !isMultiple) this.comment(String(id))
+    })
   }
 
   deleteItems(ids: string[], toTrash = false) {
@@ -529,8 +540,8 @@ class Taskbook {
     render.displayByDate(groupByDate(this._data))
   }
 
-  displayStats(data = this._data) {
-    render.displayStats(data.stats())
+  displayBoardStats() {
+    render.displayStats(this._data.stats())
   }
 
   editItemProperty(itemId: string, property: string, input: string[]) {
