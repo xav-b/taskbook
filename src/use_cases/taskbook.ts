@@ -94,8 +94,8 @@ class Taskbook {
     debug('initialising taskbook')
 
     debug('loading configuration')
-    debug(`loading archive and items (ctx ${config.local.defaultContext})`)
-    this._storage = new LocalStorage(config.local.defaultContext)
+    debug(`loading archive and items (ctx ${config.state.currentContext})`)
+    this._storage = new LocalStorage(config.state.currentContext)
     this._archive = this._storage.getArchive()
     this._bin = this._storage.getBin()
     this._data = this._storage.get()
@@ -203,7 +203,7 @@ class Taskbook {
 
   switchContext(name: string) {
     log.info(`switching to context ${name}`)
-    config.update('defaultContext', name)
+    config.update('currentContext', name)
 
     render.successSwitchContext(name)
   }
@@ -745,7 +745,7 @@ class Taskbook {
   async printTask(taskId: string, format: string, useArchive = false) {
     const store = useArchive ? this._archive : this._data
 
-    ;[taskId] = this._validateIDs([taskId], store.ids())
+      ;[taskId] = this._validateIDs([taskId], store.ids())
 
     debug(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
 

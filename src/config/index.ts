@@ -10,6 +10,13 @@ import PKG from '../../package.json'
 const debug = require('debug')('tb:config')
 
 /**
+ * Mutable state.
+ */
+interface LocalState extends JsonMap {
+  currentContext: string
+}
+
+/**
  * User facing configuration.
  * Global config minus any code-side manipulations and, mostly actually,
  * whatever is not serializable to toml.
@@ -23,7 +30,6 @@ interface UserConfig extends JsonMap {
   defaultBoard: string
   editor: string
   suspiciousDuration: number
-  defaultContext: string
   tshirtSizes: boolean
   plannedHoursWarn: number
   plannedHoursError: number
@@ -47,7 +53,9 @@ interface ThemeConfig {
 // per-context configuration, or just isolated profiles.
 const CONFIG_PATH = path.join(os.homedir(), '.config', PKG.name)
 const CONFIG_FILE = path.join(CONFIG_PATH, 'config.v2.toml')
+const STATE_FILE = path.join(CONFIG_PATH, 'state.v2.toml')
 const ENCODING = 'utf8'
+const DEFAULT_CONTEXT = 'default'
 
 const userDefaults: UserConfig = {
   taskbookDirectory: CONFIG_PATH,
@@ -62,7 +70,6 @@ const userDefaults: UserConfig = {
   defaultBoard: 'backlog',
   editor: process.env.EDITOR || 'vi',
   suspiciousDuration: 3 /* hours */,
-  defaultContext: 'default',
   tshirtSizes: true,
   plannedHoursWarn: 6,
   plannedHoursError: 8,
@@ -76,7 +83,6 @@ const defaultThemeConfig = (): ThemeConfig => ({
   grey: chalk.cyan.dim,
 })
 
-// TODO: re-test initial generation
 function ensureUserConfig(): void {
   debug('verifying config file')
   if (fs.existsSync(CONFIG_FILE)) return
@@ -93,12 +99,25 @@ function ensureUserConfig(): void {
   fs.writeFileSync(CONFIG_FILE, serialized, ENCODING)
 }
 
+function ensureLocalState(): void {
+  debug('verifying local state')
+  if (fs.existsSync(STATE_FILE)) return
+
+  debug(`writing default state for the first time: ${STATE_FILE}`)
+  // TODO: once stable, just write the string directly with everything
+  // commented out
+  const serialized = TOML.stringify({
+    currentContext: DEFAULT_CONTEXT,
+  })
+  fs.writeFileSync(STATE_FILE, serialized, ENCODING)
+}
+
 function parseUserlandConfig(): {
   local: UserConfig
   plugins: Record<string, PluginConfig>
   aliases: AliasConfig
 } {
-  debug('building configuration singleton', CONFIG_FILE)
+  debug('loading local configuration', CONFIG_FILE)
 
   const data = fs.readFileSync(CONFIG_FILE, {
     encoding: ENCODING,
@@ -115,6 +134,16 @@ function parseUserlandConfig(): {
   }
 }
 
+function parseUserlandState(): LocalState {
+  debug('loading local state', STATE_FILE)
+
+  const data = fs.readFileSync(STATE_FILE, { encoding: ENCODING })
+  const parsed = TOML.parse(data)
+
+  const defaults = { currentContext: DEFAULT_CONTEXT }
+  return { ...defaults, ...(parsed as LocalState) }
+}
+
 export class IConfig {
   public local: UserConfig
 
@@ -124,11 +153,16 @@ export class IConfig {
 
   public aliases: AliasConfig
 
+  public state: LocalState
+
   constructor() {
     ensureUserConfig()
+    ensureLocalState()
 
+    const state = parseUserlandState()
     const { local, plugins, aliases } = parseUserlandConfig()
 
+    this.state = state
     this.local = local
     this.plugins = plugins
     this.aliases = aliases
@@ -137,12 +171,12 @@ export class IConfig {
 
   // FIXME: this method deletes the comments - overall this might just be a bad
   // idea and mutable state should live elswhere
-  public update(key: keyof UserConfig, value: AnyJson) {
-    this.local[key] = value
+  public update(key: keyof LocalState, value: AnyJson) {
+    this.state[key] = value
 
-    debug(`updating user config: ${key}=${value}`)
-    const data = TOML.stringify({ taskbook: this.local, plugin: this.plugins, alias: this.aliases })
-    fs.writeFileSync(CONFIG_FILE, data, ENCODING)
+    debug(`updating local state: ${key}=${value}`)
+    const data = TOML.stringify(this.state)
+    fs.writeFileSync(STATE_FILE, data, ENCODING)
   }
 }
 

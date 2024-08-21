@@ -5,7 +5,6 @@
 - [ ] IDEA Can i integrate the idea (or even base the project) on [outline speedrunning](https://learnhowtolearn.org/how-to-build-extremely-quickly/)
            Maybe just show how this can be used by using a board or tag and priorities
 
-- [ ] FIXME replace config.update by a separation of mutatble state and static config
 - [ ] FIXME config: if no `alias` section it crashes
 - [ ] IDEA Implement `tb queue 1 2 3 5 ...` (create a board Queue and uses `queue` param to order them)
       -> `queue` new property integer
@@ -193,6 +192,7 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
   - [x] Global config refactoring
 - [x] IDEA Support git alias (and therefore custom workflows, like hiding)
 - [x] IDEA Support multi line task creation(using quotes `tb t @must +tag "multi line comment"`)
+- [x] FEAT support mutable and persistent state
 
 ---
 
