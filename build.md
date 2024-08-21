@@ -28,7 +28,7 @@
 - [ ] FEAT Support `tb delegate` which is like `delete` but keep track it was instead delegated, not cancelled
 - [ ] FEAT At init, or `tb clear`, auto-check events from previous days
 - [ ] FEAT calendar sync:
-      - [ ] Auto-set to complete past events
+      - [x] Auto-set to complete past events
       - [ ] Show time for event + tag t-short size
       - [ ] Implement `tb event:convert <task id> <schedule> [estimate]`
       - [ ] Fix token renewal (grant refused crash)

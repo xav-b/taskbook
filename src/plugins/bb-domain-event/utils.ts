@@ -14,3 +14,10 @@ export function prettyTzOffset(dt: Date = new Date()) {
 
   return pretty
 }
+
+/**
+ * Get today timezone aware date object out of HH:MM.
+ */
+export function parseScheduleTime(time: string): Date {
+  return new Date(`${today()}T${time}:00${prettyTzOffset()}`)
+}

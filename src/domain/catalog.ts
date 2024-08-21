@@ -142,7 +142,7 @@ export default class Catalog {
   }
 
   notes(): Catalog {
-    const items = _filter(this._items, (item) => item.isTask)
+    const items = _filter(this._items, (item) => item._type !== 'note')
     return new Catalog(items)
   }
 
