@@ -58,8 +58,9 @@ export default class EventTask extends Task {
   display(signaleObj: SignaleLogConfig) {
     const prettyTime = prettyToday(this.schedule)
     const color = this.isComplete ? grey.strikethrough : chalk.blue
-    // prefix message with scheduled time
-    signaleObj.message = `${color(prettyTime)} |${grey(msToMinutes(this.duration))}| ${signaleObj.message}`
+    // prefix message with scheduled and duration
+    const duration = msToMinutes(this.duration || this.estimate)
+    signaleObj.message = `${color(prettyTime)} ${grey(duration)} ${signaleObj.message}`
 
     if (this.isComplete) success(signaleObj)
     else if (this.inProgress) wait(signaleObj)

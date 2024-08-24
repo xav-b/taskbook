@@ -2,6 +2,10 @@
 
 ### Next
 
+- [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
+- [ ] FIXME `--timer` capture CTRL-C and gracefully record the time spent.
+- [ ] FIXME `tb b --timer` never completes
+
 - [ ] IDEA Can i integrate the idea (or even base the project) on [outline speedrunning](https://learnhowtolearn.org/how-to-build-extremely-quickly/)
            Maybe just show how this can be used by using a board or tag and priorities
 
@@ -9,9 +13,6 @@
 - [ ] IDEA Implement `tb queue 1 2 3 5 ...` (create a board Queue and uses `queue` param to order them)
       -> `queue` new property integer
       -> `queue` command 
-- [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
-- [ ] FIXME `--timer` capture CTRL-C and gracefully record the time spent.
-- [ ] FIXME `tb b --timer` never completes
 
 - [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
            when reviewed and automatically uncheck according to schedule (maybe add a
@@ -26,10 +27,9 @@
 ### Backlog
 
 - [ ] FEAT Support `tb delegate` which is like `delete` but keep track it was instead delegated, not cancelled
-- [ ] FEAT At init, or `tb clear`, auto-check events from previous days
 - [ ] FEAT calendar sync:
       - [x] Auto-set to complete past events
-      - [ ] Show time for event + tag t-short size
+      - [x] Show time for event
       - [ ] Implement `tb event:convert <task id> <schedule> [estimate]`
       - [ ] Fix token renewal (grant refused crash)
       - [x] Use `schedule` for task ordering on `calendar`
@@ -193,24 +193,29 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [x] IDEA Support git alias (and therefore custom workflows, like hiding)
 - [x] IDEA Support multi line task creation(using quotes `tb t @must +tag "multi line comment"`)
 - [x] FEAT support mutable and persistent state
+- [ ] FEAT `tb goto 3` opens link of 3 (implemented with alias)
 
 ---
 
 ## As A Service
 
+Open-core model. Everything works locally, and offline, just fine like I use today. But
+premium gets you:
+
+- Priority Support (bug fixes and feature requests)
+- Advanced archive search
+- Backup + Sync tasks between machines (using github repositories)
 - Collaborative: family (UI), pro teams
     - Github repositories can have collaborators - team shared boards
     - Have modular storage and use git, so there can be per-repository list of tasks
     - This would need an assignment too. Other tight integrations could be to
       have tasks completions linked to PR/commits
-- Backup + Sync tasks between machines (using github repositories)
-- Github repositories = workspaces
 - Event hooks (integrate with IFTT/Zapier)
 - Analytics
 - Habits, tasks, scheduling, 2 ways sync with google calendar, time boxing
-- Works offline
 - Mobile
-- Support for github, jira (boards are context, status are boards, etc...)
+- Support for backends: github, jira (boards are context, status are boards, etc...)
+  - Github repositories = workspaces
 
 ---
 

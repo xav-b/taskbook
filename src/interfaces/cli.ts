@@ -226,7 +226,7 @@ program
   .alias('P')
   .description('display task details')
   .argument('task')
-  .option('-f, --format [duration]', 'output format', 'markdown')
+  .option('-f, --format [format]', 'output format', 'markdown')
   .option('-a, --archive', 'use achive instead of normal storage')
   .action((task, opts) => taskbook.printTask(task, opts.format, opts.archive))
 
@@ -271,8 +271,9 @@ program
   .argument('[argv...]')
   .action((alias, argv) => {
     if (Object.keys(config.aliases).includes(alias)) {
-      debug(`will run alias ${alias}`, argv, config.aliases[alias])
-      spawn(config.aliases[alias], { shell: true, stdio: 'inherit' })
+      const cmd = config.aliases[alias].replace('$argv', argv.join(' '))
+      debug(`will run alias ${alias}`, cmd)
+      spawn(cmd, { shell: true, stdio: 'inherit' })
     } else taskbook.displayBoardStats()
   })
 

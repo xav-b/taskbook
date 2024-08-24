@@ -745,7 +745,7 @@ class Taskbook {
   async printTask(taskId: string, format: string, useArchive = false) {
     const store = useArchive ? this._archive : this._data
 
-      ;[taskId] = this._validateIDs([taskId], store.ids())
+    ;[taskId] = this._validateIDs([taskId], store.ids())
 
     debug(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
 
