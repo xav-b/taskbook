@@ -1,17 +1,15 @@
 import chalk from 'chalk'
 import { parse, compareAsc } from 'date-fns'
 
-import { sortByPriorities, msToMinutes } from '../shared/utils'
-// TODO: import { Item, Note, Goal, Task } from '../domain'
-import Item from '../domain/item'
-import Task, { TaskPriority } from '../domain/task'
+import { msToMinutes } from '../shared/utils'
+import IBullet, { Priority } from '../domain/ibullet'
+import Task from '../domain/task'
 import { CatalogStats } from '../domain/catalog'
 import { error, log, success, warn } from './printer'
-import config, { IConfig } from '../config'
+import config from '../config'
 
 const { blue, green, magenta, red, yellow } = chalk
-// TODO: should be accessible from configuration
-const grey = chalk.cyan.dim
+const { grey } = config.theme
 
 /**
  * TODO: Road to configurable theme
@@ -35,7 +33,11 @@ const theme = {
 }
 */
 
-function buildNoteMessage(item: Item): string {
+export function itemSorter(t1: IBullet, t2: IBullet): number {
+  return t1.sort(t2)
+}
+
+function buildNoteMessage(item: IBullet): string {
   return item.description
 }
 
@@ -43,20 +45,20 @@ function colorBoards(boards: string[]) {
   return boards.map((x) => grey(x)).join(' ')
 }
 
-function isBoardComplete(items: Item[]) {
+function isBoardComplete(items: IBullet[]) {
   const { tasks, complete, notes } = _getItemStats(items)
   return tasks === complete && notes === 0
 }
 
-function getStar(item: Item) {
+function getStar(item: IBullet) {
   return item.isStarred ? yellow('★') : ''
 }
 
-function getCommentHint(item: Item) {
+function getCommentHint(item: IBullet) {
   return item.comment ? blue('✎') : ''
 }
 
-function getLinkHint(item: Item) {
+function getLinkHint(item: IBullet) {
   // TODO: that's where it would be so cool to have a clickable link
   // NOTE: link and globe ascii just seem too much
   return item.link ? blue('@') : ''
@@ -64,10 +66,9 @@ function getLinkHint(item: Item) {
 
 function getRepeatHint(task: Task) {
   return task.repeat ? blue('∞') : ''
-  // return task.repeat ? blue('◌') : ''
 }
 
-function _getItemStats(items: Item[]) {
+function _getItemStats(items: IBullet[]) {
   let [tasks, complete, notes] = [0, 0, 0]
 
   items.forEach((item) => {
@@ -87,14 +88,8 @@ function _getItemStats(items: Item[]) {
 }
 
 class Render {
-  _configuration: IConfig
-
-  constructor() {
-    this._configuration = config.get()
-  }
-
-  _buildTitle(key: string, items: Item[]) {
-    let title = this._configuration.highlightTitle(key)
+  _buildTitle(key: string, items: IBullet[]) {
+    let title = config.theme.highlightTitle(key)
     if (key === new Date().toDateString()) title += ` ${grey('[Today]')}`
 
     const { tasks, complete } = _getItemStats(items)
@@ -103,7 +98,7 @@ class Render {
     return { title, correlation }
   }
 
-  _buildPrefix(item: Item) {
+  _buildPrefix(item: IBullet) {
     const prefix = []
 
     const { id } = item
@@ -120,7 +115,7 @@ class Render {
     const { isComplete, description } = item
 
     if (!isComplete && item.priority > 1) {
-      const style = this._configuration.priorities[item.priority]
+      const style = config.theme.priorities[item.priority]
       message.push(style(description))
     } else {
       // message.push(isComplete ? grey(description) : description)
@@ -140,14 +135,14 @@ class Render {
     return message.join(' ')
   }
 
-  _displayTitle(board: string, items: Item[]) {
+  _displayTitle(board: string, items: IBullet[]) {
     const { title: message, correlation: suffix } = this._buildTitle(board, items)
     const titleObj = { prefix: '\n ', message, suffix }
 
     return log(titleObj)
   }
 
-  async displayItemByBoard(item: Item) {
+  async displayItemByBoard(item: IBullet) {
     const age = item.age()
     const star = getStar(item)
     const comment = getCommentHint(item)
@@ -169,11 +164,9 @@ class Render {
     if (repeat) suffix.push(repeat)
     if (comment.length > 0) suffix.push(comment)
 
-    if (item instanceof Task) {
-      const { duration, isComplete } = item
-      if (duration && duration > 0 && isComplete) {
-        suffix.push(grey(msToMinutes(duration)))
-      }
+    const { duration, isComplete } = item
+    if (duration && duration > 0 && isComplete) {
+      suffix.push(grey(msToMinutes(duration)))
     }
 
     if (item.tags?.length > 0) suffix.push(grey(item.tags.join(' ')))
@@ -183,8 +176,8 @@ class Render {
     item.display(msgObj)
   }
 
-  _displayItemByDate(item: Item, isArchive = false) {
-    const boards = item.boards.filter((x) => x !== this._configuration.defaultBoard)
+  _displayItemByDate(item: IBullet, isArchive = false) {
+    const boards = item.boards.filter((x) => x !== config.local.defaultBoard)
     const star = getStar(item)
 
     const prefix = this._buildPrefix(item)
@@ -194,7 +187,6 @@ class Render {
 
     const suffix = []
 
-    // FIXME: calendar won't pretty print this one
     if (item instanceof Task) {
       if (item.duration && item.duration > 0 && item.isComplete)
         // FIXME: pretty rendering duration should be a task method
@@ -209,25 +201,23 @@ class Render {
     item.display(msgObj)
   }
 
-  displayByBoard(data: Record<string, Item[]>, displayTasks = true) {
+  displayByBoard(data: Record<string, IBullet[]>, displayTasks = true) {
     Object.keys(data).forEach((board: string) => {
-      if (isBoardComplete(data[board]) && !this._configuration.displayCompleteTasks) return
+      if (isBoardComplete(data[board]) && !config.local.displayCompleteTasks) return
 
       this._displayTitle(board, data[board])
 
-      // TODO: allow other sorting strategies (default by id)
-      data[board].sort(sortByPriorities).forEach((item) => {
+      data[board].sort(itemSorter).forEach((item) => {
         if (!displayTasks) return
 
-        if (item instanceof Task && item.isComplete && !this._configuration.displayCompleteTasks)
-          return
+        if (item instanceof Task && item.isComplete && !config.local.displayCompleteTasks) return
 
         this.displayItemByBoard(item)
       })
     })
   }
 
-  displayByDate(data: Record<string, Item[]>, isArchive = false) {
+  displayByDate(data: Record<string, IBullet[]>, isArchive = false) {
     Object.keys(data)
       // we move it to 11pm because otherwise the library considers it to be
       // midnight and subtract to go to UTC+0, effectively moving to the
@@ -240,16 +230,12 @@ class Render {
         const prettyDt = date.toDateString()
         const indexDt = date.toLocaleDateString('en-UK')
 
-        if (isBoardComplete(data[indexDt]) && !this._configuration.displayCompleteTasks) return
+        if (isBoardComplete(data[indexDt]) && !config.local.displayCompleteTasks) return
 
         this._displayTitle(prettyDt, data[indexDt])
 
         data[indexDt].forEach((item) => {
-          if (
-            item instanceof Task &&
-            item.isComplete &&
-            !this._configuration.displayCompleteTasks
-          ) {
+          if (item instanceof Task && item.isComplete && !config.local.displayCompleteTasks) {
             return
           }
 
@@ -259,7 +245,7 @@ class Render {
   }
 
   displayStats(opts: CatalogStats) {
-    if (!this._configuration.displayProgressOverview) return
+    if (!config.local.displayProgressOverview) return
 
     const complete = opts.complete || 0
     const inProgress = opts.inProgress || 0
@@ -273,9 +259,8 @@ class Render {
       percent >= 75 ? green(`${percent}%`) : percent >= 50 ? yellow(`${percent}%`) : `${percent}%`
 
     let estimateWarning = blue
-    if (estimate / (1000 * 60 * 60) > this._configuration.plannedHoursError) estimateWarning = red
-    else if (estimate / (1000 * 60 * 60) > this._configuration.plannedHoursWarn)
-      estimateWarning = yellow
+    if (estimate / (1000 * 60 * 60) > config.local.plannedHoursError) estimateWarning = red
+    else if (estimate / (1000 * 60 * 60) > config.local.plannedHoursWarn) estimateWarning = yellow
     const timings = [
       `${green(msToMinutes(duration))} ${grey('worked')}`,
       `${estimateWarning(msToMinutes(estimate))} ${grey('estimated')}`,
@@ -351,9 +336,7 @@ class Render {
   }
 
   markStarted(ids: string[]) {
-    if (ids.length === 0) {
-      return
-    }
+    if (ids.length === 0) return
 
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
     const message = `Started ${ids.length > 1 ? 'tasks' : 'task'}:`
@@ -369,9 +352,7 @@ class Render {
   }
 
   markStarred(ids: string[]) {
-    if (ids.length === 0) {
-      return
-    }
+    if (ids.length === 0) return
 
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
     const message = `Starred ${ids.length > 1 ? 'items' : 'item'}:`
@@ -379,9 +360,7 @@ class Render {
   }
 
   markUnstarred(ids: string[]) {
-    if (ids.length === 0) {
-      return
-    }
+    if (ids.length === 0) return
 
     const [prefix, suffix] = ['\n', grey(ids.join(', '))]
     const message = `Unstarred ${ids.length > 1 ? 'items' : 'item'}:`
@@ -407,13 +386,13 @@ class Render {
   }
 
   warning(id: number, message: string) {
-    if (!this._configuration.displayWarnings) return
+    if (!config.local.displayWarnings) return
 
     const suffix = grey(String(id))
     warn({ message: yellow(message), suffix })
   }
 
-  successCreate(item: Item, showDescription = false) {
+  successCreate(item: IBullet, showDescription = false) {
     const [prefix, suffix] = ['\n', grey(String(item.id))]
     // FIXME: in most cases `typeof Item` is `Object`, but that alternative is
     // a pretty poor UX
@@ -442,7 +421,7 @@ class Render {
     success({ prefix, message, suffix })
   }
 
-  successPriority(id: string, level: TaskPriority) {
+  successPriority(id: string, level: Priority) {
     const prefix = '\n'
     const message = `Updated priority of task: ${grey(id)} to`
     const suffix = level === 3 ? red('high') : level === 2 ? yellow('medium') : green('normal')

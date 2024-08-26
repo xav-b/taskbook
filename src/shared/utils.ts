@@ -1,8 +1,7 @@
 import fs from 'fs'
-import crypto from 'crypto'
+import crypto, { BinaryLike } from 'crypto'
 import { Maybe } from '../types'
-import Item from '../domain/item'
-import Task from '../domain/task'
+import IBullet from '../domain/ibullet'
 
 export function randomHexString(length = 8) {
   return crypto
@@ -13,16 +12,40 @@ export function randomHexString(length = 8) {
 
 export const removeDuplicates = (x: string[]): string[] => [...new Set(x)]
 
-export function sortByPriorities(t1: Item, t2: Item, pushNullDown = true): number {
+export function sortByPriorities(
+  t1: IBullet,
+  t2: IBullet,
+  pushNullDown = true,
+  pushCompletedDown = true
+): number {
+  // FIXME: the function is expected to be used in a functional manner (`[
+  // tasks ].sort(<here>)`) and so that argument is not expected to be ever
+  // different from the default.
+  // Either build a partial, or read it from config (which needs that config
+  // object to become a singleton built at runtime)
+  //
+  // refresher: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort
+  // we should return negative to place t1 before t2, b otherwise
   const orderNull = pushNullDown ? -1 : 1
+  const orderCompleted = pushCompletedDown ? -1 : 1
+
   // we want to have top priorities first, down to lowest so here the highest
   // priority should come as "lower" than the lowest ones
-  if (t1 instanceof Task && t2 instanceof Task) return t2.priority - t1.priority
+  // TODO: `isTask` could be generalised by just checking if the item has a
+  // priority or not, it doesn't have to be a task, a goal could work out too,
+  // for example.
+  if (t1.isTask && t2.isTask) {
+    if (t1.isComplete && t2.isComplete) return 0
+    if (t1.isComplete) return -orderNull
+    if (t2.isComplete) return orderNull
+
+    return t2.priority - t1.priority
+  }
   // if we are here, one of the 2 items is not a task. The behaviour we want is
   // to a) not affect the sorting of tasks with priorities, and b) push
   // downward/upward (depending on flag)
-  else if (t1 instanceof Task) return orderNull
-  else if (t2 instanceof Task) return -orderNull
+  if (t1.isTask) return orderCompleted
+  if (t2.isTask) return -orderCompleted
 
   // none of the items are a task, stand still
   return 0
@@ -63,3 +86,5 @@ export function msToMinutes(unixTs: Maybe<number>): string {
   // else just round up at the minute
   return `${Math.round(minutes)}m`
 }
+
+export const sha256 = (key: BinaryLike) => crypto.createHash('sha256').update(key).digest('hex')

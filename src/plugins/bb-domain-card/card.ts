@@ -1,10 +1,9 @@
-import chalk from 'chalk'
-
 import Printer, { SignaleLogConfig, success } from '../../interfaces/printer'
+import config from '../../config'
 import Task from '../../domain/task'
 
 const { custom } = Printer('🂡')
-const grey = chalk.cyan.dim
+const { grey } = config.theme
 
 /*
  * Logically, a card is an item you are tasked to regularly review.

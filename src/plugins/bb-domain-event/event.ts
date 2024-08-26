@@ -1,9 +1,11 @@
 import chalk from 'chalk'
 
 import Printer, { SignaleLogConfig, wait, success } from '../../interfaces/printer'
-import { TaskProperties } from '../../domain/task'
+import IBullet, { IBulletOptions } from '../../domain/ibullet'
+import { msToMinutes } from '../../shared/utils'
 import { UnixTimestamp } from '../../types'
 import Task from '../../domain/task'
+import config from '../../config'
 
 /**
  * Render a unix timestamp to, e.g., 10:30am
@@ -25,15 +27,17 @@ function prettyToday(ts: UnixTimestamp) {
 
 /*
  * Logically, an event is a scheduled task.
+ *
+ * TODO: this would be logical to add `schedule` to the `Task` or even
+ * `IBullet` domains. Even a note or a goal could very much be scheduled.
  */
-export interface EventProperties extends TaskProperties {
+export interface EventProperties extends IBulletOptions {
   // timestamp as an epoch ms (to make it consistent with the `createdAt` etc...)
   schedule: UnixTimestamp
 }
 
 const { custom } = Printer('⏲')
-// TODO: reading from config once ready
-const grey = chalk.cyan.dim
+const { grey } = config.theme
 
 /**
  * Events are tasks to accomplish at the end.
@@ -54,14 +58,23 @@ export default class EventTask extends Task {
   display(signaleObj: SignaleLogConfig) {
     const prettyTime = prettyToday(this.schedule)
     const color = this.isComplete ? grey.strikethrough : chalk.blue
-    // prefix message with scheduled time
-    // FIXME: this.schedule is a timestamp now
-    signaleObj.message = `${color(prettyTime)} ${signaleObj.message}`
-
-    if (this.duration) signaleObj.suffix = grey(String(this.duration))
+    // prefix message with scheduled and duration
+    const duration = msToMinutes(this.duration || this.estimate)
+    signaleObj.message = `${color(prettyTime)} ${grey(duration)} ${signaleObj.message}`
 
     if (this.isComplete) success(signaleObj)
     else if (this.inProgress) wait(signaleObj)
     else custom(signaleObj)
+  }
+
+  sort(other: IBullet): number {
+    // make no assumption if we're not comparing against an event
+    // push the calendar event down
+    // NOTE: EXPERIMENTAL
+    if (!(other instanceof EventTask)) return 1
+
+    // otherwise sort by timestamp ASC (meaning oldest event at the top)
+    // if the current task is older, it will be negative, pushing it first as we want
+    return this.schedule - other.schedule
   }
 }

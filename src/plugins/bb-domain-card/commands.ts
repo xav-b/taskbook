@@ -3,9 +3,13 @@ import clipboardy from 'clipboardy'
 import Taskbook from '../../use_cases/taskbook'
 import { parseOptions } from '../../shared/parser'
 import render from '../../interfaces/render'
+import config from '../../config'
 import FlashcardTask from './card'
 
 const debug = require('debug')('tb:plugin:card:commands')
+
+const boardPrefix = config.plugins?.srr?.prefix || 'deck'
+const commonTag = config.plugins?.srr?.tag || 'srr'
 
 /**
  * Creating a flashcard is completely similar to creating a task. In fact the
@@ -15,17 +19,15 @@ const debug = require('debug')('tb:plugin:card:commands')
 function createCard(board: Taskbook, front: string[], link?: string) {
   const { _data } = board
 
-  // const boards = [`@${board._configuration.cardBoard}`]
   const { description, tags, boards } = parseOptions(front, {
     // automatically push to the global board for all flashcards
-    defaultBoard: board._configuration.defaultBoard,
+    defaultBoard: config.local.defaultBoard,
   })
 
-  // FIXME: boards.push(`@${board._configuration.cardBoard}`)
-  // TODO: use config
-  const deckBoards = boards.map((b: string) => `@deck.${b.replace('@', '')}`)
-  // an easy way to list them all by using `tb list srr`
-  tags.push('+srr')
+  // FIXME: boards.push(`@${config.local.cardBoard}`)
+  const deckBoards = boards.map((b: string) => `@${boardPrefix}.${b.replace('@', '')}`)
+  // an easy way to list them all by using `tb list <configured tag>`
+  tags.push(`+${commonTag}`)
 
   const id = _data.generateID()
 
@@ -35,6 +37,7 @@ function createCard(board: Taskbook, front: string[], link?: string) {
     description,
     boards: deckBoards,
     tags,
+    link,
   })
 
   _data.set(id, flashcard)
@@ -49,7 +52,7 @@ function createCard(board: Taskbook, front: string[], link?: string) {
   // can save it in one go.
   board.comment(String(id))
 
-  if (board._configuration.enableCopyID) clipboardy.writeSync(String(id))
+  if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 }
 
 export default { createCard }

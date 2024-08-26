@@ -1,15 +1,15 @@
 import later from '@breejs/later'
 
-import Item from './item'
+import IBullet from './ibullet'
 import Task from './task'
 import { hasTerms } from '../shared/parser'
 import { Maybe } from '../types'
-import config, { IConfig } from '../config'
+import config from '../config'
 
-// base layout of items is { itemId: Item, .... }
-export type CatalogInnerData = Record<string, Item>
+// base layout of items is { itemId: IBullet, .... }
+export type CatalogInnerData = Record<string, IBullet>
 
-type FilterOutLogic = (item: Item) => boolean
+type FilterOutLogic = (item: IBullet) => boolean
 
 export interface CatalogStats {
   complete: number
@@ -37,11 +37,9 @@ function _filter(data: CatalogInnerData, exclude: FilterOutLogic): CatalogInnerD
 
 export default class Catalog {
   protected _items: CatalogInnerData
-  protected _configuration: IConfig
 
   constructor(items: CatalogInnerData) {
     this._items = items
-    this._configuration = config.get()
   }
 
   public generateID(): number {
@@ -73,14 +71,6 @@ export default class Catalog {
     return Object.keys(this._items).length
   }
 
-  private _isComplete(item: Item) {
-    return item instanceof Task && item.isComplete
-  }
-
-  private _inProgress(item: Item) {
-    return item instanceof Task && item.inProgress
-  }
-
   all(): CatalogInnerData {
     return this._items
   }
@@ -93,7 +83,7 @@ export default class Catalog {
    * Pull and de-duplicate all items' boards
    */
   public boards(): string[] {
-    const boards = [this._configuration.defaultBoard]
+    const boards = [config.local.defaultBoard]
 
     this.ids().forEach((id: string) => {
       boards.push(...this.get(id).boards.filter((x: string) => boards.indexOf(x) === -1))
@@ -113,15 +103,15 @@ export default class Catalog {
     return tags
   }
 
-  public get(id: string): Item {
+  public get(id: string): IBullet {
     return this._items[id]
   }
 
-  public uget(uid: string): Maybe<Item> {
+  public uget(uid: string): Maybe<IBullet> {
     return Object.values(this.all()).find((each) => each._uid === uid) || null
   }
 
-  set(id: number, data: Item) {
+  set(id: number, data: IBullet) {
     this._items[id] = structuredClone(data)
     // we also overwrite the `id` as it might be coming from the `storage`,
     // while here we save it to `archive`, under a new id. Obviously this is
@@ -152,7 +142,7 @@ export default class Catalog {
   }
 
   notes(): Catalog {
-    const items = _filter(this._items, (item) => item.isTask)
+    const items = _filter(this._items, (item) => item._type !== 'note')
     return new Catalog(items)
   }
 
@@ -166,10 +156,10 @@ export default class Catalog {
       // not a task
       if (!t.isTask) return true
       // not recurrent
-      if ((t as Task).repeat === null) return true
+      if (t.repeat === null) return true
 
       // so now we have a recurrent task - let's check if it is due today
-      const repeat = (t as Task).repeat
+      const { repeat } = t
       const schedule = later.parse.text(repeat || '')
       // FIXME: don't know how the error system works, can be `6` and works,
       // for `every day` for example
@@ -195,17 +185,17 @@ export default class Catalog {
   }
 
   pending(): Catalog {
-    const items = _filter(this._items, (item) => !item.isTask || this._isComplete(item))
+    const items = _filter(this._items, (item) => !item.isTask || item.isComplete)
     return new Catalog(items)
   }
 
   completed(): Catalog {
-    const items = _filter(this._items, (item) => !item.isTask || !this._isComplete(item))
+    const items = _filter(this._items, (item) => !item.isTask || !item.isComplete)
     return new Catalog(items)
   }
 
   inProgress(): Catalog {
-    const items = _filter(this._items, (item) => !item.isTask || !this._inProgress(item))
+    const items = _filter(this._items, (item) => !item.isTask || !item.inProgress)
     return new Catalog(items)
   }
 
@@ -232,6 +222,7 @@ export default class Catalog {
         return task.isComplete ? complete++ : task.inProgress ? inProgress++ : pending++
       }
 
+      // else
       return notes++
     })
 

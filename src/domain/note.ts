@@ -1,13 +1,10 @@
-import Item, { ItemProperties } from './item'
+import { BasicBullet } from './ibullet'
 import { note, SignaleLogConfig } from '../interfaces/printer'
 
-export default class Note extends Item {
+export default class Note extends BasicBullet {
   isTask = false
-  _type = 'note'
 
-  constructor(options: ItemProperties) {
-    super(options)
-  }
+  _type = 'note'
 
   display(signaleObj: SignaleLogConfig) {
     return note(signaleObj)

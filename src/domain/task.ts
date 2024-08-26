@@ -1,82 +1,40 @@
 import { formatDistance } from 'date-fns'
-import Item, { ItemProperties } from './item'
+import IBullet, { BasicBullet, IBulletOptions, Priority } from './ibullet'
 import { Maybe, UnixTimestamp } from '../types'
 import { msToMinutes } from '../shared/utils'
 import { SignaleLogConfig, wait, success, pending } from '../interfaces/printer'
 import config from '../config'
 
-export enum TaskPriority {
-  Normal = 1,
-  Medium = 2,
-  High = 3,
-}
-
-export interface TaskProperties extends ItemProperties {
-  duration?: number
-  estimate?: number
-  isComplete?: boolean
-  inProgress?: boolean
-  priority?: TaskPriority
-  repeat?: string
-  _startedAt?: UnixTimestamp
-}
-
 function toSize(estimate: UnixTimestamp) {
   const friendly = estimate / 60 / 1000
 
   if (friendly < 5) return 'xs'
-  else if (friendly < 15) return 's'
-  else if (friendly < 1 * 60) return 'm'
-  else if (friendly < 5 * 60) return 'l'
+  if (friendly < 15) return 's'
+  if (friendly < 1 * 60) return 'm'
+  if (friendly < 5 * 60) return 'l'
 
   return 'xl'
 }
 
-export default class Task extends Item {
-  protected _startedAt: Maybe<number>
-  duration: Maybe<number>
-  estimate: Maybe<number>
-  isTask: boolean
-  isComplete: boolean
-  inProgress: boolean
-  priority: TaskPriority
-  repeat: Maybe<string>
-
+export default class Task extends BasicBullet {
   _type = 'task'
 
-  constructor(options: TaskProperties) {
-    super(options)
+  isTask = true
 
-    const conf = config.get()
-
+  constructor(options: IBulletOptions) {
     // items can usually be created either because they are new, or because we
     // parsed and loaded existing items from storage, and they are all
     // re-initialised. This is detected by checking _uid, which doesn't exist
     // when creating a new instance, but has been generated once stored. An
-    // alternative coold be to offer 2 different consutructors, especially if
+    // alternative could be to offer 2 different consutructors, especially if
     // custom logic grows. `estimate` is a good example, it is stored and
     // re-passed at init as ms. But we otherwise want to be able to receive
     // human-friendly values, and the current approach will be a problem.
     const isNew = options._uid === undefined
 
-    this._startedAt = options._startedAt || null
+    super(options)
 
-    this.isTask = true
-    this.duration = options.duration || null
-    this.isComplete = options.isComplete || false
-    this.inProgress = options.inProgress || false
-    this.isStarred = options.isStarred || false
-    this.priority = options.priority || 1
-    // we store and read the raw user repeat. The parsing structure looks
-    // pretty complicated and so we leave it to the actual use cases to do
-    // their parsing.
-    this.repeat = options.repeat || null
-
-    // that line is redundant with the function but makes typescript happy,
-    // having the constructor to explicitely set `this.estimate` to a valid
-    // type
-    this.estimate = options.estimate || null
-    this.setEstimate(options.estimate || null, isNew && conf.tshirtSizes)
+    this.setEstimate(options.estimate || null, isNew && config.local.tshirtSizes)
   }
 
   public setEstimate(estimate: Maybe<number>, withSize: boolean) {
@@ -154,6 +112,34 @@ export default class Task extends Item {
     else pending(signaleObj)
   }
 
+  // Sort by task priority
+  public sort(other: IBullet) {
+    // TODO: make that configurable
+    const orderNull = -1
+    const orderCompleted = -1
+
+    // we want to have top priorities first, down to lowest so here the highest
+    // priority should come as "lower" than the lowest ones
+    // TODO: `isTask` could be generalised by just checking if the item has a
+    // priority or not, it doesn't have to be a task, a goal could work out too,
+    // for example.
+    if (this.isTask && other.isTask) {
+      if (this.isComplete && other.isComplete) return 0
+      if (this.isComplete) return -orderNull
+      if (other.isComplete) return orderNull
+
+      return other.priority - this.priority
+    }
+    // if we are here, one of the 2 items is not a task. The behaviour we want is
+    // to a) not affect the sorting of tasks with priorities, and b) push
+    // downward/upward (depending on flag)
+    if (this.isTask) return orderCompleted
+    if (other.isTask) return -orderCompleted
+
+    // none of the items are a task, stand still
+    return 0
+  }
+
   /**
    * Display task details in markdown format.
    * NOTE: too bad we have to re-implement item.toMarkdown() just to add
@@ -173,7 +159,7 @@ export default class Task extends Item {
 | ---- | ----- |
 | UID | ${this._uid} |
 | Created | ${ago} |
-| Priority | ${TaskPriority[this.priority]} |
+| Priority | ${Priority[this.priority]} |
 | Estimate | ${msToMinutes(this.estimate)} |
 `)
 

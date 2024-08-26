@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 
+import { spawn } from 'child_process'
 import { Command } from 'commander'
 import updateNotifier from 'update-notifier'
-const debug = require('debug')('tb:cli')
 
 import pkg from '../../package.json'
-import render from '../interfaces/render'
+import render from './render'
 import { parseDuration, parseDate } from '../shared/parser'
+import config from '../config'
 import EventPlugin from '../plugins/bb-domain-event/plugin'
 import GoalPlugin from '../plugins/bb-domain-goal/plugin'
 import CardPlugin from '../plugins/bb-domain-card/plugin'
 import Taskbook from '../use_cases/taskbook'
+
+const debug = require('debug')('tb:cli')
 
 debug('instantiating commander')
 const program = new Command()
@@ -18,16 +21,6 @@ debug('instantiating Taskbook')
 const taskbook = new Taskbook()
 
 debug('registering commands')
-// TODO: group commands logically together
-program
-  .name(pkg.name)
-  .description(pkg.description)
-  .version(pkg.version)
-  .action(() => {
-    taskbook.displayByBoard()
-
-    return taskbook.displayStats()
-  })
 
 program
   .command('what')
@@ -46,7 +39,7 @@ program
   .command('hello')
   .alias('bonjour')
   .description('Initialise your day')
-  .action((context: string) => taskbook.hello())
+  .action(() => taskbook.hello())
 
 // visualise tasks ---------------------------------------------------------------------
 
@@ -71,7 +64,7 @@ program
   .action(() => {
     taskbook.displayByDate()
 
-    return taskbook.displayStats()
+    return taskbook.displayBoardStats()
   })
 
 program
@@ -102,6 +95,7 @@ program
   .option('-n, --notebook', 'Open editor to also insert a comment')
   .option('-j, --json', 'JSON output instead of console rendering')
   .option('-r, --repeat [repeat]', 'Make the task recurrent')
+  .option('--on [date]', 'Schedule the task for later')
   .action((description, options) => {
     const estimate = parseDuration(options.estimate)
     // the `undefined` trick just avoids the function to manage both null and
@@ -203,10 +197,27 @@ program
 program
   .command('edit')
   .alias('e')
-  .description('Edit item description')
+  .description('Edit item description/link/duration')
   .argument('task')
-  .argument('<description...>')
-  .action((task, description) => taskbook.editDescription([`@${task}`].concat(description)))
+  .argument('property')
+  .argument('<description...>') // description | link | duration (in minutes)
+  .action((task, property, description) => {
+    // NOTE: we don't intend to support all fields, like tags. That's because
+    // a) they have their own command and b) it's unclear how e.g. boards
+    // should be merged. And that complexity is more annoying than the small
+    // benefit of editing several things at once (never useful to me)
+    // TODO: duration
+    // the properties not mentioned can be edited with more explicit/direct commands,
+    // like `tb tag` or `tb estimate`
+    const ITEM_PROPERTIES = ['description', 'link', 'duration']
+    // equivalent of not specifying the property, which used to be the default
+    // taskbook behaviour and a common use case
+    if (!ITEM_PROPERTIES.includes(property)) {
+      description = [property].concat(description)
+      property = 'description'
+    }
+    taskbook.editItemProperty(task, property, description)
+  })
 
 // work --------------------------------------------------------------------------------
 
@@ -215,7 +226,7 @@ program
   .alias('P')
   .description('display task details')
   .argument('task')
-  .option('-f, --format [duration]', 'output format', 'markdown')
+  .option('-f, --format [format]', 'output format', 'markdown')
   .option('-a, --archive', 'use achive instead of normal storage')
   .action((task, opts) => taskbook.printTask(task, opts.format, opts.archive))
 
@@ -250,6 +261,23 @@ program
   .command('clear')
   .description('Archive all checked items')
   .action(() => taskbook.clear())
+
+// default handler called when the command is not recognised
+program
+  .name(pkg.name)
+  .description(pkg.description)
+  .version(pkg.version)
+  .argument('[alias]')
+  .argument('[argv...]')
+  .action((alias, argv) => {
+    if (Object.keys(config.aliases).includes(alias)) {
+      const cmd = config.aliases[alias].replace('$argv', argv.join(' '))
+      debug(`will run alias ${alias}`, cmd)
+      spawn(cmd, { shell: true, stdio: 'inherit' })
+    } else taskbook.displayBoardStats()
+  })
+
+// done --------------------------------------------------------------------------------
 
 // register plugins
 new EventPlugin().register(program, taskbook)

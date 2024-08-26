@@ -2,38 +2,37 @@
 
 ### Next
 
-Change object/type base items to either golang style interface or functional
-practice. Right now the core code has to know about all the types of items, and
-there are checks everywhere. This makes the plugin system failing and slow down
-development, lower quality.
-
-- [ ] FIXME Completed events have elapsed time in timestamp
-- [ ] FIXME: `--timer` capture CTRL-C and gracefully record the time spent.
+- [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
+- [ ] FIXME `--timer` capture CTRL-C and gracefully record the time spent.
 - [ ] FIXME `tb b --timer` never completes
-- [ ] TECH Document recurrent values, and check why it's not reliable
+
+- [ ] IDEA Can i integrate the idea (or even base the project) on [outline speedrunning](https://learnhowtolearn.org/how-to-build-extremely-quickly/)
+           Maybe just show how this can be used by using a board or tag and priorities
+
+- [ ] FIXME config: if no `alias` section it crashes
+- [ ] IDEA Implement `tb queue 1 2 3 5 ...` (create a board Queue and uses `queue` param to order them)
+      -> `queue` new property integer
+      -> `queue` command 
+
 - [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
            when reviewed and automatically uncheck according to schedule (maybe add a
            flag). Bind it to `@flashcard.{deck}`
         - [x] Create a card type
         - [ ] Review system
-        - [ ] `card:decks` command to list decks (or can i hack on tb list?)
+        - [ ] `card:decks` command to list decks (or can i hack on tb list? Using `tb list deck.*` fuzzy)
         - [ ] Replace `next: 3d` by last review
-- [ ] FEAT Support syncing multiple calendars and have them in their respective `calendar` 
-           and `calendar.{name}` boards (or use tags?) - sorting should also work
-- [ ] TECH Implement the library + plugin architecture
-      - [ ] Global config refactoring
 
 ### Todo
 
 ### Backlog
 
 - [ ] FEAT Support `tb delegate` which is like `delete` but keep track it was instead delegated, not cancelled
-- [ ] FEAT At init, or `tb clear`, auto-check events from previous days
-- [ ] FEAT `tb link [taskId] [url]`
-- [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
 - [ ] FEAT calendar sync:
+      - [x] Auto-set to complete past events
+      - [x] Show time for event
+      - [ ] Implement `tb event:convert <task id> <schedule> [estimate]`
       - [ ] Fix token renewal (grant refused crash)
-      - [ ] Use `schedule` for task ordering on `calendar`
+      - [x] Use `schedule` for task ordering on `calendar`
       - [ ] `event.reschedule` command, to update the datetime
       - [ ] Support calendar description as task comment, and `--notebook`
       - [ ] Also sync back to gcal
@@ -53,18 +52,21 @@ development, lower quality.
   - [ ] Recurrent events
   - [ ] Validate value at creation (`on Mondays` parsing for example crashes)
 
+- [ ] IDEA Prompt mode: shorten command (no more `tb`) and refresh on every input
+- [ ] IDEA When moving tsomething to `@blocked`, indicate reason or other task(s) reference
 - [ ] IDEA the `@tmp` board is automatically cleaned with `tb clear`
 - [ ] IDEA Logger should both use `DEBUG` AND record stuff on file (rotating)
 - [ ] IDEA Use taskbook to track those items, in the open on Github
 - [ ] IDEA Exports/convert/import: json (done), markdown (for github sharing), sqlite dumb
 - [ ] IDEA `archive` and `timeline` to support same filters as `tb list`
-- [ ] IDEA `edit` command to consolidate description, comment, tag, board, estimate, duration, ...
 - [ ] IDEA `tb list` with dynamic sorting (prority, estimate (both should actually still combine))
 - [ ] IDEA `schedule` command to put a task on the calendar (as event) (or `tb mv 2 @calendar --schedule 2pm`)
 - [ ] IDEA Time boxing and pomodoro timer
 - [ ] IDEA Hook system to implement a plugin system (post-delete, post-create, ...)
 - [ ] IDEA Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
+- [ ] IDEA The current output is just one FE - support TUI
 
+- [ ] FIXME Logging to file was smarter. Either wway abstract it in `shared`
 - [ ] FIXME storage loads by data types and must be modified for a new type
 - [ ] FIXME boards and tags don't need to be stored with their `@` and `+`
 - [ ] FIXME Restore of notes seem to move ids around and duplicate, if working at all
@@ -135,6 +137,8 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
         are not there already (+ have something fun about it, like a quote or whatever)
   - [x] Experiment with a daily "day planning" task
 
+- [x] IDEA Move done tasks at the bottom of the boards show (settings though?)
+- [x] `tb edit <property> <value...>` if nothing matches existing property, edit the title
 - [x] `created task ##` could also show the description
 - [x] FEAT Add `--notebook` to `tb note`
 - [x] FEAT `tb begin --timer` will countdown the estimate with regular nudges
@@ -180,24 +184,38 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [x] Order boards in the order I list them
 - [x] Make commands positional arguments
 - [x] Support calendar timeline
+- [x] FEAT Support syncing multiple calendars
+  - [x] have them in their respective `calendar` `calendar.{name}` boards (or use tags?) 
+  - [x] Sorting should also work
+- [x] FEAT `tb edit` with no valid field should support any 
+- [x] TECH Implement the library + plugin architecture
+  - [x] Global config refactoring
+- [x] IDEA Support git alias (and therefore custom workflows, like hiding)
+- [x] IDEA Support multi line task creation(using quotes `tb t @must +tag "multi line comment"`)
+- [x] FEAT support mutable and persistent state
+- [ ] FEAT `tb goto 3` opens link of 3 (implemented with alias)
 
 ---
 
 ## As A Service
 
+Open-core model. Everything works locally, and offline, just fine like I use today. But
+premium gets you:
+
+- Priority Support (bug fixes and feature requests)
+- Advanced archive search
+- Backup + Sync tasks between machines (using github repositories)
 - Collaborative: family (UI), pro teams
     - Github repositories can have collaborators - team shared boards
     - Have modular storage and use git, so there can be per-repository list of tasks
     - This would need an assignment too. Other tight integrations could be to
       have tasks completions linked to PR/commits
-- Backup + Sync tasks between machines (using github repositories)
-- Github repositories = workspaces
 - Event hooks (integrate with IFTT/Zapier)
 - Analytics
 - Habits, tasks, scheduling, 2 ways sync with google calendar, time boxing
-- Works offline
 - Mobile
-- Support for github, jira (boards are context, status are boards, etc...)
+- Support for backends: github, jira (boards are context, status are boards, etc...)
+  - Github repositories = workspaces
 
 ---
 

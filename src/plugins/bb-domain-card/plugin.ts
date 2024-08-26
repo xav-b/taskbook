@@ -7,12 +7,6 @@ import commands from './commands'
 export default class FlashcardPlugin extends BulletBoardPlugin {
   version = '0.1.2'
 
-  config = {
-    commonTag: 'srr',
-    // automatically prefix the given boards by this
-    prefix: 'deck',
-  }
-
   register(program: Command, board: Taskbook) {
     program
       .command('card')

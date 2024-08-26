@@ -6,7 +6,6 @@ import { prompt } from 'enquirer'
 import clipboardy from 'clipboardy'
 
 import { Maybe } from '../types'
-import config, { IConfig } from '../config'
 import Storage from '../store'
 import cacheStorage from '../store/localcache'
 import LocalStorage from '../store/localjson'
@@ -15,13 +14,15 @@ import render from '../interfaces/render'
 import { removeDuplicates } from '../shared/utils'
 import { parseOptions, isBoardOpt } from '../shared/parser'
 import Catalog, { CatalogInnerData } from '../domain/catalog'
-import Item from '../domain/item'
-import Task, { TaskPriority } from '../domain/task'
+import IBullet, { Priority } from '../domain/ibullet'
+import Task from '../domain/task'
 import Note from '../domain/note'
 import Logger from '../shared/logger'
 import events from './events'
+import config from '../config'
 
-const POMODORO_STRATEGY = 25 // minutes
+// TODO: config, some works it out differently
+const POMODORO_STRATEGY = 25 // minutes - default task estimate
 
 const log = Logger()
 const cache = cacheStorage.init()
@@ -64,12 +65,24 @@ function goodDay() {
 `)
 }
 
+function groupByDate(data: Catalog) {
+  const grouped: Record<string, IBullet[]> = {}
+
+  data.ids().forEach((id) => {
+    const item = data.get(id)
+    const dt = new Date(item.updatedAt).toLocaleDateString('en-UK')
+
+    if (grouped.hasOwnProperty(dt)) grouped[dt].push(item)
+    else grouped[dt] = [item]
+  })
+
+  return grouped
+}
+
 class Taskbook {
   isNewDay: boolean
 
   _storage: Storage
-
-  _configuration: IConfig
 
   _data: Catalog
 
@@ -81,9 +94,8 @@ class Taskbook {
     debug('initialising taskbook')
 
     debug('loading configuration')
-    this._configuration = config.get()
-    debug(`loading archive and items (ctx ${this._configuration.defaultContext})`)
-    this._storage = new LocalStorage(this._configuration.defaultContext)
+    debug(`loading archive and items (ctx ${config.state.currentContext})`)
+    this._storage = new LocalStorage(config.state.currentContext)
     this._archive = this._storage.getArchive()
     this._bin = this._storage.getBin()
     this._data = this._storage.get()
@@ -102,7 +114,7 @@ class Taskbook {
   }
 
   hello() {
-    if (this.isNewDay && this._configuration.greetings) {
+    if (this.isNewDay && config.local.greetings) {
       goodDay()
     }
 
@@ -191,7 +203,7 @@ class Taskbook {
 
   switchContext(name: string) {
     log.info(`switching to context ${name}`)
-    config.set('defaultContext', name)
+    config.update('currentContext', name)
 
     render.successSwitchContext(name)
   }
@@ -244,7 +256,7 @@ class Taskbook {
   }
 
   _groupByBoard(data = this._data, boards = this._data.boards()) {
-    const grouped: Record<string, Item[]> = {}
+    const grouped: Record<string, IBullet[]> = {}
 
     // NOTE: can `boards` be null?
     if (boards === null || boards.length === 0) boards = this._data.boards()
@@ -253,19 +265,15 @@ class Taskbook {
       boards.forEach((board: string) => {
         if (data.get(id).boards.includes(board) || data.get(id).tags?.includes(board)) {
           // we already have this board with items, append to it
-          if (Array.isArray(grouped[board])) return grouped[board].push(data.get(id))
-
+          if (Array.isArray(grouped[board])) grouped[board].push(data.get(id))
           // initialise that `board` group
-          grouped[board] = [data.get(id)]
-
-          return
+          else grouped[board] = [data.get(id)]
         }
-        return
       })
     })
 
     // re-order the way `boards` were given
-    const orderInit: Record<string, Item[]> = {}
+    const orderInit: Record<string, IBullet[]> = {}
     const ordered = boards.reduce((obj, key) => {
       if (grouped[key]) obj[key] = grouped[key]
       return obj
@@ -274,7 +282,7 @@ class Taskbook {
     return ordered
   }
 
-  _saveItemToArchive(item: Item) {
+  _saveItemToArchive(item: IBullet) {
     const { _data, _archive } = this
 
     const archiveID = _archive.generateID()
@@ -287,7 +295,7 @@ class Taskbook {
     _data.delete(item.id)
   }
 
-  _saveItemToTrashBin(item: Item) {
+  _saveItemToTrashBin(item: IBullet) {
     const { _data, _bin } = this
 
     const trashID = _bin.generateID()
@@ -300,7 +308,7 @@ class Taskbook {
     _data.delete(item.id)
   }
 
-  _saveItemToStorage(item: Item) {
+  _saveItemToStorage(item: IBullet) {
     const { _data, _archive } = this
     const restoreID = _data.generateID()
 
@@ -320,7 +328,7 @@ class Taskbook {
 
     ids
       .map((each) => _data.get(each))
-      .forEach((item: Item) => {
+      .forEach((item: IBullet) => {
         item.tags = removeDuplicates(tags.concat(item.tags || []))
       })
 
@@ -334,7 +342,7 @@ class Taskbook {
     const storedTags = this._data.tags()
 
     const { description, tags, boards } = parseOptions(desc, {
-      defaultBoard: this._configuration.defaultBoard,
+      defaultBoard: config.local.defaultBoard,
     })
     const id = _data.generateID()
     const note = new Note({ id, description, tags, boards })
@@ -350,7 +358,7 @@ class Taskbook {
     _data.set(id, note)
     this._save(_data)
 
-    if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
+    if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 
     render.successCreate(note)
 
@@ -371,11 +379,14 @@ class Taskbook {
   }
 
   async checkTasks(ids: string[], duration: Maybe<number>, doneAt: Maybe<Date>) {
+    debug(`striking tasks ${ids.join(', ')}`)
+
     // another gymnastics to allow tags in the list of ids
     const { description, tags } = parseOptions(ids, {
-      defaultBoard: this._configuration.defaultBoard,
+      defaultBoard: config.local.defaultBoard,
     })
     ids = this._validateIDs(description.split(' '))
+    debug(`task ids verified: ${ids}`)
 
     const { _data } = this
     const checked: Task[] = []
@@ -399,7 +410,7 @@ class Taskbook {
             task.isComplete &&
             task.duration &&
             // configured as hours so comapre this in ms
-            task.duration > this._configuration.suspiciousDuration * 60 * 60 * 1000
+            task.duration > config.local.suspiciousDuration * 60 * 60 * 1000
           ) {
             // @ts-ignore
             const { isYes } = await prompt({
@@ -426,7 +437,7 @@ class Taskbook {
 
         // else invalid item id
         // TODO: log and print something
-        return
+        return null
       })
     )
 
@@ -448,34 +459,45 @@ class Taskbook {
     repeat?: string
   ) {
     const { boards, tags, description, priority, estimate } = parseOptions(desc, {
-      defaultBoard: this._configuration.defaultBoard,
+      defaultBoard: config.local.defaultBoard,
     })
 
     // NOTE: do we want to automatically tag 'every day' and 'every weekday'
     // +habits?
 
-    const id = this._data.generateID()
-    const task = new Task({
-      id,
-      description,
-      boards,
-      tags,
-      priority,
-      link,
-      estimate: estimate || cliEstimate,
-      repeat,
-    })
     const { _data } = this
 
-    _data.set(id, task)
-    this._save(_data)
+    // NOTE: not sure that's multi-platform
+    // we support multi-line strings to batch create multiple tasks
+    const lines = description.split('\n')
+    const isMultiple = lines.length > 1
+    lines.forEach((line: string) => {
+      const id = this._data.generateID()
+      const task = new Task({
+        id,
+        description: line,
+        boards,
+        tags,
+        priority,
+        link,
+        estimate: estimate || cliEstimate,
+        repeat,
+      })
 
-    if (this._configuration.enableCopyID) clipboardy.writeSync(String(id))
+      _data.set(id, task)
 
-    if (renderJSON) console.log(JSON.stringify({ id: task.id, created: task.toJSON() }))
-    else render.successCreate(task)
+      this._save(_data)
 
-    if (notebook) this.comment(String(id))
+      if (config.local.enableCopyID && !isMultiple) clipboardy.writeSync(String(id))
+
+      if (renderJSON) console.log(JSON.stringify({ id: task.id, created: task.toJSON() }))
+      else render.successCreate(task)
+
+      // FIXME: this whole workflow is pretty bad as we read and write several
+      // times to disk. We should set the comment without having to re-read and
+      // write + we should create all the task and only commit at the end
+      if (notebook && !isMultiple) this.comment(String(id))
+    })
   }
 
   deleteItems(ids: string[], toTrash = false) {
@@ -490,6 +512,7 @@ class Taskbook {
     })
 
     this._save(_data)
+
     render.successDelete(ids)
   }
 
@@ -503,23 +526,9 @@ class Taskbook {
     // first we want to group items by day, in a way that can be the ordered
     // (so don't go to UI-friendly yet)
 
-    const groups = this._groupByDate(this._archive)
+    const groups = groupByDate(this._archive)
 
     render.displayByDate(groups, true)
-  }
-
-  _groupByDate(data: Catalog) {
-    const grouped: Record<string, Item[]> = {}
-
-    data.ids().forEach((id) => {
-      const item = data.get(id)
-      const dt = new Date(item.updatedAt).toLocaleDateString('en-UK')
-
-      if (grouped.hasOwnProperty(dt)) grouped[dt].push(item)
-      else grouped[dt] = [item]
-    })
-
-    return grouped
   }
 
   displayByBoard() {
@@ -528,40 +537,36 @@ class Taskbook {
 
   // expose the render method to our business logic there
   displayByDate() {
-    render.displayByDate(this._groupByDate(this._data))
+    render.displayByDate(groupByDate(this._data))
   }
 
-  displayStats(data = this._data) {
-    render.displayStats(data.stats())
+  displayBoardStats() {
+    render.displayStats(this._data.stats())
   }
 
-  editDescription(input: string[]) {
-    const targets = input.filter(isBoardOpt)
+  editItemProperty(itemId: string, property: string, input: string[]) {
+    this._validateIDs([itemId])
 
-    if (targets.length === 0) {
-      render.missingID()
-      process.exit(1)
-    }
+    // TODO: parse input to allow boards, tags, etc...
 
-    if (targets.length > 1) {
-      render.invalidIDsNumber()
-      process.exit(1)
-    }
-
-    const [target] = targets
-    const [id] = this._validateIDs([target.slice(1)])
-    const newDesc = input.filter((x) => x !== target).join(' ')
-
-    if (newDesc.length === 0) {
+    if (input.length === 0) {
       render.missingDesc()
       process.exit(1)
     }
 
     const { _data } = this
-    _data.get(id).description = newDesc
-    this._save(_data)
 
-    render.successEdit(id)
+    const item = _data.get(itemId)
+    // TODO: display something if property is none of those fields
+    // TODO: validate `input[0]` depending on the cases
+    if (property === 'description') item.description = input.join(' ')
+    // eslint-disable-next-line prefer-destructuring
+    else if (property === 'link') item.link = input[0]
+    // eslint-disable-next-line prefer-destructuring
+    else if (property === 'duration') item.duration = parseInt(input[0], 10) * 60 * 1000
+
+    this._save(_data)
+    render.successEdit(itemId)
   }
 
   findItems(terms: string[], inArchive: Maybe<boolean>) {
@@ -569,7 +574,7 @@ class Taskbook {
       const result = this._archive.search(terms)
       // searching through archive makes more sense to display by date
       // (we are sure about the type given the `else` above)
-      const groups = this._groupByDate(result as Catalog)
+      const groups = groupByDate(result as Catalog)
       render.displayByDate(groups)
     } else {
       const result = this._data.search(terms)
@@ -585,10 +590,7 @@ class Taskbook {
       boards.forEach((board: string) => {
         if (data.get(id).boards.includes(board) || data.get(id).tags?.includes(board)) {
           filtered[id] = data.get(id)
-
-          return
         }
-        return
       })
     })
 
@@ -701,14 +703,14 @@ class Taskbook {
 
     if (task === null) throw new Error(`item ${taskid} is not a task`)
 
-    task.setEstimate(estimate, this._configuration.tshirtSizes)
+    task.setEstimate(estimate, config.local.tshirtSizes)
 
     this._save(this._data)
 
     render.successEdit(taskid)
   }
 
-  updatePriority(priority: TaskPriority, taskids: string[]) {
+  updatePriority(priority: Priority, taskids: string[]) {
     const { _data } = this
 
     const ids = this._validateIDs(taskids)
@@ -741,11 +743,12 @@ class Taskbook {
   }
 
   async printTask(taskId: string, format: string, useArchive = false) {
-    ;[taskId] = this._validateIDs([taskId])
+    const store = useArchive ? this._archive : this._data
+
+    ;[taskId] = this._validateIDs([taskId], store.ids())
 
     debug(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
 
-    const store = useArchive ? this._archive : this._data
     const task = store.get(taskId)
 
     if (task === null) throw new Error(`no item with id #${taskId} found`)
@@ -836,7 +839,7 @@ class Taskbook {
 
   comment(itemId: string) {
     // TODO: _validateIDs
-    const { editor } = this._configuration
+    const { editor } = config.local
 
     const { _data } = this
     const item = _data.get(itemId)
