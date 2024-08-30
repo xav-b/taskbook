@@ -228,4 +228,115 @@ export default class Catalog {
 
     return { complete, inProgress, pending, notes, estimate, duration }
   }
+
+  public groupByBoards(boards?: string[]) {
+    const grouped: Record<string, IBullet[]> = {}
+
+    if (boards === undefined) boards = this.boards()
+    // TODO: not sure that's expected. If somehow the list of boards is empty,
+    // then there's just nothing to group with, no need to fallback silently on
+    // something else
+    if (boards.length === 0) boards = this.boards()
+
+    this.ids().forEach((id) => {
+      boards.forEach((board: string) => {
+        if (this.get(id).boards.includes(board) || this.get(id).tags?.includes(board)) {
+          // we already have this board with items, append to it
+          if (Array.isArray(grouped[board])) grouped[board].push(this.get(id))
+          // initialise that `board` group
+          else grouped[board] = [this.get(id)]
+        }
+      })
+    })
+
+    // re-order the way `boards` were given
+    const orderInit: Record<string, IBullet[]> = {}
+    const ordered = boards.reduce((obj, key) => {
+      if (grouped[key]) obj[key] = grouped[key]
+      return obj
+    }, orderInit)
+
+    return ordered
+  }
+}
+
+// NOTE: this could be made more generic by allowing to pick also `_startedAt`
+// and `_createdAt`
+export function groupByLastUpdateDay(data: Catalog) {
+  const grouped: Record<string, IBullet[]> = {}
+
+  data.ids().forEach((id) => {
+    const item = data.get(id)
+    // format it as `DD/MM/YYYY`
+    const dt = new Date(item.updatedAt).toLocaleDateString('en-UK')
+
+    if (grouped.hasOwnProperty(dt)) grouped[dt].push(item)
+    else grouped[dt] = [item]
+  })
+
+  return grouped
+}
+
+// NOTE: not sure if those funcions should be member of the class. It would a
+// nice abstraction, but I also like functional and it doesn't really matter.
+// Maybe it would with more testing though...
+export function filterByAttributes(attr: string[], data: Catalog) {
+  if (data.ids().length === 0) return data
+  if (attr.length === 0) return data
+
+  // NOTE: we don't support goals and events because internally they belong
+  // to a board and one can display them with the very expressive `tb list
+  // goals` and `tb list calendar`. No need for many ways to do the same
+  // thing.
+  attr.forEach((x) => {
+    switch (x) {
+      case 'star':
+      case 'starred':
+        return data.starred()
+
+      case 'done':
+      case 'checked':
+      case 'complete':
+        return data.completed()
+
+      case 'progress':
+      case 'started':
+      case 'begun':
+        return data.inProgress()
+
+      case 'pending':
+      case 'unchecked':
+      case 'incomplete':
+        return data.pending()
+
+      case 'todo':
+      case 'task':
+      case 'tasks':
+        return data.tasks()
+
+      case 'note':
+      case 'notes':
+        return data.notes()
+
+      // unecessary but makes typescript happy and a little safer
+      default:
+        return data
+    }
+  })
+
+  return data
+}
+
+export function filterByBoards(boards: string[], data: Catalog): Catalog {
+  const filtered: CatalogInnerData = {}
+
+  data.ids().forEach((id) => {
+    boards.forEach((board: string) => {
+      if (data.get(id).boards.includes(board) || data.get(id).tags?.includes(board)) {
+        filtered[id] = data.get(id)
+      }
+    })
+  })
+
+  return new Catalog(filtered)
 }

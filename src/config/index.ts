@@ -11,6 +11,8 @@ const debug = require('debug')('tb:config')
 
 /**
  * Mutable state.
+ *
+ * FIXME: it's redundant with storage/localcache.
  */
 interface LocalState extends JsonMap {
   currentContext: string
@@ -35,6 +37,7 @@ interface UserConfig extends JsonMap {
   plannedHoursError: number
   greetings: boolean
   doneLast: boolean
+  defaultTaskEstimate: number
 }
 
 type PluginConfig = Record<string, AnyJson>
@@ -56,6 +59,7 @@ const CONFIG_FILE = path.join(CONFIG_PATH, 'config.v2.toml')
 const STATE_FILE = path.join(CONFIG_PATH, 'state.v2.toml')
 const ENCODING = 'utf8'
 const DEFAULT_CONTEXT = 'default'
+const POMODORO_STRATEGY = 25 // minutes - default task estimate
 
 const userDefaults: UserConfig = {
   taskbookDirectory: CONFIG_PATH,
@@ -75,6 +79,7 @@ const userDefaults: UserConfig = {
   plannedHoursError: 8,
   greetings: true,
   doneLast: true,
+  defaultTaskEstimate: POMODORO_STRATEGY,
 }
 
 const defaultThemeConfig = (): ThemeConfig => ({
@@ -180,4 +185,8 @@ export class IConfig {
   }
 }
 
-export default new IConfig()
+debug('initiating configuration')
+const configSingleton = new IConfig()
+debug('global config ready')
+
+export default configSingleton

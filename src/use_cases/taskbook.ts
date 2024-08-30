@@ -1,7 +1,4 @@
 import { Signale } from 'signale'
-import fs from 'fs'
-import childProcess from 'child_process'
-import tmp from 'tmp'
 import { prompt } from 'enquirer'
 import clipboardy from 'clipboardy'
 
@@ -9,11 +6,15 @@ import { Maybe } from '../types'
 import Storage from '../store'
 import cacheStorage from '../store/localcache'
 import LocalStorage from '../store/localjson'
-import help from '../interfaces/help'
+import { help, goodDay } from '../interfaces/text'
 import render from '../interfaces/render'
 import { removeDuplicates } from '../shared/utils'
 import { parseOptions, isBoardOpt } from '../shared/parser'
-import Catalog, { CatalogInnerData } from '../domain/catalog'
+import Catalog, {
+  filterByBoards,
+  groupByLastUpdateDay,
+  filterByAttributes,
+} from '../domain/catalog'
 import IBullet, { Priority } from '../domain/ibullet'
 import Task from '../domain/task'
 import Note from '../domain/note'
@@ -21,63 +22,10 @@ import Logger from '../shared/logger'
 import events from './events'
 import config from '../config'
 
-// TODO: config, some works it out differently
-const POMODORO_STRATEGY = 25 // minutes - default task estimate
+const debug = require('debug')('tb:core:taskbook')
 
 const log = Logger()
 const cache = cacheStorage.init()
-const debug = require('debug')('tb:core:taskbook')
-
-// blocking logger to record steps of the timer
-const interactive = new Signale({ interactive: true, scope: 'task.timer' })
-
-function goodDay() {
-  const quote = 'Make that day Phenomenal.'
-  console.log(`
-
-
-
-
-
-                                    ██   ██    ██
-                                   ██    ██   ██
-                                   ██   ██    ██
-                                    ██  ██     ██
-                                    ██    ██   ██
-
-                                  █████████████████
-                                  ██              ██████
-                                  ██              ██  ██
-                                  ██              ██  ██
-                                  ██              ██████
-                                   ██            ██
-                                ██████████████████████
-                                 ██                ██
-                                  ██████████████████
-
-
-                               ${quote}
-
-
-
-
-
-`)
-}
-
-function groupByDate(data: Catalog) {
-  const grouped: Record<string, IBullet[]> = {}
-
-  data.ids().forEach((id) => {
-    const item = data.get(id)
-    const dt = new Date(item.updatedAt).toLocaleDateString('en-UK')
-
-    if (grouped.hasOwnProperty(dt)) grouped[dt].push(item)
-    else grouped[dt] = [item]
-  })
-
-  return grouped
-}
 
 class Taskbook {
   isNewDay: boolean
@@ -199,87 +147,6 @@ class Taskbook {
 
     debug(`done - comitting new recurrent tasks`)
     this._save(this._data)
-  }
-
-  switchContext(name: string) {
-    log.info(`switching to context ${name}`)
-    config.update('currentContext', name)
-
-    render.successSwitchContext(name)
-  }
-
-  _filterByAttributes(attr: string[], data = this._data) {
-    if (data.ids().length === 0) return data
-    if (attr.length === 0) return data
-
-    // NOTE: we don't support goals and events because internally they belong
-    // to a board and one can display them with the very expressive `tb list
-    // goals` and `tb list calendar`. No need for many ways to do the same
-    // thing.
-    attr.forEach((x) => {
-      switch (x) {
-        case 'star':
-        case 'starred':
-          return data.starred()
-
-        case 'done':
-        case 'checked':
-        case 'complete':
-          return data.completed()
-
-        case 'progress':
-        case 'started':
-        case 'begun':
-          return data.inProgress()
-
-        case 'pending':
-        case 'unchecked':
-        case 'incomplete':
-          return data.pending()
-
-        case 'todo':
-        case 'task':
-        case 'tasks':
-          return data.tasks()
-
-        case 'note':
-        case 'notes':
-          return data.notes()
-
-        // unecessary but makes typescript happy and a little safer
-        default:
-          return data
-      }
-    })
-
-    return data
-  }
-
-  _groupByBoard(data = this._data, boards = this._data.boards()) {
-    const grouped: Record<string, IBullet[]> = {}
-
-    // NOTE: can `boards` be null?
-    if (boards === null || boards.length === 0) boards = this._data.boards()
-
-    data.ids().forEach((id) => {
-      boards.forEach((board: string) => {
-        if (data.get(id).boards.includes(board) || data.get(id).tags?.includes(board)) {
-          // we already have this board with items, append to it
-          if (Array.isArray(grouped[board])) grouped[board].push(data.get(id))
-          // initialise that `board` group
-          else grouped[board] = [data.get(id)]
-        }
-      })
-    })
-
-    // re-order the way `boards` were given
-    const orderInit: Record<string, IBullet[]> = {}
-    const ordered = boards.reduce((obj, key) => {
-      if (grouped[key]) obj[key] = grouped[key]
-      return obj
-    }, orderInit)
-
-    return ordered
   }
 
   _saveItemToArchive(item: IBullet) {
@@ -526,18 +393,18 @@ class Taskbook {
     // first we want to group items by day, in a way that can be the ordered
     // (so don't go to UI-friendly yet)
 
-    const groups = groupByDate(this._archive)
+    const groups = groupByLastUpdateDay(this._archive)
 
     render.displayByDate(groups, true)
   }
 
   displayByBoard() {
-    render.displayByBoard(this._groupByBoard())
+    render.displayByBoard(this._data.groupByBoards())
   }
 
   // expose the render method to our business logic there
   displayByDate() {
-    render.displayByDate(groupByDate(this._data))
+    render.displayByDate(groupByLastUpdateDay(this._data))
   }
 
   displayBoardStats() {
@@ -574,27 +441,13 @@ class Taskbook {
       const result = this._archive.search(terms)
       // searching through archive makes more sense to display by date
       // (we are sure about the type given the `else` above)
-      const groups = groupByDate(result as Catalog)
+      const groups = groupByLastUpdateDay(result as Catalog)
       render.displayByDate(groups)
     } else {
       const result = this._data.search(terms)
-      const groups = this._groupByBoard(result)
+      const groups = result.groupByBoards()
       render.displayByBoard(groups)
     }
-  }
-
-  _filterByBoards(boards: string[], data = this._data): Catalog {
-    const filtered: CatalogInnerData = {}
-
-    data.ids().forEach((id) => {
-      boards.forEach((board: string) => {
-        if (data.get(id).boards.includes(board) || data.get(id).tags?.includes(board)) {
-          filtered[id] = data.get(id)
-        }
-      })
-    })
-
-    return new Catalog(filtered)
   }
 
   listByAttributes(terms: string[]): void {
@@ -624,12 +477,12 @@ class Taskbook {
     tags = removeDuplicates(tags)
     attributes = removeDuplicates(attributes)
 
-    let data = this._filterByAttributes(attributes)
+    let data = filterByAttributes(attributes, this._data)
     if (boards.length > 0 || tags.length > 0)
       // filter by boards and/or tags
-      data = this._filterByBoards(boards.concat(tags), data)
+      data = filterByBoards(boards.concat(tags), data)
 
-    const groups = this._groupByBoard(data, boards.concat(tags))
+    const groups = this._data.groupByBoards(boards.concat(tags))
     render.displayByBoard(groups, showTasks)
 
     render.displayStats(data.stats())
@@ -745,7 +598,7 @@ class Taskbook {
   async printTask(taskId: string, format: string, useArchive = false) {
     const store = useArchive ? this._archive : this._data
 
-    ;[taskId] = this._validateIDs([taskId], store.ids())
+      ;[taskId] = this._validateIDs([taskId], store.ids())
 
     debug(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
 
@@ -766,6 +619,9 @@ class Taskbook {
 
   beginTask(id: string, useTimer: boolean) {
     ;[id] = this._validateIDs([id])
+
+    // blocking logger to record steps of the timer
+    const interactive = new Signale({ interactive: true, scope: 'task.timer' })
 
     const { _data } = this
     const started: string[] = []
@@ -792,7 +648,9 @@ class Taskbook {
         // first estimate how long we will block
         // TODO: take into account what has been worked on already (`task.duration`?)
         // TODO: make the tick configurable
-        const estimate = task.estimate ? task.estimate / 1000 / 60 : POMODORO_STRATEGY
+        const estimate = task.estimate
+          ? task.estimate / 1000 / 60
+          : config.local.defaultTaskEstimate
         const msg = `working on: ${task.description} (#${task.id})`
 
         // capture CTRL-C to gracefully handle it
@@ -844,26 +702,7 @@ class Taskbook {
     const { _data } = this
     const item = _data.get(itemId)
 
-    const tmpFile = tmp.fileSync({ mode: 0o644, prefix: 'taskbook-', postfix: '.md' })
-
-    let initContent = `# ID ${itemId} - ${item.description}
-
-> _write content here..._
-`
-    if (item.link) initContent += `\n🔗 [Resource](${item.link})\n`
-
-    if (item.comment)
-      // initialise the file with the existing comment
-      initContent = Buffer.from(_data.get(itemId).comment as string, 'base64').toString('ascii')
-    fs.writeFileSync(tmpFile.fd, initContent)
-
-    childProcess.spawnSync(editor, [`${tmpFile.name}`], { stdio: 'inherit' })
-    // TODO: handle child error
-    const comment = fs.readFileSync(tmpFile.name, 'utf8').trim()
-
-    const encoded = Buffer.from(comment).toString('base64')
-
-    item.comment = encoded
+    item.writeComment(editor)
 
     this._save(_data)
 
@@ -882,11 +721,17 @@ class Taskbook {
 
     this._save(_data)
   }
+}
 
-  showManual() {
-    // console.log(marked.parse(help))
-    console.log(help)
-  }
+export function switchContext(name: string) {
+  log.info(`switching to context ${name}`)
+  config.update('currentContext', name)
+
+  render.successSwitchContext(name)
+}
+
+export function showManual() {
+  console.log(help)
 }
 
 export default Taskbook

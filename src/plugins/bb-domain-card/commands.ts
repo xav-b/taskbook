@@ -40,17 +40,14 @@ function createCard(board: Taskbook, front: string[], link?: string) {
     link,
   })
 
+  // By definition a card will need its "back", which is a comment in Taskbook
+  flashcard.writeComment(config.local.editor)
+
   _data.set(id, flashcard)
 
   board._save()
 
   render.successCreate(flashcard)
-
-  // TODO: it's a bit silly to re-load and re-save for the comment but this is
-  // in order to leverage the current implementation of `board.comment()`. That
-  // method should offer to simply manage the creation of the comment, so we
-  // can save it in one go.
-  board.comment(String(id))
 
   if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 }

@@ -27,7 +27,9 @@ tag = "srr"
 
 [alias]
 goto = "tb print --format json $argv | jq --raw-output '.link' | xargs open"
-dojo = "clear && tb list must should would calendar"
+bujo = "clear && tb list must should would calendar"
 later = "tb move @stash $argv"
 block = "tb move @blocked $argv"
 pretty = "tb print $argv | glow"
+bonjour = "tb clear && tb event.sync --calendar binance && tb hello && tb bujo"
+delegate = "tb tag $argv +delegate && tb delete $argv"

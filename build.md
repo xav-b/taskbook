@@ -2,6 +2,8 @@
 
 ### Next
 
+Support analytics
+
 - [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
 - [ ] FIXME `--timer` capture CTRL-C and gracefully record the time spent.
 - [ ] FIXME `tb b --timer` never completes
@@ -26,18 +28,12 @@
 
 ### Backlog
 
-- [ ] FEAT Support `tb delegate` which is like `delete` but keep track it was instead delegated, not cancelled
 - [ ] FEAT calendar sync:
-      - [x] Auto-set to complete past events
-      - [x] Show time for event
       - [ ] Implement `tb event:convert <task id> <schedule> [estimate]`
       - [ ] Fix token renewal (grant refused crash)
-      - [x] Use `schedule` for task ordering on `calendar`
       - [ ] `event.reschedule` command, to update the datetime
       - [ ] Support calendar description as task comment, and `--notebook`
       - [ ] Also sync back to gcal
-      - [x] `event.schedule` command to put a task on the calendar
-      - [x] Support multiple calendars (`--calendar xx`) and use a different token file
 - [ ] FEAT Have task link rendered and clickable
 - [ ] FEAT ZSH Autocompletion (take example of the existing one)
 - [ ] FEAT Storage: implement drizzle, sqlite and turso
@@ -52,35 +48,35 @@
   - [ ] Recurrent events
   - [ ] Validate value at creation (`on Mondays` parsing for example crashes)
 
+- [ ] IDEA Augment `tb find` with `fzf`
+- [ ] IDEA config management CLI (`tb config:set taskbook.doneLast true`)
 - [ ] IDEA Prompt mode: shorten command (no more `tb`) and refresh on every input
-- [ ] IDEA When moving tsomething to `@blocked`, indicate reason or other task(s) reference
+- [ ] IDEA When moving something to `@blocked`, indicate reason or other task(s) reference
 - [ ] IDEA the `@tmp` board is automatically cleaned with `tb clear`
-- [ ] IDEA Logger should both use `DEBUG` AND record stuff on file (rotating)
 - [ ] IDEA Use taskbook to track those items, in the open on Github
-- [ ] IDEA Exports/convert/import: json (done), markdown (for github sharing), sqlite dumb
+- [ ] IDEA Import/sync boards (like import this taskbook stuff)
+- [ ] IDEA Export/convert/import: json (done), markdown (for github sharing), sqlite dumb
 - [ ] IDEA `archive` and `timeline` to support same filters as `tb list`
 - [ ] IDEA `tb list` with dynamic sorting (prority, estimate (both should actually still combine))
-- [ ] IDEA `schedule` command to put a task on the calendar (as event) (or `tb mv 2 @calendar --schedule 2pm`)
-- [ ] IDEA Time boxing and pomodoro timer
+- [ ] IDEA Support time boxing and pomodoro timer
 - [ ] IDEA Hook system to implement a plugin system (post-delete, post-create, ...)
 - [ ] IDEA Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
 - [ ] IDEA The current output is just one FE - support TUI
 
-- [ ] FIXME Logging to file was smarter. Either wway abstract it in `shared`
 - [ ] FIXME storage loads by data types and must be modified for a new type
-- [ ] FIXME boards and tags don't need to be stored with their `@` and `+`
 - [ ] FIXME Restore of notes seem to move ids around and duplicate, if working at all
-- [ ] FIXME install latest dependencies of chalk, clipboard and update-notifier
 - [ ] FIXME Running `tb estimate` twice may create 2 t-shirt sizes
 - [ ] FIXME Typing a wrong command and having all the boards returned is not helpful nor intuitive
 - [ ] FIXME NaNm worked / NaNm estimated (or n.a.)
 - [ ] FIXME `tb event` says `Created EventTask x` - re-implements a pretty `item._type`
 - [ ] FIXME Replace all `throw` by proper rendering + `process.exit`
 
+- [ ] TECH Logger should both use `DEBUG` AND record stuff on file (rotating) - abstract in shared
+- [ ] TECH boards and tags don't need to be stored with their `@` and `+`
+- [ ] TECH install latest dependencies of chalk, clipboard and update-notifier
 - [ ] TECH More performant - should be a feature
 - [ ] TECH _groupByX should belong to Catalog
 - [ ] TECH Make board names stored lower case, displayed title case (case insensitive basically) (`My Board` -> `my-board`)
-- [ ] TECH `theme` from config (`grey` and `board title`)
 
 ---
 
@@ -99,7 +95,7 @@ We would also ship:
 - presets: core (`minimal` to the original taskbook, `bujo` that implements
 Bullet Journal, and `extensive` bundling everything in the mono repo)
 
-- [ ] Merge each `plugin.config` into a config singleton that is easy to import
+- [x] Merge each `plugin.config` into a config singleton that is easy to import
 - [x] FIXME: `focus` command is aware of `Goal`
 - [ ] FIXME: `storage` is aware of every types
 - [ ] Migrate Task and Note (but no need for packages, built-in)
@@ -127,7 +123,8 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [x] Task points ([Issue #181](https://github.com/klaudiosinani/taskbook/issues/181)) -> use +xs +l...
 - [x] Timeline to display done and pending (maybe not bad to keep archive/active segregation)
 - [x] Blocked stage with visual cue (also dimmed, but different icon, and not affected by clear) (use `tbblock` alias)
-- [x] Brag about tasks (use `tb c x y z +brag`)
+- [x] Brag dabout tasks (use `tb c x y z +brag`)
+- [x] FEAT Support `tb delegate`
 
 - [x] Implementing habits
   - [x] `tb task --repeat "everyday"` (check that scheduling nodejs that uses many human cron inputs)
@@ -193,15 +190,22 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
 - [x] IDEA Support git alias (and therefore custom workflows, like hiding)
 - [x] IDEA Support multi line task creation(using quotes `tb t @must +tag "multi line comment"`)
 - [x] FEAT support mutable and persistent state
-- [ ] FEAT `tb goto 3` opens link of 3 (implemented with alias)
+- [x] FEAT `tb goto 3` opens link of 3 (implemented with alias)
+- [x] FEAT calendar sync:
+      - [x] Auto-set to complete past events
+      - [x] Show time for event
+      - [x] Use `schedule` for task ordering on `calendar`
+      - [x] `event.schedule` command to put a task on the calendar
+      - [x] Support multiple calendars (`--calendar xx`) and use a different token file
 
 ---
 
 ## As A Service
 
 Open-core model. Everything works locally, and offline, just fine like I use today. But
-premium gets you:
+premium gets you cloud features.
 
+- Premium plugins
 - Priority Support (bug fixes and feature requests)
 - Advanced archive search
 - Backup + Sync tasks between machines (using github repositories)

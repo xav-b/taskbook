@@ -1,3 +1,6 @@
+import fs from 'fs'
+import childProcess from 'child_process'
+import tmp from 'tmp'
 import { formatDistance } from 'date-fns'
 import { nanoid } from 'nanoid'
 import { SignaleLogConfig } from '../interfaces/printer'
@@ -102,6 +105,8 @@ export default interface IBullet {
   addTag: (tag: string) => void
 
   decodeComment: () => Maybe<string>
+
+  writeComment: (editor: string) => void
 
   toJSON: () => Record<string, any>
 
@@ -227,6 +232,29 @@ export abstract class BasicBullet implements IBullet {
     if (!this.comment) return null
 
     return Buffer.from(this.comment, 'base64').toString('ascii')
+  }
+
+  writeComment(editor: string) {
+    const tmpFile = tmp.fileSync({ mode: 0o644, prefix: 'taskbook-', postfix: '.md' })
+
+    let initContent = `# ID ${this.id} - ${this.description}
+
+> _write content here..._
+`
+    if (this.link) initContent += `\n🔗 [Resource](${this.link})\n`
+
+    if (this.comment)
+      // initialise the file with the existing comment
+      initContent = Buffer.from(this.comment as string, 'base64').toString('ascii')
+    fs.writeFileSync(tmpFile.fd, initContent)
+
+    childProcess.spawnSync(editor, [`${tmpFile.name}`], { stdio: 'inherit' })
+    // TODO: handle child error
+    const comment = fs.readFileSync(tmpFile.name, 'utf8').trim()
+
+    const encoded = Buffer.from(comment).toString('base64')
+
+    this.comment = encoded
   }
 
   public toJSON(): Record<string, any> {

@@ -7,11 +7,11 @@ import updateNotifier from 'update-notifier'
 import pkg from '../../package.json'
 import render from './render'
 import { parseDuration, parseDate } from '../shared/parser'
-import config from '../config'
 import EventPlugin from '../plugins/bb-domain-event/plugin'
 import GoalPlugin from '../plugins/bb-domain-goal/plugin'
 import CardPlugin from '../plugins/bb-domain-card/plugin'
-import Taskbook from '../use_cases/taskbook'
+import Taskbook, { showManual, switchContext } from '../use_cases/taskbook'
+import config from '../config'
 
 const debug = require('debug')('tb:cli')
 
@@ -26,14 +26,14 @@ program
   .command('what')
   .alias('w')
   .description('Usage examples')
-  .action(() => taskbook.showManual())
+  .action(() => showManual())
 
 program
   .command('context:switch')
   .alias('cx')
   .description('Switch active context')
   .argument('context')
-  .action((context: string) => taskbook.switchContext(context))
+  .action((context: string) => switchContext(context))
 
 program
   .command('hello')
@@ -289,3 +289,5 @@ updateNotifier({ pkg }).notify()
 
 debug('parsing command line')
 program.parse()
+
+debug('completed')
