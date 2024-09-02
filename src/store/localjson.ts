@@ -2,12 +2,7 @@ import fs from 'fs'
 import path from 'path'
 
 import config from '../config'
-import Storage from '.'
-import Task from '../domain/task'
-import Note from '../domain/note'
-import CalendarEvent from '../plugins/bb-domain-event/event'
-import Goal from '../plugins/bb-domain-goal/goal'
-import Flashcard from '../plugins/bb-domain-card/card'
+import Storage, { mapFromJson } from '.'
 import Catalog, { CatalogInnerData } from '../domain/catalog'
 import Logger from '../shared/logger'
 import { randomHexString, ensureDir } from '../shared/utils'
@@ -16,37 +11,15 @@ const { basename, join } = path
 
 const log = Logger()
 
+const DEFAULT_STORAGE = 'index'
 const DEFAULT_WORKSPACE = 'default'
-
-function parseJson(data: any): Catalog {
-  const catalog: CatalogInnerData = {}
-
-  // FIXME: there shouldn't be any knowledge of the plugins here
-  Object.keys(data).forEach((id: string) => {
-    if (data[id]._type === 'task') catalog[id] = new Task(data[id])
-    else if (data[id]._type === 'note') catalog[id] = new Note(data[id])
-    else if (data[id]._type === 'event') catalog[id] = new CalendarEvent(data[id])
-    else if (data[id]._type === 'goal') catalog[id] = new Goal(data[id])
-    else if (data[id]._type === 'flashcard') catalog[id] = new Flashcard(data[id])
-    else log.error(`[warning] unknown item type: ${data[id]._type}`)
-  })
-
-  return new Catalog(catalog)
-}
+const TB_APP_DIRECTORY = config.local.taskbookDirectory
 
 class LocalJSONStorage implements Storage {
   // local storage is all about directories and files
   _storageDir: string
 
-  _archiveDir: string
-
   _tempDir: string
-
-  _archiveFile: string
-
-  _binFile: string
-
-  _mainStorageFile: string
 
   constructor(workspace?: string) {
     // applying the default there as callers may explicitely pass a `null` or
@@ -55,26 +28,19 @@ class LocalJSONStorage implements Storage {
 
     log.info(`initialising workspace storage ${workspace}`)
 
-    this._storageDir = join(this._mainAppDir, workspace, 'storage')
-    this._archiveDir = join(this._mainAppDir, workspace, 'archive')
-    this._tempDir = join(this._mainAppDir, workspace, '.temp')
-    this._archiveFile = join(this._archiveDir, 'archive.json')
-    this._binFile = join(this._archiveDir, 'bin.json')
-    this._mainStorageFile = join(this._storageDir, 'storage.json')
+    this._storageDir = join(TB_APP_DIRECTORY, workspace, 'storage')
+    // poor-man-atomic-writes: they are first written to a temporary file,
+    // and that file is moved (committed!) to the actual storage
+    this._tempDir = join(TB_APP_DIRECTORY, workspace, '.temp')
 
     this._ensureDirectories()
 
-    log.info(`storage ready ${this._mainStorageFile}`)
-  }
-
-  get _mainAppDir(): string {
-    return config.local.taskbookDirectory
+    log.info(`storage ready ${this._storageDir}`)
   }
 
   _ensureDirectories() {
-    ensureDir(this._mainAppDir)
+    ensureDir(TB_APP_DIRECTORY)
     ensureDir(this._storageDir)
-    ensureDir(this._archiveDir)
     ensureDir(this._tempDir)
 
     this._cleanTempDir()
@@ -95,7 +61,12 @@ class LocalJSONStorage implements Storage {
     return join(this._tempDir, tempFilename)
   }
 
-  get(storageFile = this._mainStorageFile): Catalog {
+  _storageFile(scope: string): string {
+    return join(this._storageDir, `${scope}.json`)
+  }
+
+  get(scope = DEFAULT_STORAGE): Catalog {
+    const storageFile = this._storageFile(scope)
     log.debug(`loading storage items from ${storageFile}`)
     let data = {}
 
@@ -104,32 +75,18 @@ class LocalJSONStorage implements Storage {
       data = JSON.parse(content)
     }
 
-    return parseJson(data)
+    return mapFromJson(data)
   }
 
-  getArchive(): Catalog {
-    return this.get(this._archiveFile)
-  }
+  set(data: CatalogInnerData, scope = DEFAULT_STORAGE) {
+    const storageFile = this._storageFile(scope)
 
-  getBin(): Catalog {
-    return this.get(this._binFile)
-  }
-
-  set(data: CatalogInnerData, storageFile = this._mainStorageFile) {
     log.info(`saving catalog to storage: ${storageFile}`)
     const serialized = JSON.stringify(data, null, 4)
     const tempStorageFile = this._getTempFile(storageFile)
 
     fs.writeFileSync(tempStorageFile, serialized, 'utf8')
     fs.renameSync(tempStorageFile, storageFile)
-  }
-
-  setArchive(data: CatalogInnerData) {
-    this.set(data, this._archiveFile)
-  }
-
-  setBin(data: CatalogInnerData) {
-    this.set(data, this._binFile)
   }
 }
 

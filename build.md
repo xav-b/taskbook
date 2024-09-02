@@ -2,8 +2,9 @@
 
 ### Next
 
-Support analytics
 
+- [ ] FEAT Make show task age optional
+- [ ] Task dependencies
 - [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
 - [ ] FIXME `--timer` capture CTRL-C and gracefully record the time spent.
 - [ ] FIXME `tb b --timer` never completes
@@ -28,6 +29,7 @@ Support analytics
 
 ### Backlog
 
+- [ ] FEAT Support deadline
 - [ ] FEAT calendar sync:
       - [ ] Implement `tb event:convert <task id> <schedule> [estimate]`
       - [ ] Fix token renewal (grant refused crash)
@@ -38,14 +40,17 @@ Support analytics
 - [ ] FEAT ZSH Autocompletion (take example of the existing one)
 - [ ] FEAT Storage: implement drizzle, sqlite and turso
 - [ ] FEAT Undo previous action
-- [ ] FEAT [Filter by priority](https://github.com/klaudiosinani/taskbook/pull/136)
+- --- FEAT More advanced filtering
+  - [ ] IDEA Filter by types (filter out events typically, and tags like `pro`)
+  - [ ] FEAT [Filter by priority](https://github.com/klaudiosinani/taskbook/pull/136)
+  - [ ] IDEA `archive` and `timeline` to support same filters as `tb list`
 - [ ] FEAT [Rename boards](https://github.com/klaudiosinani/taskbook/pull/73/files)
 - [ ] FEAT Support ids range in the form of 3..7
 - [ ] FEAT Support due date [PR #69](https://github.com/klaudiosinani/taskbook/pull/69)
 - [ ] FEAT Recurrent
   - [x] Everyday it misses on the scheduling
   - [x] Recurrent tasks
-  - [ ] Recurrent events
+  - [ ] Recurrent events (support same as `--repeat`)
   - [ ] Validate value at creation (`on Mondays` parsing for example crashes)
 
 - [ ] IDEA Augment `tb find` with `fzf`
@@ -56,7 +61,6 @@ Support analytics
 - [ ] IDEA Use taskbook to track those items, in the open on Github
 - [ ] IDEA Import/sync boards (like import this taskbook stuff)
 - [ ] IDEA Export/convert/import: json (done), markdown (for github sharing), sqlite dumb
-- [ ] IDEA `archive` and `timeline` to support same filters as `tb list`
 - [ ] IDEA `tb list` with dynamic sorting (prority, estimate (both should actually still combine))
 - [ ] IDEA Support time boxing and pomodoro timer
 - [ ] IDEA Hook system to implement a plugin system (post-delete, post-create, ...)
@@ -215,7 +219,7 @@ premium gets you cloud features.
     - This would need an assignment too. Other tight integrations could be to
       have tasks completions linked to PR/commits
 - Event hooks (integrate with IFTT/Zapier)
-- Analytics
+- Analytics/Reporting/Advanced search
 - Habits, tasks, scheduling, 2 ways sync with google calendar, time boxing
 - Mobile
 - Support for backends: github, jira (boards are context, status are boards, etc...)

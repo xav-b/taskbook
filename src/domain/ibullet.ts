@@ -234,7 +234,7 @@ export abstract class BasicBullet implements IBullet {
     return Buffer.from(this.comment, 'base64').toString('ascii')
   }
 
-  writeComment(editor: string) {
+  public writeComment(editor: string) {
     const tmpFile = tmp.fileSync({ mode: 0o644, prefix: 'taskbook-', postfix: '.md' })
 
     let initContent = `# ID ${this.id} - ${this.description}

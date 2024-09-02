@@ -34,18 +34,13 @@ class Taskbook {
 
   _data: Catalog
 
-  _archive: Catalog
-
-  _bin: Catalog
-
   constructor() {
     debug('initialising taskbook')
 
     debug('loading configuration')
     debug(`loading archive and items (ctx ${config.state.currentContext})`)
     this._storage = new LocalStorage(config.state.currentContext)
-    this._archive = this._storage.getArchive()
-    this._bin = this._storage.getBin()
+
     this._data = this._storage.get()
 
     // determine if this is the first run of the day
@@ -75,8 +70,8 @@ class Taskbook {
     this._storage.set(data.all())
   }
 
-  _saveArchive(data: Catalog = this._archive) {
-    this._storage.setArchive(data.all())
+  _saveArchive(data: Catalog) {
+    this._storage.set(data.all(), 'archive')
   }
 
   _validateIDs(inputIDs: string[], existingIDs = this._data.ids()): string[] {
@@ -108,7 +103,7 @@ class Taskbook {
     const today = new Date()
 
     // 1. look for all archived task having `repeat`
-    const recurrents = this._archive.todayTasks()
+    const recurrents = this._storage.get('archive').todayTasks()
     debug(`found ${recurrents.length} tasks to repeat today`)
 
     const added: string[] = []
@@ -150,33 +145,36 @@ class Taskbook {
   }
 
   _saveItemToArchive(item: IBullet) {
-    const { _data, _archive } = this
+    const { _data } = this
+    const archive = this._storage.get('archive')
 
-    const archiveID = _archive.generateID()
+    const archiveID = archive.generateID()
     debug(`archiving item under id ${archiveID}`)
 
-    _archive.set(archiveID, item)
+    archive.set(archiveID, item)
 
-    this._saveArchive(_archive)
+    this._saveArchive(archive)
 
     _data.delete(item.id)
   }
 
   _saveItemToTrashBin(item: IBullet) {
-    const { _data, _bin } = this
+    const { _data } = this
+    const bin = this._storage.get('bin')
 
-    const trashID = _bin.generateID()
+    const trashID = bin.generateID()
     debug(`trashing item under id ${trashID}`)
 
-    _bin.set(trashID, item)
+    bin.set(trashID, item)
 
-    this._storage.setBin(_bin.all())
+    this._storage.set(bin.all(), 'bin')
 
     _data.delete(item.id)
   }
 
   _saveItemToStorage(item: IBullet) {
-    const { _data, _archive } = this
+    const { _data } = this
+    const archive = this._storage.get('archive')
     const restoreID = _data.generateID()
 
     item.id = restoreID
@@ -184,7 +182,7 @@ class Taskbook {
 
     this._save(_data)
 
-    _archive.delete(item.id)
+    archive.delete(item.id)
   }
 
   tagItem(desc: string[]) {
@@ -351,20 +349,18 @@ class Taskbook {
         repeat,
       })
 
-      _data.set(id, task)
+      if (notebook) task.writeComment(config.local.editor)
 
-      this._save(_data)
+      _data.set(id, task)
 
       if (config.local.enableCopyID && !isMultiple) clipboardy.writeSync(String(id))
 
       if (renderJSON) console.log(JSON.stringify({ id: task.id, created: task.toJSON() }))
       else render.successCreate(task)
-
-      // FIXME: this whole workflow is pretty bad as we read and write several
-      // times to disk. We should set the comment without having to re-read and
-      // write + we should create all the task and only commit at the end
-      if (notebook && !isMultiple) this.comment(String(id))
     })
+
+    // commit
+    this._save(_data)
   }
 
   deleteItems(ids: string[], toTrash = false) {
@@ -389,11 +385,12 @@ class Taskbook {
    */
   displayArchive() {
     debug('displaying the whole archive, by dates ASC')
+    const archive = this._storage.get('archive')
 
     // first we want to group items by day, in a way that can be the ordered
     // (so don't go to UI-friendly yet)
 
-    const groups = groupByLastUpdateDay(this._archive)
+    const groups = groupByLastUpdateDay(archive)
 
     render.displayByDate(groups, true)
   }
@@ -438,7 +435,7 @@ class Taskbook {
 
   findItems(terms: string[], inArchive: Maybe<boolean>) {
     if (inArchive) {
-      const result = this._archive.search(terms)
+      const result = this._storage.get('archive').search(terms)
       // searching through archive makes more sense to display by date
       // (we are sure about the type given the `else` above)
       const groups = groupByLastUpdateDay(result as Catalog)
@@ -522,14 +519,14 @@ class Taskbook {
   }
 
   restoreItems(ids: string[]) {
-    ids = this._validateIDs(ids, this._archive.ids())
-    const { _archive } = this
+    const archive = this._storage.get('archive')
+    ids = this._validateIDs(ids, archive.ids())
 
     ids.forEach((id) => {
-      this._saveItemToStorage(_archive.get(id))
+      this._saveItemToStorage(archive.get(id))
     })
 
-    this._saveArchive(_archive)
+    this._saveArchive(archive)
     render.successRestore(ids)
   }
 
@@ -596,7 +593,7 @@ class Taskbook {
   }
 
   async printTask(taskId: string, format: string, useArchive = false) {
-    const store = useArchive ? this._archive : this._data
+    const store = useArchive ? this._storage.get('archive') : this._storage.get()
 
       ;[taskId] = this._validateIDs([taskId], store.ids())
 
