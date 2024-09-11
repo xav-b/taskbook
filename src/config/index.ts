@@ -39,6 +39,7 @@ interface UserConfig extends JsonMap {
   doneLast: boolean
   defaultTaskEstimate: number
   showAge: boolean
+  highlightTags: string[]
 }
 
 type PluginConfig = Record<string, AnyJson>
@@ -82,6 +83,8 @@ const userDefaults: UserConfig = {
   doneLast: true,
   defaultTaskEstimate: POMODORO_STRATEGY,
   showAge: true,
+  // those tags will be prefixed and highlighted in tag display
+  highlightTags: [],
 }
 
 const defaultThemeConfig = (): ThemeConfig => ({

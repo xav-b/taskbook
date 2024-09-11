@@ -33,6 +33,25 @@ const theme = {
 }
 */
 
+function getItemStats(items: IBullet[]) {
+  let [tasks, complete, notes] = [0, 0, 0]
+
+  items.forEach((item) => {
+    if (item.isTask) {
+      tasks++
+      if (item instanceof Task && item.isComplete) {
+        return complete++
+      }
+    }
+
+    // FIXME: that kind of work by accident, and we may want to represent
+    // other types like goals and events.
+    return notes++
+  })
+
+  return { tasks, complete, notes }
+}
+
 export function itemSorter(t1: IBullet, t2: IBullet): number {
   return t1.sort(t2)
 }
@@ -46,7 +65,7 @@ function colorBoards(boards: string[]) {
 }
 
 function isBoardComplete(items: IBullet[]) {
-  const { tasks, complete, notes } = _getItemStats(items)
+  const { tasks, complete, notes } = getItemStats(items)
   return tasks === complete && notes === 0
 }
 
@@ -68,23 +87,56 @@ function getRepeatHint(task: Task) {
   return task.repeat ? blue('∞') : ''
 }
 
-function _getItemStats(items: IBullet[]) {
-  let [tasks, complete, notes] = [0, 0, 0]
+/**
+ * Build the 4-chars columns that shows the item ID.
+ */
+function buildPrefix(itemId: number) {
+  return [
+    // ID column 4 chars (meaning we should not have 5-figures IDs)
+    // (should this be a constant configuration?)
+    ' '.repeat(4 - String(itemId).length),
+    grey(`${itemId}.`),
+    // if we wanted to build subtasks we would only need that
+    // if (isSubtask) prefix.push('\t'),
+  ].join(' ')
+}
 
-  items.forEach((item) => {
-    if (item.isTask) {
-      tasks++
-      if (item instanceof Task && item.isComplete) {
-        return complete++
-      }
-    }
+function buildTaskMessage(item: Task, isArchive = false): string {
+  const message = []
 
-    // FIXME: that kind of work by accident, and we may want to represent
-    // other types like goals and events.
-    return notes++
-  })
+  const { isComplete, description } = item
 
-  return { tasks, complete, notes }
+  // look to prefix a scope to the task, if any of its tags are in the
+  // configured "highlightTags"
+  const toHighlight = item.tags.filter((tag) => (config.local.highlightTags ?? []).includes(tag))
+  if (toHighlight.length > 0) {
+    // pick the first one - not great but I don't see a valid case where it
+    // makes sense to display nicely several matches
+    message.push(`${chalk.bold(toHighlight[0].replace('+', ''))}:`)
+    // no need to display that tag then
+    // FIXME: that's a bit dangerous to mutate the item though...
+    item.tags = item.tags.filter((tag) => tag !== toHighlight[0])
+  }
+
+  if (!isComplete && item.priority > 1) {
+    const style = config.theme.priorities[item.priority]
+    message.push(style(description))
+  } else {
+    // message.push(isComplete ? grey(description) : description)
+    message.push(isComplete ? grey(description) : description)
+  }
+
+  // a task not completed and archived means it was deleted. Make it a
+  // "little" more obvious when printing the archive. Of course this may not
+  // work for non-task items like notes
+  if (!isComplete && item.isTask && isArchive) message.unshift(chalk.bold.red('CANCELLED'))
+
+  // NOTE: alternatively we could leave the actual description as-is, and
+  // simply add a prefix to indicate urgency
+  // if (!isComplete && item.priority > 1)
+  //   message.push(item.priority === 2 ? yellow('(!)') : red('(!!)'))
+
+  return message.join(' ')
 }
 
 class Render {
@@ -92,47 +144,10 @@ class Render {
     let title = config.theme.highlightTitle(key)
     if (key === new Date().toDateString()) title += ` ${grey('[Today]')}`
 
-    const { tasks, complete } = _getItemStats(items)
+    const { tasks, complete } = getItemStats(items)
     const correlation = grey(`[${complete}/${tasks}]`)
 
     return { title, correlation }
-  }
-
-  _buildPrefix(item: IBullet) {
-    const prefix = []
-
-    const { id } = item
-
-    prefix.push(' '.repeat(4 - String(id).length))
-    prefix.push(grey(`${id}.`))
-
-    return prefix.join(' ')
-  }
-
-  _buildTaskMessage(item: Task, isArchive = false): string {
-    const message = []
-
-    const { isComplete, description } = item
-
-    if (!isComplete && item.priority > 1) {
-      const style = config.theme.priorities[item.priority]
-      message.push(style(description))
-    } else {
-      // message.push(isComplete ? grey(description) : description)
-      message.push(isComplete ? grey(description) : description)
-    }
-
-    // a task not completed and archived means it was deleted. Make it a
-    // "little" more obvious when printing the archive. Of course this may not
-    // work for non-task items like notes
-    if (!isComplete && item.isTask && isArchive) message.unshift(chalk.bold.red('CANCELLED'))
-
-    // NOTE: alternatively we could leave the actual description as-is, and
-    // simply add a prefix to indicate urgency
-    // if (!isComplete && item.priority > 1)
-    //   message.push(item.priority === 2 ? yellow('(!)') : red('(!!)'))
-
-    return message.join(' ')
   }
 
   _displayTitle(board: string, items: IBullet[]) {
@@ -151,10 +166,10 @@ class Render {
     const suffix = []
     let message = ''
 
-    const prefix = this._buildPrefix(item)
+    const prefix = buildPrefix(item.id)
 
     if (item instanceof Task) {
-      message = this._buildTaskMessage(item)
+      message = buildTaskMessage(item)
       repeat = getRepeatHint(item)
     } else message = buildNoteMessage(item)
 
@@ -180,9 +195,9 @@ class Render {
     const boards = item.boards.filter((x) => x !== config.local.defaultBoard)
     const star = getStar(item)
 
-    const prefix = this._buildPrefix(item)
+    const prefix = buildPrefix(item.id)
     let message = ''
-    if (item instanceof Task) message = this._buildTaskMessage(item, isArchive)
+    if (item instanceof Task) message = buildTaskMessage(item, isArchive)
     else message = buildNoteMessage(item)
 
     const suffix = []
