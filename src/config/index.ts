@@ -38,6 +38,7 @@ interface UserConfig extends JsonMap {
   greetings: boolean
   doneLast: boolean
   defaultTaskEstimate: number
+  showAge: boolean
 }
 
 type PluginConfig = Record<string, AnyJson>
@@ -80,6 +81,7 @@ const userDefaults: UserConfig = {
   greetings: true,
   doneLast: true,
   defaultTaskEstimate: POMODORO_STRATEGY,
+  showAge: true,
 }
 
 const defaultThemeConfig = (): ThemeConfig => ({

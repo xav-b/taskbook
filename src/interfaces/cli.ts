@@ -49,7 +49,20 @@ program
   .alias('ls')
   .description('List items by attributes')
   .argument('[attributes...]')
-  .action((attributes) => taskbook.listByAttributes(attributes))
+  .action((attributes) => {
+    const { data, groups } = taskbook.listByAttributes(attributes)
+
+    const showTasks = attributes.length > 0
+    const stats = data.stats()
+
+    const tasksGrouped = data.groupByBoards(groups)
+    // console.log('\n\n', groups, showTasks)
+    // console.log('\n\n', groups['@stash'][0].toJSON(), showTasks)
+    // console.log('\n\n', stats, '\n\n')
+
+    render.displayByBoard(tasksGrouped, showTasks)
+    render.displayStats(stats)
+  })
 
 program
   .command('archive')
@@ -244,8 +257,8 @@ program
   .command('copy')
   .alias('y')
   .description('Copy items description')
-  .argument('<items...>')
-  .action((items) => taskbook.copyToClipboard(items))
+  .argument('itemid')
+  .action((itemid) => taskbook.copyToClipboard(itemid))
 
 // board -------------------------------------------------------------------------------
 

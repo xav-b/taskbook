@@ -41,6 +41,7 @@ class Taskbook {
     debug(`loading archive and items (ctx ${config.state.currentContext})`)
     this._storage = new LocalStorage(config.state.currentContext)
 
+    // TODO: lazy-load it instead
     this._data = this._storage.get()
 
     // determine if this is the first run of the day
@@ -74,7 +75,7 @@ class Taskbook {
     this._storage.set(data.all(), 'archive')
   }
 
-  _validateIDs(inputIDs: string[], existingIDs = this._data.ids()): string[] {
+  _validateIDs(inputIDs: string[], data: Catalog = this._data): void {
     if (inputIDs.length === 0) {
       render.missingID()
       process.exit(1)
@@ -83,13 +84,11 @@ class Taskbook {
     inputIDs = removeDuplicates(inputIDs)
 
     inputIDs.forEach((id) => {
-      if (existingIDs.indexOf(id) === -1) {
+      if (!data.exists(id)) {
         render.invalidID(id)
         process.exit(1)
       }
     })
-
-    return inputIDs
   }
 
   /**
@@ -112,6 +111,8 @@ class Taskbook {
       if (task === null)
         throw new Error(`impossible, this should be a task, but typescript disagrees`)
       if (added.includes(task.description))
+        // very much expected since each completion will add a new instance of
+        // that same task that will be picked up. Hacky design...
         return debug(`task ${taskId} already added ${task.description}`)
 
       const existing = this._data.search([task.description])
@@ -119,6 +120,7 @@ class Taskbook {
       // Check we also didn't check it today already. This is normally guarded
       // because this function only runs the first time of the day, but this is
       // done outside and so it should not matter here.
+      // (and anyway this helps with idempotency)
       if (new Date(task.updatedAt).getDate() === today.getDate())
         debug(`task id:${taskId} already completed today`)
       else {
@@ -132,6 +134,10 @@ class Taskbook {
           priority: task.priority,
           link: task.link || undefined,
           estimate: task.estimate || undefined,
+          // since the task already exist in the archive with the property (we
+          // found it just now) it would not be strictly necessary. But the
+          // property a) is correct and b) enables the `repeat` visual hint
+          repeat: task.repeat || undefined,
         })
         this._data.set(todayTask.id, todayTask)
         added.push(task.description)
@@ -145,7 +151,7 @@ class Taskbook {
   }
 
   _saveItemToArchive(item: IBullet) {
-    const { _data } = this
+    const _data = this._storage.get()
     const archive = this._storage.get('archive')
 
     const archiveID = archive.generateID()
@@ -230,17 +236,12 @@ class Taskbook {
     if (notebook) this.comment(String(id))
   }
 
-  copyToClipboard(ids: string[]) {
-    ids = this._validateIDs(ids)
+  copyToClipboard(itemId: string) {
+    this._validateIDs([itemId])
 
-    const { _data } = this
-    const descriptions: string[] = []
+    clipboardy.writeSync(this._data.get(itemId).description)
 
-    ids.forEach((id) => descriptions.push(_data.get(id).description))
-
-    clipboardy.writeSync(descriptions.join('\n'))
-
-    render.successCopyToClipboard(ids)
+    render.successCopyToClipboard([itemId])
   }
 
   async checkTasks(ids: string[], duration: Maybe<number>, doneAt: Maybe<Date>) {
@@ -250,7 +251,7 @@ class Taskbook {
     const { description, tags } = parseOptions(ids, {
       defaultBoard: config.local.defaultBoard,
     })
-    ids = this._validateIDs(description.split(' '))
+    this._validateIDs(description.split(' '))
     debug(`task ids verified: ${ids}`)
 
     const { _data } = this
@@ -364,7 +365,7 @@ class Taskbook {
   }
 
   deleteItems(ids: string[], toTrash = false) {
-    ids = this._validateIDs(ids)
+    this._validateIDs(ids)
 
     const { _data } = this
 
@@ -393,10 +394,6 @@ class Taskbook {
     const groups = groupByLastUpdateDay(archive)
 
     render.displayByDate(groups, true)
-  }
-
-  displayByBoard() {
-    render.displayByBoard(this._data.groupByBoards())
   }
 
   // expose the render method to our business logic there
@@ -447,21 +444,21 @@ class Taskbook {
     }
   }
 
-  listByAttributes(terms: string[]): void {
+  /**
+   * Detect tags, boards or pre-defined "statuses" to filter (as AND) the whole
+   * board and nicely display by boards.
+   */
+  listByAttributes(terms: string[]): { data: Catalog; groups?: string[] } {
     let boards: string[] = []
     let tags: string[] = []
     let attributes: string[] = []
-    const showTasks = terms.length > 0
     const storedBoards = this._data.boards()
     const storedTags = this._data.tags()
 
-    // effectively `showTasks` has been already decided so:
-    // - nothing was passed: we show the boards
-    // - `all` was passed: we show all boards AND their tasks
-    // - attributes were passed: we filter as expected
-    if (terms.includes('all')) terms = []
+    // no filtering
+    if (terms.includes('all')) return { data: this._data }
 
-    // parse boards and tags
+    // parse boards and tags among the filtering properties
     terms.forEach((x) => {
       if (storedBoards.indexOf(`@${x}`) >= 0) boards.push(`@${x}`)
 
@@ -473,21 +470,23 @@ class Taskbook {
     boards = removeDuplicates(boards)
     tags = removeDuplicates(tags)
     attributes = removeDuplicates(attributes)
+    // we want to group filtered result by boards and tags
+    const groups = boards.concat(tags)
 
+    // then it's a 2 steps affair: filter by attributes and filter by tags + boards.
+    // We should end up with a shrinked catalogs, ready to be used for rendering
+    // or stats.
     let data = filterByAttributes(attributes, this._data)
     if (boards.length > 0 || tags.length > 0)
       // filter by boards and/or tags
       data = filterByBoards(boards.concat(tags), data)
 
-    const groups = this._data.groupByBoards(boards.concat(tags))
-    render.displayByBoard(groups, showTasks)
-
-    render.displayStats(data.stats())
+    return { data, groups }
   }
 
   moveBoards(input: string[]) {
     const { _data } = this
-    let ids: string[] = []
+    const ids: string[] = []
     let boards: string[] = []
 
     input.filter(isBoardOpt).forEach((board) => {
@@ -508,7 +507,7 @@ class Taskbook {
       process.exit(1)
     }
 
-    ids = this._validateIDs(ids)
+    this._validateIDs(ids)
 
     ids.forEach((id) => {
       _data.get(id).boards = boards
@@ -520,7 +519,7 @@ class Taskbook {
 
   restoreItems(ids: string[]) {
     const archive = this._storage.get('archive')
-    ids = this._validateIDs(ids, archive.ids())
+    this._validateIDs(ids, archive)
 
     ids.forEach((id) => {
       this._saveItemToStorage(archive.get(id))
@@ -531,7 +530,7 @@ class Taskbook {
   }
 
   starItems(ids: string[]) {
-    ids = this._validateIDs(ids)
+    this._validateIDs(ids)
     const { _data } = this
     const starred: string[] = []
     const unstarred: string[] = []
@@ -561,11 +560,11 @@ class Taskbook {
   }
 
   updatePriority(priority: Priority, taskids: string[]) {
+    this._validateIDs(taskids)
+
     const { _data } = this
 
-    const ids = this._validateIDs(taskids)
-
-    ids.forEach((taskid: string) => {
+    taskids.forEach((taskid: string) => {
       const task = _data.task(taskid)
       if (task === null) throw new Error(`item ${taskid} is not a task`)
       task.priority = priority
@@ -595,7 +594,7 @@ class Taskbook {
   async printTask(taskId: string, format: string, useArchive = false) {
     const store = useArchive ? this._storage.get('archive') : this._storage.get()
 
-      ;[taskId] = this._validateIDs([taskId], store.ids())
+    this._validateIDs([taskId], store)
 
     debug(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
 
@@ -615,7 +614,7 @@ class Taskbook {
   }
 
   beginTask(id: string, useTimer: boolean) {
-    ;[id] = this._validateIDs([id])
+    this._validateIDs([id])
 
     // blocking logger to record steps of the timer
     const interactive = new Signale({ interactive: true, scope: 'task.timer' })
@@ -693,7 +692,8 @@ class Taskbook {
   }
 
   comment(itemId: string) {
-    // TODO: _validateIDs
+    this._validateIDs([itemId])
+
     const { editor } = config.local
 
     const { _data } = this

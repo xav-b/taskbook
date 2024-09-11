@@ -158,7 +158,7 @@ class Render {
       repeat = getRepeatHint(item)
     } else message = buildNoteMessage(item)
 
-    if (age !== 0) suffix.push(grey(`${age}d`))
+    if (age !== 0 && config.local.showAge) suffix.push(grey(`${age}d`))
     if (star) suffix.push(star)
     if (link) suffix.push(link)
     if (repeat) suffix.push(repeat)

@@ -64,6 +64,11 @@ export default class Catalog {
    * Unlike other methods, use the internal id to check for existence.
    */
   public exists(uid: string): boolean {
+    // most common case, check item id
+    const doesExist = uid in this.ids()
+    if (doesExist) return true
+
+    // else give a shot at the _uid
     return Object.values(this.all()).find((each) => each._uid === uid) !== undefined
   }
 
@@ -232,7 +237,9 @@ export default class Catalog {
   public groupByBoards(boards?: string[]) {
     const grouped: Record<string, IBullet[]> = {}
 
+    // by default group by boards and tags
     if (boards === undefined) boards = this.boards()
+
     // TODO: not sure that's expected. If somehow the list of boards is empty,
     // then there's just nothing to group with, no need to fallback silently on
     // something else
@@ -257,6 +264,10 @@ export default class Catalog {
     }, orderInit)
 
     return ordered
+  }
+
+  public toJSON(): Record<string, any> {
+    return Object.entries(this._items).map(([, item]) => item.toJSON())
   }
 }
 

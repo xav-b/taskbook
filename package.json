@@ -11,7 +11,8 @@
     "url": "https://xavierbruhiere.com"
   },
   "bin": {
-    "tb": "dist/src/interfaces/cli.js"
+    "tb": "dist/src/interfaces/cli.js",
+    "tb-serve": "dist/src/interfaces/server.js"
   },
   "engines": {
     "node": ">=10"

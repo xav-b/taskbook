@@ -2,21 +2,12 @@
 
 ### Next
 
-
-- [ ] FEAT Make show task age optional
-- [ ] Task dependencies
+- [ ] IDEA Augment `tb find` with `fzf`
 - [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
-- [ ] FIXME `--timer` capture CTRL-C and gracefully record the time spent.
-- [ ] FIXME `tb b --timer` never completes
-
-- [ ] IDEA Can i integrate the idea (or even base the project) on [outline speedrunning](https://learnhowtolearn.org/how-to-build-extremely-quickly/)
-           Maybe just show how this can be used by using a board or tag and priorities
-
 - [ ] FIXME config: if no `alias` section it crashes
 - [ ] IDEA Implement `tb queue 1 2 3 5 ...` (create a board Queue and uses `queue` param to order them)
       -> `queue` new property integer
       -> `queue` command 
-
 - [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
            when reviewed and automatically uncheck according to schedule (maybe add a
            flag). Bind it to `@flashcard.{deck}`
@@ -53,7 +44,8 @@
   - [ ] Recurrent events (support same as `--repeat`)
   - [ ] Validate value at creation (`on Mondays` parsing for example crashes)
 
-- [ ] IDEA Augment `tb find` with `fzf`
+- [ ] IDEA Compact archive so it doesn't grow crazy (`storage.compact()`)
+- [ ] IDEA Task dependencies
 - [ ] IDEA config management CLI (`tb config:set taskbook.doneLast true`)
 - [ ] IDEA Prompt mode: shorten command (no more `tb`) and refresh on every input
 - [ ] IDEA When moving something to `@blocked`, indicate reason or other task(s) reference
@@ -67,6 +59,8 @@
 - [ ] IDEA Have a `theme` where colors and all are abstracted as `primary`, `secondary`, etc... (at the very least get the `grey` customised)
 - [ ] IDEA The current output is just one FE - support TUI
 
+- [ ] FIXME `--timer` capture CTRL-C and gracefully record the time spent.
+- [ ] FIXME `tb b --timer` never completes
 - [ ] FIXME storage loads by data types and must be modified for a new type
 - [ ] FIXME Restore of notes seem to move ids around and duplicate, if working at all
 - [ ] FIXME Running `tb estimate` twice may create 2 t-shirt sizes
@@ -201,6 +195,7 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
       - [x] Use `schedule` for task ordering on `calendar`
       - [x] `event.schedule` command to put a task on the calendar
       - [x] Support multiple calendars (`--calendar xx`) and use a different token file
+- [x] FEAT Make show task age optional
 
 ---
 
@@ -235,3 +230,5 @@ Download `gapi-token.json` from https://console.cloud.google.com/apis/credential
 ## Resources
 
 - [Taskline](https://github.com/perryrh0dan/taskline#configuration)
+- Can we integrate the idea (or even base the project) on [outline speedrunning](https://learnhowtolearn.org/how-to-build-extremely-quickly/)
+  Maybe just show how this can be used by using a board or tag and priorities
