@@ -5,10 +5,11 @@ import { UnixTimestamp } from '../../types'
 import { parseOptions } from '../../shared/parser'
 import render from '../../interfaces/render'
 import config from '../../config'
+import Logger from '../../shared/logger'
 import EventTask from './event'
 import gcal from './gcal'
 
-const debug = require('debug')('tb:plugin:event:commands')
+const log = Logger('plugin.event')
 
 const DEFAULT_EVENT_DURATION_MS = 30 * 60 * 1000
 const calendarBoard = config.plugins?.calendar?.board || 'calendar'
@@ -20,7 +21,7 @@ async function todayEvents(auth: any) {
   const timeMin = `${todayDate}T00:00:00+08:00`
   const timeMax = `${todayDate}T23:59:59+08:00`
 
-  debug(`searching events: ${timeMin} -> ${timeMax}`)
+  log.debug(`searching events: ${timeMin} -> ${timeMax}`)
   return gcal.listEvents(auth, {
     timeMin,
     timeMax,
@@ -47,11 +48,11 @@ function upsert(
   // if the item already exists, we will attempt to overwrite everything with the data fetched
   const id = existing?.id ?? _data.generateID()
 
-  debug(`initialising event ${id}`)
+  log.debug(`initialising event ${id}`)
   const event = new EventTask({ id, _uid: eventID, description, boards, tags, schedule, estimate })
 
-  if (existing) debug(`updating event ${id} (${existing._uid})`)
-  else debug(`creating event ${id}`, event)
+  if (existing) log.info(`updating event ${id} (${existing._uid})`)
+  else log.info(`creating event ${id}`, event)
   _data.set(id, event)
   board._save()
 
@@ -81,7 +82,7 @@ async function syncGCal(board: Taskbook, name?: string | null) {
   const idsToDelete: string[] = []
   todayExistingEvents.forEach((each) => {
     if (events.find((ge) => ge?.id === each._uid) === undefined) {
-      debug(`unable to find event ${each._uid} - deleting`)
+      log.warn(`unable to find event ${each._uid} - deleting`)
       idsToDelete.push(String(each.id))
     }
   })

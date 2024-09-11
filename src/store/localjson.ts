@@ -9,7 +9,7 @@ import { randomHexString, ensureDir } from '../shared/utils'
 
 const { basename, join } = path
 
-const log = Logger()
+const log = Logger('store.json')
 
 const DEFAULT_STORAGE = 'index'
 const DEFAULT_WORKSPACE = 'default'

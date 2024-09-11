@@ -4,9 +4,10 @@ import Taskbook from '../../use_cases/taskbook'
 import { parseOptions } from '../../shared/parser'
 import render from '../../interfaces/render'
 import config from '../../config'
+import Logger from '../../shared/logger'
 import FlashcardTask from './card'
 
-const debug = require('debug')('tb:plugin:card:commands')
+const log = Logger('plugin.card')
 
 const boardPrefix = config.plugins?.srr?.prefix || 'deck'
 const commonTag = config.plugins?.srr?.tag || 'srr'
@@ -31,7 +32,7 @@ function createCard(board: Taskbook, front: string[], link?: string) {
 
   const id = _data.generateID()
 
-  debug(`initialising flashcard ${id}: ${boards}`)
+  log.info(`initialising flashcard ${id}: ${boards}`)
   const flashcard = new FlashcardTask({
     id,
     description,

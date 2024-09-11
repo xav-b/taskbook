@@ -4,16 +4,16 @@ import { Command } from 'commander'
 import net, { AddressInfo } from 'net'
 
 import Taskbook from '../use_cases/taskbook'
+import Logger from '../shared/logger'
 import pkg from '../../package.json'
 
-const debug = require('debug')('server:udp')
+const log = Logger('ui.server')
 
 // TODO: cli option
 const PORT = 2222
 
-debug('instantiating commander')
 const program = new Command()
-debug('instantiating Taskbook')
+log.debug('instantiating Taskbook')
 const taskbook = new Taskbook()
 
 interface TBCommand {
@@ -31,18 +31,18 @@ program
     const server = net.createServer()
 
     server.on('connection', (conn) => {
-      debug(`connection established from ${conn.remoteAddress}:${conn.remotePort}`)
+      log.info(`connection established from ${conn.remoteAddress}:${conn.remotePort}`)
 
       conn.setEncoding('utf8')
-      conn.on('close', () => console.log('connection closed'))
-      conn.on('error', (err) => console.error(`handler failed: ${err.message}`))
+      conn.on('close', () => log.info('connection closed'))
+      conn.on('error', (err) => log.error(`handler failed: ${err.message}`))
 
       conn.on('data', (message) => {
         // const _send = (_response: Record<string, any>) =>
         //   server.send(JSON.stringify(_response), remote.port, remote.address)
 
         const msg: TBCommand = JSON.parse(message.toString())
-        debug('received command:', msg.command, msg.itemIds)
+        log.debug('received command:', msg.command, msg.itemIds)
 
         // replicate command and aliases from cli
         if (['list', 'ls', 'l'].includes(msg.command)) {
@@ -56,7 +56,7 @@ program
 
     server.listen(PORT, () => {
       const { address, port } = server.address() as AddressInfo
-      console.log(`listening on tcp://${address}:${port}...`)
+      log.info(`listening on tcp://${address}:${port}...`)
     })
   })
 

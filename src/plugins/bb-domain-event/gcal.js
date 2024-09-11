@@ -5,14 +5,16 @@
  */
 
 import { today, prettyTzOffset } from './utils'
+import Logger from '../../shared/logger'
 
 const fs = require('fs').promises
 const path = require('path')
 const process = require('process')
 
-const debug = require('debug')('tb:plugin:event:gcal')
 const { authenticate } = require('@google-cloud/local-auth')
 const { google } = require('googleapis')
+
+const log = Logger('plugin.event')
 
 const CALENDAR_VERSION = 'v3'
 // If modifying these scopes, delete token.json.
@@ -36,12 +38,12 @@ const tokenPath = (calendar) => path.join(process.cwd(), `gapi-token.${calendar 
 async function loadSavedCredentialsIfExist(calendar) {
   const savedTokenPath = tokenPath(calendar)
   try {
-    debug(`attempting to read saved google credentials from '${savedTokenPath}'`)
+    log.info(`attempting to read saved google credentials from '${savedTokenPath}'`)
     const content = await fs.readFile(savedTokenPath)
     const credentials = JSON.parse(content)
     return google.auth.fromJSON(credentials)
   } catch (err) {
-    debug(`failed to authenticate from JSON file '${savedTokenPath}': ${err}`)
+    log.error(`failed to authenticate from JSON file '${savedTokenPath}': ${err}`)
     return null
   }
 }
@@ -70,27 +72,27 @@ async function saveCredentials(client, calendar) {
  *
  */
 async function authorize(calendarName) {
-  debug(`tentatively loading credentials (calendar=${calendarName})`)
+  log.info(`tentatively loading credentials (calendar=${calendarName})`)
   let client = await loadSavedCredentialsIfExist(calendarName)
 
   // TODO: detect expired credentials
   if (client) {
-    debug('credentials found - authenticated')
+    log.info('credentials found - authenticated')
     return client
   }
 
-  debug('no crendetials found, authenticate')
+  log.info('no crendetials found, authenticate')
   client = await authenticate({
     scopes: SCOPES,
     keyfilePath: CREDENTIALS_PATH,
   })
 
   if (client.credentials) {
-    debug('saving auth (refresh) token')
+    log.info('saving auth (refresh) token')
     await saveCredentials(client, calendarName)
   } else throw new Error('no auth token found')
 
-  debug('authentication successfully completed')
+  log.success('authentication successfully completed')
   return client
 }
 
@@ -116,17 +118,17 @@ async function listEvents(auth, opts) {
 
   // handle failures modes
   if (!res.data.items || res.data.items.length === 0) {
-    debug('no upcoming events found')
+    log.info('no upcoming events found')
     return []
   }
 
   return res.data.items
     .map((event) => {
-      debug(`processing event ${event.id}`)
+      log.debug(`processing event ${event.id}`)
 
       if (event.status === 'confirmed' && event.kind === 'calendar#event') {
         if (event.start.dateTime === undefined) {
-          debug('full day event - ignoring')
+          log.debug('full day event - ignoring')
           return null
         }
 

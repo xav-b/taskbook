@@ -5,9 +5,10 @@ import path from 'path'
 import chalk from 'chalk'
 import TOML, { AnyJson, JsonMap } from '@iarna/toml'
 import { Priority } from '../domain/ibullet'
+import Logger from '../shared/logger'
 import PKG from '../../package.json'
 
-const debug = require('debug')('tb:config')
+const log = Logger('core.config')
 
 /**
  * Mutable state.
@@ -94,10 +95,10 @@ const defaultThemeConfig = (): ThemeConfig => ({
 })
 
 function ensureUserConfig(): void {
-  debug('verifying config file')
+  log.debug('verifying config file')
   if (fs.existsSync(CONFIG_FILE)) return
 
-  debug(`writing default config for the first time: ${CONFIG_FILE}`)
+  log.info(`writing default config for the first time: ${CONFIG_FILE}`)
   // TODO: once stable, just write the string directly with everything
   // commented out
   const serialized = TOML.stringify({
@@ -110,10 +111,10 @@ function ensureUserConfig(): void {
 }
 
 function ensureLocalState(): void {
-  debug('verifying local state')
+  log.debug('verifying local state')
   if (fs.existsSync(STATE_FILE)) return
 
-  debug(`writing default state for the first time: ${STATE_FILE}`)
+  log.info(`writing default state for the first time: ${STATE_FILE}`)
   // TODO: once stable, just write the string directly with everything
   // commented out
   const serialized = TOML.stringify({
@@ -127,7 +128,7 @@ function parseUserlandConfig(): {
   plugins: Record<string, PluginConfig>
   aliases: AliasConfig
 } {
-  debug('loading local configuration', CONFIG_FILE)
+  log.info('loading local configuration', CONFIG_FILE)
 
   const data = fs.readFileSync(CONFIG_FILE, {
     encoding: ENCODING,
@@ -145,7 +146,7 @@ function parseUserlandConfig(): {
 }
 
 function parseUserlandState(): LocalState {
-  debug('loading local state', STATE_FILE)
+  log.info('loading local state', STATE_FILE)
 
   const data = fs.readFileSync(STATE_FILE, { encoding: ENCODING })
   const parsed = TOML.parse(data)
@@ -184,14 +185,14 @@ export class IConfig {
   public update(key: keyof LocalState, value: AnyJson) {
     this.state[key] = value
 
-    debug(`updating local state: ${key}=${value}`)
+    log.info(`updating local state: ${key}=${value}`)
     const data = TOML.stringify(this.state)
     fs.writeFileSync(STATE_FILE, data, ENCODING)
   }
 }
 
-debug('initiating configuration')
+log.debug('initiating configuration')
 const configSingleton = new IConfig()
-debug('global config ready')
+log.debug('global config ready')
 
 export default configSingleton

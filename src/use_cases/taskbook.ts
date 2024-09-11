@@ -22,9 +22,7 @@ import Logger from '../shared/logger'
 import events from './events'
 import config from '../config'
 
-const debug = require('debug')('tb:core:taskbook')
-
-const log = Logger()
+const log = Logger('core.taskbook')
 const cache = cacheStorage.init()
 
 class Taskbook {
@@ -35,10 +33,9 @@ class Taskbook {
   _data: Catalog
 
   constructor() {
-    debug('initialising taskbook')
+    log.info('initialising taskbook')
 
-    debug('loading configuration')
-    debug(`loading archive and items (ctx ${config.state.currentContext})`)
+    log.info(`initialising storage (ctx ${config.state.currentContext})`)
     this._storage = new LocalStorage(config.state.currentContext)
 
     // TODO: lazy-load it instead
@@ -47,7 +44,7 @@ class Taskbook {
     // determine if this is the first run of the day
     this.isNewDay = false
     const last = cache.get('root.lastOpen')
-    debug(`last taskbook run: ${last}`)
+    log.debug(`last taskbook run: ${last}`)
 
     if (last !== null) {
       this.isNewDay = new Date(last).getDate() !== new Date().getDate()
@@ -62,7 +59,7 @@ class Taskbook {
       goodDay()
     }
 
-    debug('checking recurrent tasks')
+    log.debug('checking recurrent tasks')
     // the operation is idempotent
     this.scheduleRecurrentTasks()
   }
@@ -98,12 +95,12 @@ class Taskbook {
    * Then create a new task
    */
   scheduleRecurrentTasks() {
-    debug('scheduling today recurrent tasks')
+    log.info('scheduling today recurrent tasks')
     const today = new Date()
 
     // 1. look for all archived task having `repeat`
     const recurrents = this._storage.get('archive').todayTasks()
-    debug(`found ${recurrents.length} tasks to repeat today`)
+    log.debug(`found ${recurrents.length} tasks to repeat today`)
 
     const added: string[] = []
     recurrents.ids().forEach((taskId) => {
@@ -113,18 +110,18 @@ class Taskbook {
       if (added.includes(task.description))
         // very much expected since each completion will add a new instance of
         // that same task that will be picked up. Hacky design...
-        return debug(`task ${taskId} already added ${task.description}`)
+        return log.debug(`task ${taskId} already added ${task.description}`)
 
       const existing = this._data.search([task.description])
-      if (existing.ids().length > 0) return debug(`task id:${taskId} already scheduled`)
+      if (existing.ids().length > 0) return log.debug(`task id:${taskId} already scheduled`)
       // Check we also didn't check it today already. This is normally guarded
       // because this function only runs the first time of the day, but this is
       // done outside and so it should not matter here.
       // (and anyway this helps with idempotency)
       if (new Date(task.updatedAt).getDate() === today.getDate())
-        debug(`task id:${taskId} already completed today`)
+        log.debug(`task id:${taskId} already completed today`)
       else {
-        debug(`rescheduling recurrent task id:${taskId} (${task.repeat})`)
+        log.info(`rescheduling recurrent task id:${taskId} (${task.repeat})`)
         // very much a new task
         const todayTask = new Task({
           id: this._data.generateID(),
@@ -146,7 +143,7 @@ class Taskbook {
       }
     })
 
-    debug(`done - comitting new recurrent tasks`)
+    log.info(`done - comitting new recurrent tasks`)
     this._save(this._data)
   }
 
@@ -155,7 +152,7 @@ class Taskbook {
     const archive = this._storage.get('archive')
 
     const archiveID = archive.generateID()
-    debug(`archiving item under id ${archiveID}`)
+    log.info(`archiving item under id ${archiveID}`)
 
     archive.set(archiveID, item)
 
@@ -169,7 +166,7 @@ class Taskbook {
     const bin = this._storage.get('bin')
 
     const trashID = bin.generateID()
-    debug(`trashing item under id ${trashID}`)
+    log.info(`trashing item under id ${trashID}`)
 
     bin.set(trashID, item)
 
@@ -245,14 +242,13 @@ class Taskbook {
   }
 
   async checkTasks(ids: string[], duration: Maybe<number>, doneAt: Maybe<Date>) {
-    debug(`striking tasks ${ids.join(', ')}`)
+    log.info(`striking tasks ${ids.join(', ')}`)
 
     // another gymnastics to allow tags in the list of ids
     const { description, tags } = parseOptions(ids, {
       defaultBoard: config.local.defaultBoard,
     })
     this._validateIDs(description.split(' '))
-    debug(`task ids verified: ${ids}`)
 
     const { _data } = this
     const checked: Task[] = []
@@ -385,7 +381,7 @@ class Taskbook {
    * display wher the date is the board.
    */
   displayArchive() {
-    debug('displaying the whole archive, by dates ASC')
+    log.info('displaying the whole archive, by dates ASC')
     const archive = this._storage.get('archive')
 
     // first we want to group items by day, in a way that can be the ordered
@@ -596,7 +592,7 @@ class Taskbook {
 
     this._validateIDs([taskId], store)
 
-    debug(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
+    log.info(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
 
     const task = store.get(taskId)
 

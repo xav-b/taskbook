@@ -196,6 +196,7 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
       - [x] `event.schedule` command to put a task on the calendar
       - [x] Support multiple calendars (`--calendar xx`) and use a different token file
 - [x] FEAT Make show task age optional
+- [x] FEAT Highlight a task scope
 
 ---
 

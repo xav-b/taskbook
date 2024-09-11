@@ -6,6 +6,7 @@ import updateNotifier from 'update-notifier'
 
 import pkg from '../../package.json'
 import render from './render'
+import Logger from '../shared/logger'
 import { parseDuration, parseDate } from '../shared/parser'
 import EventPlugin from '../plugins/bb-domain-event/plugin'
 import GoalPlugin from '../plugins/bb-domain-goal/plugin'
@@ -13,14 +14,12 @@ import CardPlugin from '../plugins/bb-domain-card/plugin'
 import Taskbook, { showManual, switchContext } from '../use_cases/taskbook'
 import config from '../config'
 
-const debug = require('debug')('tb:cli')
-
-debug('instantiating commander')
+const log = Logger('ui.cli')
 const program = new Command()
-debug('instantiating Taskbook')
+log.debug('instantiating Taskbook')
 const taskbook = new Taskbook()
 
-debug('registering commands')
+log.debug('registering commands')
 
 program
   .command('what')
@@ -285,7 +284,7 @@ program
   .action((alias, argv) => {
     if (Object.keys(config.aliases).includes(alias)) {
       const cmd = config.aliases[alias].replace('$argv', argv.join(' '))
-      debug(`will run alias ${alias}`, cmd)
+      log.info(`will run alias ${alias}`, cmd)
       spawn(cmd, { shell: true, stdio: 'inherit' })
     } else taskbook.displayBoardStats()
   })
@@ -297,10 +296,10 @@ new EventPlugin().register(program, taskbook)
 new GoalPlugin().register(program, taskbook)
 new CardPlugin().register(program, taskbook)
 
-debug('checking on updates')
+log.debug('checking on updates')
 updateNotifier({ pkg }).notify()
 
-debug('parsing command line')
+log.debug('parsing command line')
 program.parse()
 
-debug('completed')
+log.debug('completed')

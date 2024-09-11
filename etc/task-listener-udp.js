@@ -1,9 +1,11 @@
 const notifier = require('node-notifier')
 const udp = require('dgram')
-const debug = require('debug')('server:udp')
+
+import Logger from '../src/shared/logger'
 
 const PORT = 2222
 
+const log = Logger('ui.server.events')
 const server = udp.createSocket('udp4')
 
 server.on('listening', () => {
@@ -12,10 +14,10 @@ server.on('listening', () => {
 })
 
 server.on('message', (message, remote) => {
-  debug(`${remote.size}b message received from ${remote.address}:${remote.port}`)
+  log.debug(`${remote.size}b message received from ${remote.address}:${remote.port}`)
   const msg = JSON.parse(message.toString())
 
-  debug('received message:', msg)
+  log.debug('received message:', msg)
 
   // TODO: write a kind of specific handler here
   const { i, estimate } = msg.args

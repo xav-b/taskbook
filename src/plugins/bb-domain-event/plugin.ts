@@ -4,12 +4,13 @@ import render from '../../interfaces/render'
 import IBullet from '../../domain/ibullet'
 import { parseDuration } from '../../shared/parser'
 import config from '../../config'
+import Logger from '../../shared/logger'
 import { parseScheduleTime } from './utils'
 import EventTask from './event'
 import BulletBoardPlugin from '..'
 import commands from './commands'
 
-const debug = require('debug')('tb:plugin:event:plugin')
+const log = Logger('plugin.event')
 
 /**
  * Mark as done all past events, so you don't have to.
@@ -73,7 +74,7 @@ export default class EventPlugin extends BulletBoardPlugin {
     // might be a nice idea. But this will remain uncheck until it runs, while
     // here this will always be up to date, consenting a bit pf perf hit.
     if (config.plugins?.calendar?.gc) {
-      debug('garbage collecting events')
+      log.info('garbage collecting events')
 
       const events = findEvents(board)
       const checked = garbageCollect(events)

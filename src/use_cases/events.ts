@@ -1,7 +1,7 @@
 import udp from 'dgram'
+import Logger from '../shared/logger'
 
-const debug = require('debug')('tb:core:taskbook')
-
+const log = Logger('core.events')
 const client = udp.createSocket('udp4')
 
 // TODO: configuration
@@ -18,12 +18,12 @@ interface EventPayloadI {
 const serialize = (payload: EventPayloadI) => Buffer.from(JSON.stringify(payload))
 
 function fire(event: string, payload: Omit<EventPayloadI, 'event'>) {
-  debug(`firing event ${event} on ${UDP_HOST}:${UDP_PORT}`)
+  log.info(`firing event ${event} on ${UDP_HOST}:${UDP_PORT}`)
 
   const packet = serialize({ event, ...payload })
 
   // fire and forget
-  client.send(packet, UDP_PORT, UDP_HOST, (err) => debug(`udp message ack: ${err}`))
+  client.send(packet, UDP_PORT, UDP_HOST, (err) => log.debug(`udp message ack: ${err}`))
 }
 
 export default { fire, close: () => client.close() }

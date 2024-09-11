@@ -108,11 +108,16 @@ function buildTaskMessage(item: Task, isArchive = false): string {
 
   // look to prefix a scope to the task, if any of its tags are in the
   // configured "highlightTags"
-  const toHighlight = item.tags.filter((tag) => (config.local.highlightTags ?? []).includes(tag))
+  const toHighlight = item.tags
+    .concat(item.boards)
+    .filter((tag) =>
+      (config.local.highlightTags ?? []).includes(tag.replace('+', '').replace('@', ''))
+    )
   if (toHighlight.length > 0) {
     // pick the first one - not great but I don't see a valid case where it
     // makes sense to display nicely several matches
-    message.push(`${chalk.bold(toHighlight[0].replace('+', ''))}:`)
+    const scope = toHighlight[0].replace('+', '').replace('@', '')
+    message.push(`${isComplete ? `${grey(scope)}:` : `${chalk.bold(scope)}`}:`)
     // no need to display that tag then
     // FIXME: that's a bit dangerous to mutate the item though...
     item.tags = item.tags.filter((tag) => tag !== toHighlight[0])
