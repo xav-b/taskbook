@@ -106,7 +106,9 @@ export default interface IBullet {
 
   decodeComment: () => Maybe<string>
 
-  writeComment: (editor: string) => void
+  writeCommentInEditor: (editor: string) => void
+
+  writeComment: (content: string) => void
 
   toJSON: () => Record<string, any>
 
@@ -234,7 +236,10 @@ export abstract class BasicBullet implements IBullet {
     return Buffer.from(this.comment, 'base64').toString('ascii')
   }
 
-  public writeComment(editor: string) {
+  // TODO: this would be just a lot easier to have 1 `writeComment` and open
+  // the editor if no content is passed. But importing the config here creates
+  // a circular dependency we need to fix first
+  public writeCommentInEditor(editor: string) {
     const tmpFile = tmp.fileSync({ mode: 0o644, prefix: 'taskbook-', postfix: '.md' })
 
     let initContent = `# ID ${this.id} - ${this.description}
@@ -252,7 +257,11 @@ export abstract class BasicBullet implements IBullet {
     // TODO: handle child error
     const comment = fs.readFileSync(tmpFile.name, 'utf8').trim()
 
-    const encoded = Buffer.from(comment).toString('base64')
+    this.writeComment(comment)
+  }
+
+  public writeComment(content: string) {
+    const encoded = Buffer.from(content).toString('base64')
 
     this.comment = encoded
   }

@@ -40,7 +40,10 @@ interface UserConfig extends JsonMap {
   doneLast: boolean
   defaultTaskEstimate: number
   showAge: boolean
+  // those tags will be prefixed and highlighted in tag display
   highlightTags: string[]
+  // should `tb clear` also archive notes?
+  clearNotes: boolean
 }
 
 type PluginConfig = Record<string, AnyJson>
@@ -84,8 +87,8 @@ const userDefaults: UserConfig = {
   doneLast: true,
   defaultTaskEstimate: POMODORO_STRATEGY,
   showAge: true,
-  // those tags will be prefixed and highlighted in tag display
   highlightTags: [],
+  clearNotes: true,
 }
 
 const defaultThemeConfig = (): ThemeConfig => ({

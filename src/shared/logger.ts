@@ -11,7 +11,7 @@ import { Signale } from 'signale'
 // computer sometimes duh)
 const LOGS_PATH = path.join('/tmp', 'taskbook.logs')
 
-export default (scope: string) => {
+export default (scope: string, stdout = false) => {
   const streams: stream.Writable[] = [
     fs.createWriteStream(LOGS_PATH, {
       flags: 'a',
@@ -20,7 +20,7 @@ export default (scope: string) => {
     }),
   ]
 
-  if (process.env.TB_DEBUG === 'true') streams.push(process.stdout)
+  if (process.env.TB_DEBUG === 'true' || stdout) streams.push(process.stdout)
 
   return new Signale({
     scope: scope.padEnd(15),

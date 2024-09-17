@@ -42,7 +42,7 @@ function createCard(board: Taskbook, front: string[], link?: string) {
   })
 
   // By definition a card will need its "back", which is a comment in Taskbook
-  flashcard.writeComment(config.local.editor)
+  flashcard.writeCommentInEditor(config.local.editor)
 
   _data.set(id, flashcard)
 

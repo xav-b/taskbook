@@ -112,14 +112,20 @@ program
     const estimate = parseDuration(options.estimate)
     // the `undefined` trick just avoids the function to manage both null and
     // undefined and keep a clean signature
-    taskbook.createTask(
+    // TODO: at this point pass a `TaskCreateOptions`
+    const tasks = taskbook.createTask(
       description,
+      undefined,
       estimate || undefined,
       options.link,
       options.notebook,
-      options.json,
       options.repeat
     )
+
+    tasks.forEach((t) => {
+      if (options.json) console.log(JSON.stringify({ id: t.id, created: t.toJSON() }))
+      else render.successCreate(t)
+    })
   })
 
 // Tasks manage ------------------------------------------------------------------------
@@ -272,7 +278,7 @@ program
 program
   .command('clear')
   .description('Archive all checked items')
-  .action(() => taskbook.clear())
+  .action(() => taskbook.clear(config.local.clearNotes))
 
 // default handler called when the command is not recognised
 program

@@ -2,8 +2,8 @@ import { Signale } from 'signale'
 import { prompt } from 'enquirer'
 import clipboardy from 'clipboardy'
 
-import { Maybe } from '../types'
-import Storage from '../store'
+import { Maybe } from '~/types'
+import Storage from '~/store'
 import cacheStorage from '../store/localcache'
 import LocalStorage from '../store/localjson'
 import { help, goodDay } from '../interfaces/text'
@@ -32,11 +32,11 @@ class Taskbook {
 
   _data: Catalog
 
-  constructor() {
+  constructor(context = config.state.currentContext) {
     log.info('initialising taskbook')
 
-    log.info(`initialising storage (ctx ${config.state.currentContext})`)
-    this._storage = new LocalStorage(config.state.currentContext)
+    log.info(`initialising storage (ctx ${context})`)
+    this._storage = new LocalStorage(context)
 
     // TODO: lazy-load it instead
     this._data = this._storage.get()
@@ -148,7 +148,7 @@ class Taskbook {
   }
 
   _saveItemToArchive(item: IBullet) {
-    const _data = this._storage.get()
+    const { _data } = this
     const archive = this._storage.get('archive')
 
     const archiveID = archive.generateID()
@@ -305,21 +305,29 @@ class Taskbook {
 
     this._save(_data)
 
-    for (const t of checked) log.info(`checking task ${t.id}`, t)
+    for (const t of checked) {
+      log.debug(`firing udp event for task #${t.id} checked`)
+      const payload = { command: 'check', msg: `checked task #${t.id}`, args: t }
+      await events.fire('task checked', payload)
+      log.info(`checking task ${t.id}`, t)
+    }
     for (const t of unchecked) log.info(`un-checking task ${t.id}`)
 
     render.markComplete(checked)
     render.markIncomplete(unchecked)
+
+    events.close()
   }
 
   createTask(
     desc: string[],
+    comment?: string,
     cliEstimate?: number,
     link?: string,
     notebook?: boolean,
-    renderJSON?: boolean,
     repeat?: string
-  ) {
+  ): Task[] {
+    const created: Task[] = []
     const { boards, tags, description, priority, estimate } = parseOptions(desc, {
       defaultBoard: config.local.defaultBoard,
     })
@@ -346,18 +354,20 @@ class Taskbook {
         repeat,
       })
 
-      if (notebook) task.writeComment(config.local.editor)
+      if (comment) task.writeComment(comment)
+      else if (notebook) task.writeCommentInEditor(config.local.editor)
 
       _data.set(id, task)
 
       if (config.local.enableCopyID && !isMultiple) clipboardy.writeSync(String(id))
 
-      if (renderJSON) console.log(JSON.stringify({ id: task.id, created: task.toJSON() }))
-      else render.successCreate(task)
+      created.push(task)
     })
 
     // commit
     this._save(_data)
+
+    return created
   }
 
   deleteItems(ids: string[], toTrash = false) {
@@ -366,7 +376,7 @@ class Taskbook {
     const { _data } = this
 
     ids.forEach((id) => {
-      // the operation will also delete `id` from `_data`
+      // both operation will also delete `id` from `_data`
       if (toTrash) this._saveItemToTrashBin(_data.get(id))
       else this._saveItemToArchive(_data.get(id))
     })
@@ -570,7 +580,7 @@ class Taskbook {
     this._save(_data)
   }
 
-  clear() {
+  clear(alsoNotes = true) {
     const ids: string[] = []
     const { _data } = this
 
@@ -578,7 +588,7 @@ class Taskbook {
       const item = _data.get(id)
 
       if (item instanceof Task && item.isComplete) ids.push(id)
-      else if (item instanceof Note) ids.push(id)
+      else if (item instanceof Note && alsoNotes) ids.push(id)
       // else not something we want to clear
     })
 
@@ -667,7 +677,7 @@ class Taskbook {
 
               // publish vent
               const payload = { command: 'begin', msg, args: { i, estimate } }
-              events.fire('begin.timer', payload)
+              events.fire('task timer updated', payload)
 
               if (i >= estimate) {
                 interactive.success(`[${estimate}/${estimate}] - completed`)
@@ -695,7 +705,7 @@ class Taskbook {
     const { _data } = this
     const item = _data.get(itemId)
 
-    item.writeComment(editor)
+    item.writeCommentInEditor(editor)
 
     this._save(_data)
 
@@ -708,9 +718,9 @@ class Taskbook {
   _migrate() {
     const { _data } = this
 
-    _data.ids().forEach((id) => {
-      // if (!_data.get(id)._uid) _data.get(id)._uid = nanoid()
-    })
+    // _data.ids().forEach((id) => {
+    // if (!_data.get(id)._uid) _data.get(id)._uid = nanoid()
+    // })
 
     this._save(_data)
   }

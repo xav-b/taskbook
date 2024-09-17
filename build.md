@@ -1,13 +1,23 @@
 ## Things to build
 
+### Key focuses
+
+- It should be faster
+- Support speed outlining and execution
+- Automate every day commands
+
 ### Next
 
+- [ ] Implement sqlite
+- [ ] Capture resources too (services, github, website, ...)
+- [ ] Capture reading list
+- [ ] IDEA `blocked` to have trigger to bring them back (e.g. task dependency and time)
 - [ ] IDEA Augment `tb find` with `fzf`
 - [ ] FEAT Support scheduling in the future `tb task --on 2025-01-01/Tuesday`
-- [ ] FIXME config: if no `alias` section it crashes
 - [ ] IDEA Implement `tb queue 1 2 3 5 ...` (create a board Queue and uses `queue` param to order them)
       -> `queue` new property integer
       -> `queue` command 
+- [ ] FIXME config: if no `alias` section it crashes
 - [ ] IDEA Can a todo be a card (as a plugin)? Name is front, comment is solution. Check
            when reviewed and automatically uncheck according to schedule (maybe add a
            flag). Bind it to `@flashcard.{deck}`
@@ -20,7 +30,8 @@
 
 ### Backlog
 
-- [ ] FEAT Support deadline
+- [ ] FEAT Allow to disable UDP events
+- [ ] FEAT Support deadline (`due:friday`)
 - [ ] FEAT calendar sync:
       - [ ] Implement `tb event:convert <task id> <schedule> [estimate]`
       - [ ] Fix token renewal (grant refused crash)
@@ -41,11 +52,13 @@
 - [ ] FEAT Recurrent
   - [x] Everyday it misses on the scheduling
   - [x] Recurrent tasks
+  - [ ] Recurrent task based on Monthly
   - [ ] Recurrent events (support same as `--repeat`)
   - [ ] Validate value at creation (`on Mondays` parsing for example crashes)
 
+- [ ] IDEA Using note subtasks, or the concept of parent-child, starting a task would queue all the subtasks
 - [ ] IDEA Compact archive so it doesn't grow crazy (`storage.compact()`)
-- [ ] IDEA Task dependencies
+- [ ] IDEA Task dependencies `depends:<task id>`
 - [ ] IDEA config management CLI (`tb config:set taskbook.doneLast true`)
 - [ ] IDEA Prompt mode: shorten command (no more `tb`) and refresh on every input
 - [ ] IDEA When moving something to `@blocked`, indicate reason or other task(s) reference
