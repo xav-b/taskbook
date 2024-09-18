@@ -1,10 +1,14 @@
 ## Things to build
 
-### Key focuses
-
-- It should be faster
-- Support speed outlining and execution
-- Automate every day commands
+**New design**
+- There is a very common pattern where we grab an item and do some changes
+  using that item own domain (so we don't want to depart from that). But to
+  make it work with the storage, you need everytime to `desk.set(item, item.id)`
+  and `desk.flush()`, allowing the db to update its internal state and choose
+  between atomic update or batch commit (or both, like for sql `commit()`)
+  Maybe `Catalog` could track tasks that have changed, and `flush()` would
+  first `.set()` all of them.
+- the super recurrent `desk.set(item, item.id)` is also silly
 
 ### Next
 
@@ -56,6 +60,7 @@
   - [ ] Recurrent events (support same as `--repeat`)
   - [ ] Validate value at creation (`on Mondays` parsing for example crashes)
 
+- [ ] IDEA `render` should also be a method. When taking dirty changes it could either pretty print, send udp messages, return json...
 - [ ] IDEA Using note subtasks, or the concept of parent-child, starting a task would queue all the subtasks
 - [ ] IDEA Compact archive so it doesn't grow crazy (`storage.compact()`)
 - [ ] IDEA Task dependencies `depends:<task id>`
@@ -82,7 +87,6 @@
 - [ ] FIXME `tb event` says `Created EventTask x` - re-implements a pretty `item._type`
 - [ ] FIXME Replace all `throw` by proper rendering + `process.exit`
 
-- [ ] TECH Logger should both use `DEBUG` AND record stuff on file (rotating) - abstract in shared
 - [ ] TECH boards and tags don't need to be stored with their `@` and `+`
 - [ ] TECH install latest dependencies of chalk, clipboard and update-notifier
 - [ ] TECH More performant - should be a feature
@@ -210,6 +214,7 @@ Bullet Journal, and `extensive` bundling everything in the mono repo)
       - [x] Support multiple calendars (`--calendar xx`) and use a different token file
 - [x] FEAT Make show task age optional
 - [x] FEAT Highlight a task scope
+- [x] TECH Logger should both use `DEBUG` AND record stuff on file (rotating) - abstract in shared
 
 ---
 

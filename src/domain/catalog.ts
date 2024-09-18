@@ -1,7 +1,12 @@
 import later from '@breejs/later'
 
-import IBullet from './ibullet'
+import IBullet, { IBulletOptions } from './ibullet'
 import Task from './task'
+import Note from '../domain/note'
+import CalendarEvent, { EventProperties } from '../plugins/bb-domain-event/event'
+import Goal from '../plugins/bb-domain-goal/goal'
+import Flashcard from '../plugins/bb-domain-card/card'
+import Storage, { RawIBullet, RawCatalog } from '../store'
 import { hasTerms } from '../shared/parser'
 import { Maybe } from '../types'
 import config from '../config'
@@ -9,7 +14,7 @@ import config from '../config'
 // base layout of items is { itemId: IBullet, .... }
 export type CatalogInnerData = Record<string, IBullet>
 
-type FilterOutLogic = (item: IBullet) => boolean
+type FilterLogic = (item: IBullet) => boolean
 
 export interface CatalogStats {
   complete: number
@@ -24,24 +29,47 @@ export interface CatalogStats {
   duration?: number
 }
 
-/**
- * Filter the list of current tasks available to the command.
- */
-function _filter(data: CatalogInnerData, exclude: FilterOutLogic): CatalogInnerData {
-  Object.keys(data).forEach((id) => {
-    if (exclude(data[id])) delete data[id]
-  })
+function parseRawItem(item: RawIBullet): IBullet {
+  if (item._type === 'task') return new Task(item as IBulletOptions)
+  else if (item._type === 'note') return new Note(item as IBulletOptions)
+  else if (item._type === 'event') return new CalendarEvent(item as EventProperties)
+  else if (item._type === 'goal') return new Goal(item as IBulletOptions)
+  else if (item._type === 'flashcard') return new Flashcard(item as IBulletOptions)
 
-  return data
+  throw new Error(`[warning] unknown item type: ${item._type}`)
+}
+
+// NOTE: it is not easy to type `any` because it should be the union of all the
+// possible type fields, which introduces a strong coupling... And since it
+// needs to be optional, it doesn't even bring much type safety.
+function mapFromJson(data: RawCatalog): CatalogInnerData {
+  const catalog: CatalogInnerData = {}
+
+  Object.values(data).forEach((each) => (catalog[each.id] = parseRawItem(each)))
+
+  return catalog
 }
 
 export default class Catalog {
-  protected _items: CatalogInnerData
+  bucket: string | undefined
 
-  constructor(items: CatalogInnerData) {
-    this._items = items
+  protected store: Storage
+
+  // internal cache of all items
+  protected _items: CatalogInnerData | null
+
+  constructor(store: Storage, bucket?: string, items?: CatalogInnerData) {
+    this.store = store
+    this.bucket = bucket
+    // if not forced at initialisation, this will be lazy loaded on the next
+    // cache miss
+    this._items = items || null
   }
 
+  /**
+   * Find the smallest (and therefore most convenient) integer IDs considering
+   * the entire set in store.
+   */
   public generateID(): number {
     const ids = this.ids().map((id) => parseInt(id, 10))
     const max = Math.max(...ids)
@@ -50,7 +78,7 @@ export default class Catalog {
     if (ids.length === 0) return 1
 
     // pick up the first available id. This allows to recycle ids that have
-    // been archived.
+    // been moved to other buckets.
     for (let idx = 0; idx < max; idx++) {
       // will return the lowest id that is not in the used list of tasks
       if (!ids.includes(idx)) return idx
@@ -73,15 +101,18 @@ export default class Catalog {
   }
 
   get length() {
-    return Object.keys(this._items).length
+    return Object.keys(this.all()).length
   }
 
   all(): CatalogInnerData {
+    // cache miss
+    if (this._items === null) this._items = mapFromJson(this.store.all(this.bucket))
+
     return this._items
   }
 
   ids(): string[] {
-    return Object.keys(this._items)
+    return Object.keys(this.all())
   }
 
   /**
@@ -109,55 +140,111 @@ export default class Catalog {
   }
 
   public get(id: string): IBullet {
-    return this._items[id]
+    // if the whole dataset has been loaded already, it's faster to use the cached hashmap
+    if (this._items) return this._items[id]
+
+    // else ask the store
+    const item = this.store.get(id, this.bucket)
+    if (item === null) throw new Error(`failed to retrieve #${id} from store`)
+
+    return parseRawItem(item)
   }
 
   public uget(uid: string): Maybe<IBullet> {
     return Object.values(this.all()).find((each) => each._uid === uid) || null
   }
 
-  set(id: number, data: IBullet) {
-    this._items[id] = structuredClone(data)
-    // we also overwrite the `id` as it might be coming from the `storage`,
-    // while here we save it to `archive`, under a new id. Obviously this is
-    // terrible design.
-    this._items[id].id = id
+  set(data: IBullet, id = this.generateID()) {
+    // we also overwrite the `id` as it might be coming from one bucket,
+    // while here we might be saving it to another, having its own constraints
+    // of ids. Obviously this is terrible design.
+    const item = { ...structuredClone(data), id }
+
+    // if we have a valid cache, update it
+    if (this._items) this._items[id] = item
+
+    this.store.upsert(item, undefined, this.bucket)
+  }
+
+  edit(itemId: string, properties: Record<string, any>): IBullet {
+    const item = this.get(itemId)
+
+    // update our internal data representation
+    for (const [key, value] of Object.entries(properties)) {
+      // @ts-ignore
+      item[key] = value
+    }
+
+    // and of course the DB
+    this.store.upsert(item, item.id.toString())
+
+    return item
+  }
+
+  batchEdit(itemIds: string[], properties: Record<string, any>) {
+    const dirty: CatalogInnerData = {}
+
+    itemIds.forEach((id: string) => {
+      const item = this.get(id)
+      dirty[id] = item
+
+      // update our internal data representation
+      for (const [key, value] of Object.entries(properties)) {
+        // @ts-ignore
+        item[key] = value
+      }
+      // and of course the DB
+      this.store.upsert(item, item.id.toString())
+    })
+
+    this.flush()
   }
 
   delete(id: number) {
-    delete this._items[id]
+    if (this._items) delete this._items[id]
+
+    this.store.delete(id.toString(), this.bucket)
+  }
+
+  flush() {
+    this.store.commit(this.bucket)
   }
 
   task(id: string): Maybe<Task> {
-    if (!this._items[id].isTask) return null
+    if (this._items) {
+      const { isTask } = this._items[id]
+      return isTask ? (this._items[id] as Task) : null
+    }
 
-    return this._items[id] as Task
+    // cache miss
+    const item = this.store.get(id, this.bucket) as Task
+    return item.isTask ? (item as Task) : null
   }
 
   search(terms: string[]): Catalog {
-    const result: CatalogInnerData = {}
-
-    this.ids().forEach((id) => {
-      if (!hasTerms(this.get(id).description, terms)) return
-
-      result[id] = this.get(id)
-    })
-
-    return new Catalog(result)
+    return this.subcatalog((item) => hasTerms(item.description, terms))
   }
 
   notes(): Catalog {
-    const items = _filter(this._items, (item) => item._type !== 'note')
-    return new Catalog(items)
+    return this.subcatalog((item) => item._type === 'note')
   }
 
   tasks(): Catalog {
-    const items = _filter(this._items, (item) => !item.isTask)
-    return new Catalog(items)
+    return this.subcatalog((item) => item.isTask)
+  }
+
+  subcatalog(includeLogic: FilterLogic, items = this.all()): Catalog {
+    const innerData: CatalogInnerData = {}
+
+    Object.keys(items).forEach((id) => {
+      if (includeLogic(items[id])) innerData[id] = items[id]
+    })
+
+    return new Catalog(this.store, this.bucket, innerData)
   }
 
   todayTasks(): Catalog {
-    const tasks = _filter(this._items, (t) => {
+    return this.subcatalog((t) => {
       // not a task
       if (!t.isTask) return true
       // not recurrent
@@ -185,28 +272,22 @@ export default class Catalog {
       // exclude the rest
       return true
     })
-
-    return new Catalog(tasks)
   }
 
   pending(): Catalog {
-    const items = _filter(this._items, (item) => !item.isTask || item.isComplete)
-    return new Catalog(items)
+    return this.subcatalog((item) => item.isTask && !item.isComplete)
   }
 
   completed(): Catalog {
-    const items = _filter(this._items, (item) => !item.isTask || !item.isComplete)
-    return new Catalog(items)
+    return this.subcatalog((item) => item.isTask && item.isComplete)
   }
 
   inProgress(): Catalog {
-    const items = _filter(this._items, (item) => !item.isTask || !item.inProgress)
-    return new Catalog(items)
+    return this.subcatalog((item) => item.isTask && item.inProgress)
   }
 
   starred(): Catalog {
-    const items = _filter(this._items, (item) => !item.isStarred)
-    return new Catalog(items)
+    return this.subcatalog((item) => item.isStarred)
   }
 
   public stats(): CatalogStats {
@@ -232,6 +313,18 @@ export default class Catalog {
     })
 
     return { complete, inProgress, pending, notes, estimate, duration }
+  }
+
+  public filterByBoards(boards: string[]): Catalog {
+    return this.subcatalog((item) => {
+      // if any of the boards is the item's board or tag, retain
+      // boards.forEach((board: string) => {
+      for (const board of boards) {
+        if (item.boards.includes(board) || item.tags.includes(board)) return true
+      }
+
+      return false
+    })
   }
 
   public groupByBoards(boards?: string[]) {
@@ -267,7 +360,7 @@ export default class Catalog {
   }
 
   public toJSON(): Record<string, any> {
-    return Object.entries(this._items).map(([, item]) => item.toJSON())
+    return Object.entries(this.all()).map(([, item]) => item.toJSON())
   }
 }
 
@@ -336,18 +429,4 @@ export function filterByAttributes(attr: string[], data: Catalog) {
   })
 
   return data
-}
-
-export function filterByBoards(boards: string[], data: Catalog): Catalog {
-  const filtered: CatalogInnerData = {}
-
-  data.ids().forEach((id) => {
-    boards.forEach((board: string) => {
-      if (data.get(id).boards.includes(board) || data.get(id).tags?.includes(board)) {
-        filtered[id] = data.get(id)
-      }
-    })
-  })
-
-  return new Catalog(filtered)
 }

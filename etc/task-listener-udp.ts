@@ -9,7 +9,7 @@ import render from '../src/interfaces/render'
 import Logger from '../src/shared/logger'
 
 const PORT = 2222
-const EVENTS_NEED_REFRESH = ['task checked']
+const EVENTS_NEED_REFRESH = ['task checked', 'tasks moved']
 
 const program = new Command()
 const log = Logger('ui.server.events', true)
@@ -44,7 +44,7 @@ function handleTimer(msg: EventPayload) {
   const { i, estimate } = msg.args
 
   const notify = (body: string) => {
-    console.log(`notifying`, body)
+    log.info(`notifying`, body)
 
     notifier.notify({
       title: 'Task Countdown',
@@ -76,7 +76,7 @@ program
 
     server.on('listening', () => {
       const socket = server.address()
-      console.log(`listening on ${socket.address}:${socket.port}...`)
+      log.info(`listening on ${socket.address}:${socket.port}...`)
     })
 
     // initial display
@@ -86,13 +86,12 @@ program
       log.debug(`${remote.size}b message received from ${remote.address}:${remote.port}`)
       const msg = JSON.parse(message.toString()) as EventPayload
 
-      log.debug('received message:', msg)
+      log.debug(`received new event: ${msg.event}`)
 
       // all the events that should update the board
       if (EVENTS_NEED_REFRESH.includes(msg.event)) {
         // TODO: we could check if the task belongs to the attributes and only
         // update then
-        log.info('[udp.msg]', msg.msg, msg.args)
         displayBoard(attributes)
       } else if (msg.event === 'task timer updated') {
         handleTimer(msg)

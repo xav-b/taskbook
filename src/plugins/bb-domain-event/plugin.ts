@@ -32,7 +32,7 @@ function garbageCollect(events: EventTask[]): IBullet[] {
 
 function findEvents(board: Taskbook): EventTask[] {
   const events: EventTask[] = []
-  Object.values(board._data.all()).forEach((item: IBullet) => {
+  Object.values(board.office.desk.all()).forEach((item: IBullet) => {
     if (item._type === 'event') events.push(item as EventTask)
   })
 
@@ -79,7 +79,10 @@ export default class EventPlugin extends BulletBoardPlugin {
       const events = findEvents(board)
       const checked = garbageCollect(events)
       if (checked.length > 0) {
-        board._save()
+        // update the catalog and database
+        checked.forEach((each) => board.office.desk.set(each, each.id))
+        board.office.desk.flush()
+
         render.markComplete(checked)
       }
     }

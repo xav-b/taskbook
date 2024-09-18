@@ -2,8 +2,8 @@ import fs from 'fs'
 import path from 'path'
 
 import config from '../config'
-import Storage, { mapFromJson } from '.'
-import Catalog, { CatalogInnerData } from '../domain/catalog'
+import Storage, { RawCatalog, RawIBullet } from '.'
+import IBullet from '../domain/ibullet'
 import Logger from '../shared/logger'
 import { randomHexString, ensureDir } from '../shared/utils'
 
@@ -21,7 +21,13 @@ class LocalJSONStorage implements Storage {
 
   _tempDir: string
 
+  // loading from disk is expensive. If we do it once, keep an internally
+  // loaded version of it.
+  _cache: Record<string, RawCatalog>
+
   constructor(workspace?: string) {
+    this._cache = {}
+
     // applying the default there as callers may explicitely pass a `null` or
     // `undefined`
     workspace = workspace || DEFAULT_WORKSPACE
@@ -61,12 +67,15 @@ class LocalJSONStorage implements Storage {
     return join(this._tempDir, tempFilename)
   }
 
-  _storageFile(scope: string): string {
-    return join(this._storageDir, `${scope}.json`)
+  _storageFile(bucket: string): string {
+    return join(this._storageDir, `${bucket}.json`)
   }
 
-  get(scope = DEFAULT_STORAGE): Catalog {
-    const storageFile = this._storageFile(scope)
+  all(bucket = DEFAULT_STORAGE): RawCatalog {
+    if (this._cache[bucket]) return this._cache[bucket]
+
+    // else load it
+    const storageFile = this._storageFile(bucket)
     log.debug(`loading storage items from ${storageFile}`)
     let data = {}
 
@@ -75,11 +84,22 @@ class LocalJSONStorage implements Storage {
       data = JSON.parse(content)
     }
 
-    return mapFromJson(data)
+    this._cache[bucket] = data
+
+    return this._cache[bucket]
   }
 
-  set(data: CatalogInnerData, scope = DEFAULT_STORAGE) {
-    const storageFile = this._storageFile(scope)
+  /**
+   * In the case of filesystem storage, we simply flush to disk the entire
+   * collection.
+   * Which will effectively save the edits made so far to the internal cache
+   * for that bucket.
+   */
+  commit(bucket = DEFAULT_STORAGE) {
+    // retrieve our (likely dirty) cache
+    const data = this.all(bucket)
+    // where it will be saved
+    const storageFile = this._storageFile(bucket)
 
     log.info(`saving catalog to storage: ${storageFile}`)
     const serialized = JSON.stringify(data, null, 4)
@@ -87,6 +107,31 @@ class LocalJSONStorage implements Storage {
 
     fs.writeFileSync(tempStorageFile, serialized, 'utf8')
     fs.renameSync(tempStorageFile, storageFile)
+  }
+
+  get(key: string, bucket?: string): RawIBullet | null {
+    return this.all(bucket)[key] || null
+  }
+
+  /**
+   * Because every update need to re-dump the whole json file, we only update
+   * the internal state, and will wait for `this.commit()`
+   */
+  upsert(item: IBullet, key?: string, bucket?: string): void {
+    const data = this.all(bucket)
+    const itemId = key ? parseInt(key, 10) : item.id
+    // update our internal cache
+    data[itemId] = item
+  }
+
+  /**
+   * Same approach to delete.
+   */
+  delete(key: string, bucket?: string) {
+    const data = this.all(bucket)
+
+    // update internal cache
+    delete data[key]
   }
 }
 

@@ -18,6 +18,7 @@ export enum Priority {
 // all Item props need to be supported, albeit mostly optional
 export interface IBulletOptions {
   id: number
+  _type?: string
   _uid?: string
   _createdAt?: UnixTimestamp
   description: string

@@ -10,11 +10,7 @@ import { help, goodDay } from '../interfaces/text'
 import render from '../interfaces/render'
 import { removeDuplicates } from '../shared/utils'
 import { parseOptions, isBoardOpt } from '../shared/parser'
-import Catalog, {
-  filterByBoards,
-  groupByLastUpdateDay,
-  filterByAttributes,
-} from '../domain/catalog'
+import Catalog, { groupByLastUpdateDay, filterByAttributes } from '../domain/catalog'
 import IBullet, { Priority } from '../domain/ibullet'
 import Task from '../domain/task'
 import Note from '../domain/note'
@@ -25,21 +21,30 @@ import config from '../config'
 const log = Logger('core.taskbook')
 const cache = cacheStorage.init()
 
+interface Office {
+  desk: Catalog
+  archive: Catalog
+  bin: Catalog
+}
+
 class Taskbook {
   isNewDay: boolean
 
-  _storage: Storage
-
-  _data: Catalog
+  protected _store: Storage
+  // plugins are expected to access it, and anyway catalog is an abstraction
+  // meant to be used
+  office: Office
 
   constructor(context = config.state.currentContext) {
     log.info('initialising taskbook')
 
     log.info(`initialising storage (ctx ${context})`)
-    this._storage = new LocalStorage(context)
-
-    // TODO: lazy-load it instead
-    this._data = this._storage.get()
+    this._store = new LocalStorage(context)
+    this.office = {
+      desk: new Catalog(this._store),
+      archive: new Catalog(this._store, 'archive'),
+      bin: new Catalog(this._store, 'bin'),
+    }
 
     // determine if this is the first run of the day
     this.isNewDay = false
@@ -64,15 +69,7 @@ class Taskbook {
     this.scheduleRecurrentTasks()
   }
 
-  _save(data: Catalog = this._data) {
-    this._storage.set(data.all())
-  }
-
-  _saveArchive(data: Catalog) {
-    this._storage.set(data.all(), 'archive')
-  }
-
-  _validateIDs(inputIDs: string[], data: Catalog = this._data): void {
+  _validateIDs(inputIDs: string[], data: Catalog = this.office.desk): void {
     if (inputIDs.length === 0) {
       render.missingID()
       process.exit(1)
@@ -99,7 +96,7 @@ class Taskbook {
     const today = new Date()
 
     // 1. look for all archived task having `repeat`
-    const recurrents = this._storage.get('archive').todayTasks()
+    const recurrents = this.office.archive.todayTasks()
     log.debug(`found ${recurrents.length} tasks to repeat today`)
 
     const added: string[] = []
@@ -112,7 +109,7 @@ class Taskbook {
         // that same task that will be picked up. Hacky design...
         return log.debug(`task ${taskId} already added ${task.description}`)
 
-      const existing = this._data.search([task.description])
+      const existing = this.office.desk.search([task.description])
       if (existing.ids().length > 0) return log.debug(`task id:${taskId} already scheduled`)
       // Check we also didn't check it today already. This is normally guarded
       // because this function only runs the first time of the day, but this is
@@ -124,7 +121,7 @@ class Taskbook {
         log.info(`rescheduling recurrent task id:${taskId} (${task.repeat})`)
         // very much a new task
         const todayTask = new Task({
-          id: this._data.generateID(),
+          id: this.office.desk.generateID(),
           description: task.description,
           boards: task.boards,
           tags: task.tags,
@@ -136,7 +133,7 @@ class Taskbook {
           // property a) is correct and b) enables the `repeat` visual hint
           repeat: task.repeat || undefined,
         })
-        this._data.set(todayTask.id, todayTask)
+        this.office.desk.set(todayTask, todayTask.id)
         added.push(task.description)
 
         render.successCreate(todayTask, true)
@@ -144,75 +141,32 @@ class Taskbook {
     })
 
     log.info(`done - comitting new recurrent tasks`)
-    this._save(this._data)
-  }
-
-  _saveItemToArchive(item: IBullet) {
-    const { _data } = this
-    const archive = this._storage.get('archive')
-
-    const archiveID = archive.generateID()
-    log.info(`archiving item under id ${archiveID}`)
-
-    archive.set(archiveID, item)
-
-    this._saveArchive(archive)
-
-    _data.delete(item.id)
-  }
-
-  _saveItemToTrashBin(item: IBullet) {
-    const { _data } = this
-    const bin = this._storage.get('bin')
-
-    const trashID = bin.generateID()
-    log.info(`trashing item under id ${trashID}`)
-
-    bin.set(trashID, item)
-
-    this._storage.set(bin.all(), 'bin')
-
-    _data.delete(item.id)
-  }
-
-  _saveItemToStorage(item: IBullet) {
-    const { _data } = this
-    const archive = this._storage.get('archive')
-    const restoreID = _data.generateID()
-
-    item.id = restoreID
-    _data.set(restoreID, item)
-
-    this._save(_data)
-
-    archive.delete(item.id)
+    this.office.desk.flush()
   }
 
   tagItem(desc: string[]) {
     const { description, tags } = parseOptions(desc)
     const ids = description.split(' ')
 
-    const { _data } = this
-
     ids
-      .map((each) => _data.get(each))
+      .map((each) => this.office.desk.get(each))
       .forEach((item: IBullet) => {
         item.tags = removeDuplicates(tags.concat(item.tags || []))
+        this.office.desk.set(item, item.id)
       })
 
-    this._save(_data)
+    this.office.desk.flush()
     render.successEdit(ids.join(', '))
   }
 
   createNote(desc: string[], notebook?: boolean) {
-    const { _data } = this
-    const storedBoards = _data.boards()
-    const storedTags = this._data.tags()
+    const storedBoards = this.office.desk.boards()
+    const storedTags = this.office.desk.tags()
 
     const { description, tags, boards } = parseOptions(desc, {
       defaultBoard: config.local.defaultBoard,
     })
-    const id = _data.generateID()
+    const id = this.office.desk.generateID()
     const note = new Note({ id, description, tags, boards })
 
     // warn on new tags and boards
@@ -223,8 +177,8 @@ class Taskbook {
       if (!storedBoards.includes(b)) render.warning(note.id, `new board: ${b}`)
     })
 
-    _data.set(id, note)
-    this._save(_data)
+    this.office.desk.set(note, id)
+    this.office.desk.flush()
 
     if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 
@@ -236,7 +190,7 @@ class Taskbook {
   copyToClipboard(itemId: string) {
     this._validateIDs([itemId])
 
-    clipboardy.writeSync(this._data.get(itemId).description)
+    clipboardy.writeSync(this.office.desk.get(itemId).description)
 
     render.successCopyToClipboard([itemId])
   }
@@ -250,14 +204,13 @@ class Taskbook {
     })
     this._validateIDs(description.split(' '))
 
-    const { _data } = this
     const checked: Task[] = []
     const unchecked: Task[] = []
 
     await Promise.all(
       ids.map(async (id) => {
-        if (_data.get(id).isTask) {
-          const task = _data.task(id)
+        if (this.office.desk.get(id).isTask) {
+          const task = this.office.desk.task(id)
           if (task === null) throw new Error(`task ${id} is not a task`)
 
           if (task.isComplete) task.uncheck()
@@ -294,6 +247,8 @@ class Taskbook {
             }
           }
 
+          this.office.desk.set(task, task.id)
+
           return task.isComplete ? checked.push(task) : unchecked.push(task)
         }
 
@@ -303,8 +258,9 @@ class Taskbook {
       })
     )
 
-    this._save(_data)
+    this.office.desk.flush()
 
+    // fire events
     for (const t of checked) {
       log.debug(`firing udp event for task #${t.id} checked`)
       const payload = { command: 'check', msg: `checked task #${t.id}`, args: t }
@@ -335,14 +291,12 @@ class Taskbook {
     // NOTE: do we want to automatically tag 'every day' and 'every weekday'
     // +habits?
 
-    const { _data } = this
-
     // NOTE: not sure that's multi-platform
     // we support multi-line strings to batch create multiple tasks
     const lines = description.split('\n')
     const isMultiple = lines.length > 1
     lines.forEach((line: string) => {
-      const id = this._data.generateID()
+      const id = this.office.desk.generateID()
       const task = new Task({
         id,
         description: line,
@@ -357,33 +311,49 @@ class Taskbook {
       if (comment) task.writeComment(comment)
       else if (notebook) task.writeCommentInEditor(config.local.editor)
 
-      _data.set(id, task)
+      this.office.desk.set(task, id)
 
       if (config.local.enableCopyID && !isMultiple) clipboardy.writeSync(String(id))
 
       created.push(task)
     })
 
-    // commit
-    this._save(_data)
+    this.office.desk.flush()
 
     return created
   }
 
-  deleteItems(ids: string[], toTrash = false) {
-    this._validateIDs(ids)
+  transfer(items: IBullet[], targetBucket?: string, fromBucket?: string) {
+    if (targetBucket === undefined && fromBucket === undefined)
+      throw new Error('cant transfer if both storages are missing')
 
-    const { _data } = this
+    const fromCatalog =
+      fromBucket === undefined ? this.office.desk : new Catalog(this._store, fromBucket)
+    const targetCatalog =
+      targetBucket === undefined ? this.office.desk : new Catalog(this._store, targetBucket)
 
-    ids.forEach((id) => {
-      // both operation will also delete `id` from `_data`
-      if (toTrash) this._saveItemToTrashBin(_data.get(id))
-      else this._saveItemToArchive(_data.get(id))
+    this._validateIDs(items.map((each) => each.id.toString(), fromCatalog))
+
+    items.forEach((each) => {
+      log.info(`moving item #${each.id} to ${targetBucket}`)
+      // since we omit the second argument, a new ID will be generated
+      // specifically for that storage
+      targetCatalog.set(each)
+
+      // transfer done, delete the original
+      fromCatalog.delete(each.id)
     })
 
-    this._save(_data)
+    // indicate to catalog and storage we're done with updates
+    targetCatalog.flush()
+    fromCatalog.flush()
+  }
 
-    render.successDelete(ids)
+  deleteItems(ids: string[], toTrash = false) {
+    this.transfer(
+      ids.map((each) => this.office.desk.get(each)),
+      toTrash ? 'bin' : 'archive'
+    )
   }
 
   /**
@@ -392,23 +362,21 @@ class Taskbook {
    */
   displayArchive() {
     log.info('displaying the whole archive, by dates ASC')
-    const archive = this._storage.get('archive')
 
     // first we want to group items by day, in a way that can be the ordered
     // (so don't go to UI-friendly yet)
-
-    const groups = groupByLastUpdateDay(archive)
+    const groups = groupByLastUpdateDay(this.office.archive)
 
     render.displayByDate(groups, true)
   }
 
   // expose the render method to our business logic there
   displayByDate() {
-    render.displayByDate(groupByLastUpdateDay(this._data))
+    render.displayByDate(groupByLastUpdateDay(this.office.desk))
   }
 
   displayBoardStats() {
-    render.displayStats(this._data.stats())
+    render.displayStats(this.office.desk.stats())
   }
 
   editItemProperty(itemId: string, property: string, input: string[]) {
@@ -421,9 +389,7 @@ class Taskbook {
       process.exit(1)
     }
 
-    const { _data } = this
-
-    const item = _data.get(itemId)
+    const item = this.office.desk.get(itemId)
     // TODO: display something if property is none of those fields
     // TODO: validate `input[0]` depending on the cases
     if (property === 'description') item.description = input.join(' ')
@@ -432,19 +398,21 @@ class Taskbook {
     // eslint-disable-next-line prefer-destructuring
     else if (property === 'duration') item.duration = parseInt(input[0], 10) * 60 * 1000
 
-    this._save(_data)
+    this.office.desk.set(item)
+    this.office.desk.flush()
+
     render.successEdit(itemId)
   }
 
   findItems(terms: string[], inArchive: Maybe<boolean>) {
     if (inArchive) {
-      const result = this._storage.get('archive').search(terms)
+      const result = new Catalog(this._store, 'archive').search(terms)
       // searching through archive makes more sense to display by date
       // (we are sure about the type given the `else` above)
       const groups = groupByLastUpdateDay(result as Catalog)
       render.displayByDate(groups)
     } else {
-      const result = this._data.search(terms)
+      const result = this.office.desk.search(terms)
       const groups = result.groupByBoards()
       render.displayByBoard(groups)
     }
@@ -458,11 +426,11 @@ class Taskbook {
     let boards: string[] = []
     let tags: string[] = []
     let attributes: string[] = []
-    const storedBoards = this._data.boards()
-    const storedTags = this._data.tags()
+    const storedBoards = this.office.desk.boards()
+    const storedTags = this.office.desk.tags()
 
     // no filtering
-    if (terms.includes('all')) return { data: this._data }
+    if (terms.includes('all')) return { data: this.office.desk }
 
     // parse boards and tags among the filtering properties
     terms.forEach((x) => {
@@ -482,16 +450,15 @@ class Taskbook {
     // then it's a 2 steps affair: filter by attributes and filter by tags + boards.
     // We should end up with a shrinked catalogs, ready to be used for rendering
     // or stats.
-    let data = filterByAttributes(attributes, this._data)
+    let data = filterByAttributes(attributes, this.office.desk)
     if (boards.length > 0 || tags.length > 0)
       // filter by boards and/or tags
-      data = filterByBoards(boards.concat(tags), data)
+      data = data.filterByBoards(boards.concat(tags))
 
     return { data, groups }
   }
 
-  moveBoards(input: string[]) {
-    const { _data } = this
+  async moveBoards(input: string[]) {
     const ids: string[] = []
     let boards: string[] = []
 
@@ -516,37 +483,42 @@ class Taskbook {
     this._validateIDs(ids)
 
     ids.forEach((id) => {
-      _data.get(id).boards = boards
+      this.office.desk.edit(id, { boards })
     })
+
+    this.office.desk.flush()
+
     render.successMove(ids.join(', '), boards)
 
-    this._save(_data)
+    const payload = { command: 'move', msg: `moved tasks`, args: { ids, boards } }
+    await events.fire('tasks moved', payload)
+    events.close()
   }
 
   restoreItems(ids: string[]) {
-    const archive = this._storage.get('archive')
-    this._validateIDs(ids, archive)
-
-    ids.forEach((id) => {
-      this._saveItemToStorage(archive.get(id))
-    })
-
-    this._saveArchive(archive)
-    render.successRestore(ids)
+    this.transfer(
+      ids.map((each) => this.office.desk.get(each)),
+      undefined,
+      'archive'
+    )
   }
 
   starItems(ids: string[]) {
     this._validateIDs(ids)
-    const { _data } = this
+
     const starred: string[] = []
     const unstarred: string[] = []
 
     ids.forEach((id) => {
-      _data.get(id).isStarred = !_data.get(id).isStarred
-      return _data.get(id).isStarred ? starred.push(id) : unstarred.push(id)
+      // toggle it
+      const item = this.office.desk.get(id)
+      item.isStarred = !item.isStarred
+      this.office.desk.set(item, item.id)
+      return item.isStarred ? starred.push(id) : unstarred.push(id)
     })
 
-    this._save(_data)
+    this.office.desk.flush()
+
     render.markStarred(starred)
     render.markUnstarred(unstarred)
   }
@@ -554,13 +526,14 @@ class Taskbook {
   estimateWork(taskid: string, estimate: number) {
     this._validateIDs([taskid])
 
-    const task = this._data.task(taskid)
+    const task = this.office.desk.task(taskid)
 
     if (task === null) throw new Error(`item ${taskid} is not a task`)
 
     task.setEstimate(estimate, config.local.tshirtSizes)
+    this.office.desk.set(task, task.id)
 
-    this._save(this._data)
+    this.office.desk.flush()
 
     render.successEdit(taskid)
   }
@@ -568,24 +541,16 @@ class Taskbook {
   updatePriority(priority: Priority, taskids: string[]) {
     this._validateIDs(taskids)
 
-    const { _data } = this
+    this.office.desk.batchEdit(taskids, { priority })
 
-    taskids.forEach((taskid: string) => {
-      const task = _data.task(taskid)
-      if (task === null) throw new Error(`item ${taskid} is not a task`)
-      task.priority = priority
-      render.successPriority(taskid, priority)
-    })
-
-    this._save(_data)
+    render.successPriority(taskids.join(', '), priority)
   }
 
   clear(alsoNotes = true) {
     const ids: string[] = []
-    const { _data } = this
 
-    _data.ids().forEach((id) => {
-      const item = _data.get(id)
+    this.office.desk.ids().forEach((id) => {
+      const item = this.office.desk.get(id)
 
       if (item instanceof Task && item.isComplete) ids.push(id)
       else if (item instanceof Note && alsoNotes) ids.push(id)
@@ -595,18 +560,18 @@ class Taskbook {
     if (ids.length === 0) return
 
     this.deleteItems(ids)
+    render.successDelete(ids)
   }
 
+  // FIXME: doesn't have to be a task, works for any ibullet
   async printTask(taskId: string, format: string, useArchive = false) {
-    const store = useArchive ? this._storage.get('archive') : this._storage.get()
+    const catalog = useArchive ? new Catalog(this._store, 'archive') : this.office.desk
 
-    this._validateIDs([taskId], store)
+    this._validateIDs([taskId], catalog)
 
     log.info(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
 
-    const task = store.get(taskId)
-
-    if (task === null) throw new Error(`no item with id #${taskId} found`)
+    const task = catalog.get(taskId)
 
     // TODO: html
     if (format === 'markdown') task.toMarkdown()
@@ -625,13 +590,12 @@ class Taskbook {
     // blocking logger to record steps of the timer
     const interactive = new Signale({ interactive: true, scope: 'task.timer' })
 
-    const { _data } = this
     const started: string[] = []
     const paused: string[] = []
 
     // TODO: else render error
-    if (_data.get(id).isTask) {
-      const task = _data.task(id)
+    if (this.office.desk.get(id).isTask) {
+      const task = this.office.desk.task(id)
       // TODO: handle the UI of it
       if (task === null) throw new Error(`item ${id} is not a task`)
 
@@ -640,7 +604,8 @@ class Taskbook {
       if (task.inProgress) started.push(id)
       else paused.push(id)
 
-      this._save(_data)
+      this.office.desk.set(task, task.id)
+      this.office.desk.flush()
 
       if (started.length > 0) render.markStarted(started)
       if (paused.length > 0) render.markPaused(paused)
@@ -702,12 +667,12 @@ class Taskbook {
 
     const { editor } = config.local
 
-    const { _data } = this
-    const item = _data.get(itemId)
+    const item = this.office.desk.get(itemId)
 
     item.writeCommentInEditor(editor)
 
-    this._save(_data)
+    this.office.desk.set(item, item.id)
+    this.office.desk.flush()
 
     render.successEdit(itemId)
   }
@@ -716,13 +681,11 @@ class Taskbook {
    * Offer an easy place to loop through all items and apply/backfill logic.
    */
   _migrate() {
-    const { _data } = this
-
-    // _data.ids().forEach((id) => {
+    // this.office.desk.ids().forEach((id) => {
     // if (!_data.get(id)._uid) _data.get(id)._uid = nanoid()
     // })
 
-    this._save(_data)
+    this.office.desk.flush()
   }
 }
 

@@ -37,24 +37,22 @@ function upsert(
   estimate: number,
   eventID?: string
 ) {
-  const { _data } = board
-
   const boards = [`@${calendarBoard}`]
   const { description, tags } = parseOptions(desc, {
     defaultBoard: config.local.defaultBoard,
   })
 
-  const existing = eventID !== undefined ? board._data.uget(eventID) : null
+  const existing = eventID !== undefined ? board.office.desk.uget(eventID) : null
   // if the item already exists, we will attempt to overwrite everything with the data fetched
-  const id = existing?.id ?? _data.generateID()
+  const id = existing?.id ?? board.office.desk.generateID()
 
   log.debug(`initialising event ${id}`)
   const event = new EventTask({ id, _uid: eventID, description, boards, tags, schedule, estimate })
 
   if (existing) log.info(`updating event ${id} (${existing._uid})`)
   else log.info(`creating event ${id}`, event)
-  _data.set(id, event)
-  board._save()
+  board.office.desk.set(event, id)
+  board.office.desk.flush()
 
   if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 
@@ -74,7 +72,7 @@ async function syncGCal(board: Taskbook, name?: string | null) {
 
   // first pull existing events we have
   // TODO: `@calendar` from config or constants
-  const todayExistingEvents = Object.values(board._data.all()).filter((each) =>
+  const todayExistingEvents = Object.values(board.office.desk.all()).filter((each) =>
     each.boards.includes(`@${config.local.defaultBoard}`)
   )
 
@@ -90,7 +88,7 @@ async function syncGCal(board: Taskbook, name?: string | null) {
     board.deleteItems(idsToDelete)
     // if there are no further events to process, this is our only chance to
     // commit the deletions
-    if (events.length === 0) board._save()
+    if (events.length === 0) board.office.desk.flush()
   }
 
   events.forEach((calEvent) => {

@@ -135,7 +135,10 @@ program
   .alias('r')
   .description('Restore items from archive')
   .argument('<items...>')
-  .action((items) => taskbook.restoreItems(items))
+  .action((items) => {
+    taskbook.restoreItems(items)
+    render.successRestore(items)
+  })
 
 program
   .command('comment')
@@ -159,7 +162,10 @@ program
   .description('Delete items')
   .option('-t, --trash', 'send to trash bin instead of archive')
   .argument('<items...>')
-  .action((items, options) => taskbook.deleteItems(items, options.trash))
+  .action((items, options) => {
+    taskbook.deleteItems(items, options.trash)
+    render.successDelete(items)
+  })
 
 program
   .command('check')

@@ -18,8 +18,6 @@ const commonTag = config.plugins?.srr?.tag || 'srr'
  * identified, and work out the review process.
  */
 function createCard(board: Taskbook, front: string[], link?: string) {
-  const { _data } = board
-
   const { description, tags, boards } = parseOptions(front, {
     // automatically push to the global board for all flashcards
     defaultBoard: config.local.defaultBoard,
@@ -30,7 +28,7 @@ function createCard(board: Taskbook, front: string[], link?: string) {
   // an easy way to list them all by using `tb list <configured tag>`
   tags.push(`+${commonTag}`)
 
-  const id = _data.generateID()
+  const id = board.office.desk.generateID()
 
   log.info(`initialising flashcard ${id}: ${boards}`)
   const flashcard = new FlashcardTask({
@@ -44,9 +42,9 @@ function createCard(board: Taskbook, front: string[], link?: string) {
   // By definition a card will need its "back", which is a comment in Taskbook
   flashcard.writeCommentInEditor(config.local.editor)
 
-  _data.set(id, flashcard)
+  board.office.desk.set(flashcard, id)
 
-  board._save()
+  board.office.desk.flush()
 
   render.successCreate(flashcard)
 
