@@ -2,7 +2,6 @@ import chalk from 'chalk'
 
 import Printer, { SignaleLogConfig, wait, success } from '../../interfaces/printer'
 import IBullet, { IBulletOptions } from '../../domain/ibullet'
-import { msToMinutes } from '../../shared/utils'
 import { UnixTimestamp } from '../../types'
 import Task from '../../domain/task'
 import config from '../../config'
@@ -58,9 +57,7 @@ export default class EventTask extends Task {
   display(signaleObj: SignaleLogConfig) {
     const prettyTime = prettyToday(this.schedule)
     const color = this.isComplete ? grey.strikethrough : chalk.blue
-    // prefix message with scheduled and duration
-    const duration = msToMinutes(this.duration || this.estimate)
-    signaleObj.message = `${color(prettyTime)} ${grey(duration)} ${signaleObj.message}`
+    signaleObj.message = `${color(prettyTime)} ${signaleObj.message}`
 
     if (this.isComplete) success(signaleObj)
     else if (this.inProgress) wait(signaleObj)

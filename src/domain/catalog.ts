@@ -246,9 +246,9 @@ export default class Catalog {
   todayTasks(): Catalog {
     return this.subcatalog((t) => {
       // not a task
-      if (!t.isTask) return true
+      if (!t.isTask) return false
       // not recurrent
-      if (t.repeat === null) return true
+      if (t.repeat === null) return false
 
       // so now we have a recurrent task - let's check if it is due today
       const { repeat } = t
@@ -264,13 +264,13 @@ export default class Catalog {
       // TODO: handle the whole array
       // `d` is the day of the week, `D` is the day of the month
       const { D, d } = schedule.schedules[0]
-      if (d && d.includes(today.getDay() + 1)) return false
-      if (D && D.includes(today.getDate())) return false
+      if (d && d.includes(today.getDay() + 1)) return true
+      if (D && D.includes(today.getDate())) return true
       // this seems to mean 'every day'
-      if (D && D.includes(1)) return false
+      if (D && D.includes(1)) return true
 
       // exclude the rest
-      return true
+      return false
     })
   }
 

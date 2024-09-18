@@ -1,6 +1,8 @@
 ## Things to build
 
 **New design**
+- What does it do after `global config ready`
+
 - There is a very common pattern where we grab an item and do some changes
   using that item own domain (so we don't want to depart from that). But to
   make it work with the storage, you need everytime to `desk.set(item, item.id)`
@@ -12,6 +14,7 @@
 
 ### Next
 
+- [ ] IDEA Implement (configurable) alignment
 - [ ] Implement sqlite
 - [ ] Capture resources too (services, github, website, ...)
 - [ ] Capture reading list

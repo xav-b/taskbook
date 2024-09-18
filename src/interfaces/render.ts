@@ -178,6 +178,17 @@ class Render {
       repeat = getRepeatHint(item)
     } else message = buildNoteMessage(item)
 
+    // TODO: if (config.local.alignMetas)
+    let descCol = 55
+    const offsets = {
+      event: 8,
+    }
+    // @ts-ignore
+    descCol = descCol - (offsets[item._type] || 0)
+    if (message.length > descCol) message = message.slice(0, descCol - 3) + '...'
+    // TODO: handle goal and event (they have prefix)
+    else message += grey(` ${'.'.repeat(descCol - item.description.length - 1)}`)
+
     if (age !== 0 && config.local.showAge) suffix.push(grey(`${age}d`))
     if (star) suffix.push(star)
     if (link) suffix.push(link)

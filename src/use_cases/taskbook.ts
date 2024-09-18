@@ -398,7 +398,7 @@ class Taskbook {
     // eslint-disable-next-line prefer-destructuring
     else if (property === 'duration') item.duration = parseInt(input[0], 10) * 60 * 1000
 
-    this.office.desk.set(item)
+    this.office.desk.set(item, item.id)
     this.office.desk.flush()
 
     render.successEdit(itemId)
