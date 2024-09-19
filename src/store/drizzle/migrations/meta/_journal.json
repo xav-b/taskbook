@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1726808777601,
+      "tag": "20240920050617_sleepy_eddie_brock",
+      "breakpoints": true
+    }
+  ]
+}

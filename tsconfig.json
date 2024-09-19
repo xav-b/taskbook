@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "ES2021",
     "module": "commonjs",
     "allowJs": true,
     "resolveJsonModule": true,
@@ -10,13 +10,15 @@
     "strict": true,
     "outDir": "dist",
     "sourceMap": true,
-    "esModuleInterop": true,
+    "esModuleInterop": true /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */,
     "moduleResolution": "node",
+    "skipLibCheck": true /* Skip type checking all .d.ts files. */,
+    "declaration": true,
     "paths": {
       "~/": ["./src/"],
       "~/*": ["./src/*"]
     }
   },
   "include": ["package.json", "src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts"]
+  "exclude": ["node_modules", "src/**/*.test.ts"]
 }

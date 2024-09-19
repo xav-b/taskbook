@@ -11,13 +11,13 @@ export default class GoalPlugin extends BulletBoardPlugin {
       .alias('g')
       .description('Create a new goal')
       .argument('<description...>')
-      .action((description) => commands.create(board, description))
+      .action(async (description) => await commands.create(board, description))
 
     program
       .command('toward')
       .description('Link tasks to a goal')
       .argument('goal')
       .argument('<tasks...>')
-      .action((goal, tasks) => commands.link(board, goal, tasks))
+      .action(async (goal, tasks) => await commands.link(board, goal, tasks))
   }
 }

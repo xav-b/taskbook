@@ -7,7 +7,7 @@ import Goal from './goal'
 
 const goalsBoard = config.plugins?.goals?.board || 'goals'
 
-function create(board: Taskbook, desc: string[]) {
+async function create(board: Taskbook, desc: string[]) {
   const { description, priority, tags } = parseOptions(desc, {
     defaultBoard: config.local.defaultBoard,
   })
@@ -18,25 +18,30 @@ function create(board: Taskbook, desc: string[]) {
 
   const goal = new Goal({ id, description, boards, priority, tags })
 
-  board.office.desk.set(goal, id)
-  board.office.desk.flush()
+  await board.office.desk.set(goal, id)
 
   if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 
   render.successCreate(goal)
 }
 
-function link(board: Taskbook, goalID: string, taskIDs: string[]) {
+async function link(board: Taskbook, goalID: string, taskIDs: string[]) {
   const { desk } = board.office
 
   // TODO: verify that goal exists
   // camel-case it
-  const goalTag = `+${desk.get(goalID).description.replace(' ', '')}`
-  // alternative: const goalBoard = `@goal-${goalID}`
+  const goal = await desk.get(goalID)
+  if (goal === null) throw new Error(`enabled to find goal #${goalID}`)
 
-  taskIDs.forEach((taskID: string) => {
+  const goalTag = `+${goal.description.replace(' ', '')}`
+  // NOTE: alternative: const goalBoard = `@goal-${goalID}`
+
+  const tasks = await desk.getMulti(taskIDs)
+  for (const item of tasks) {
+    // FIXME: `getMulti` design dosn't tell us which one was not found
+    if (item === null) throw new Error(`there was an invalid item: ${taskIDs}`)
+
     // we use `star` to indicate a task is linked to a goal
-    const item = desk.get(taskID)
     item.isStarred = true
 
     // and the actual linkage to a goal happens through a tag. As a remidner,
@@ -46,13 +51,11 @@ function link(board: Taskbook, goalID: string, taskIDs: string[]) {
     // <mygoal>`
     if (!item.tags.includes(goalTag)) item.tags.push(goalTag)
 
-    desk.set(item, item.id)
-  })
+    await desk.set(item, item.id)
+  }
 
   // FIXME: board.starItems(taskIDs) won't save it
   render.markStarred(taskIDs)
-
-  desk.flush()
 
   render.successMove(taskIDs.join(', '), [goalTag])
 }

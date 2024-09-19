@@ -147,7 +147,7 @@ export default class Task extends BasicBullet {
    */
   toMarkdown() {
     const comment = this.decodeComment()
-    const ago = formatDistance(new Date(this._createdAt), new Date(), { addSuffix: true })
+    const ago = formatDistance(new Date(this._createdAt * 1000), new Date(), { addSuffix: true })
     // saving an interesting past feature, pulling tasks from the comments
     // const subtasksDone = (decoded.match(/\[x\]/g) || []).length
     // const subtasksTodo = (decoded.match(/\[\s\]/g) || []).length
@@ -158,6 +158,7 @@ export default class Task extends BasicBullet {
 | Meta | Value |
 | ---- | ----- |
 | UID | ${this._uid} |
+| Type | ${this._type} |
 | Created | ${ago} |
 | Priority | ${Priority[this.priority]} |
 | Estimate | ${msToMinutes(this.estimate)} |

@@ -117,7 +117,8 @@ function buildTaskMessage(item: Task, isArchive = false): string {
     // pick the first one - not great but I don't see a valid case where it
     // makes sense to display nicely several matches
     const scope = toHighlight[0].replace('+', '').replace('@', '')
-    message.push(`${isComplete ? `${grey(scope)}:` : `${chalk.bold(scope)}`}:`)
+    const style = item.priority > 1 ? config.theme.priorities[item.priority] : chalk
+    message.push(isComplete ? `${grey(scope)}` : `${style.bold(scope)}`)
     // no need to display that tag then
     // FIXME: that's a bit dangerous to mutate the item though...
     item.tags = item.tags.filter((tag) => tag !== toHighlight[0])
@@ -127,7 +128,6 @@ function buildTaskMessage(item: Task, isArchive = false): string {
     const style = config.theme.priorities[item.priority]
     message.push(style(description))
   } else {
-    // message.push(isComplete ? grey(description) : description)
     message.push(isComplete ? grey(description) : description)
   }
 
@@ -173,6 +173,14 @@ class Render {
 
     const prefix = buildPrefix(item.id)
 
+    // TODO: it duplicates the scope logic that was added at the beginning of description
+    // (we need to do it before the tag is removed in `buildMessage`)
+    const toHighlight = item.tags
+      .concat(item.boards)
+      .filter((tag) =>
+        (config.local.highlightTags ?? []).includes(tag.replace('+', '').replace('@', ''))
+      )
+
     if (item instanceof Task) {
       message = buildTaskMessage(item)
       repeat = getRepeatHint(item)
@@ -180,13 +188,15 @@ class Render {
 
     // TODO: if (config.local.alignMetas)
     let descCol = 55
-    const offsets = {
+    const offsets: Record<string, number> = {
+      // TODO: also for goals
       event: 8,
     }
+    const scopeOffset = toHighlight.length === 1 ? toHighlight[0].length : 0
     // @ts-ignore
-    descCol = descCol - (offsets[item._type] || 0)
+    descCol = descCol - (offsets[item._type] || 0) - scopeOffset
     if (message.length > descCol) message = message.slice(0, descCol - 3) + '...'
-    // TODO: handle goal and event (they have prefix)
+    // FIXME: I think emojis mess it up
     else message += grey(` ${'.'.repeat(descCol - item.description.length - 1)}`)
 
     if (age !== 0 && config.local.showAge) suffix.push(grey(`${age}d`))
@@ -195,9 +205,11 @@ class Render {
     if (repeat) suffix.push(repeat)
     if (comment.length > 0) suffix.push(comment)
 
-    const { duration, isComplete } = item
+    const { duration, estimate, isComplete } = item
     if (duration && duration > 0 && isComplete) {
       suffix.push(grey(msToMinutes(duration)))
+    } else if (estimate) {
+      suffix.push(grey(msToMinutes(estimate)))
     }
 
     if (item.tags?.length > 0) suffix.push(grey(item.tags.join(' ')))

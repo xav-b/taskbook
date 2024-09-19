@@ -31,7 +31,8 @@ function prettyToday(ts: UnixTimestamp) {
  * `IBullet` domains. Even a note or a goal could very much be scheduled.
  */
 export interface EventProperties extends IBulletOptions {
-  // timestamp as an epoch ms (to make it consistent with the `createdAt` etc...)
+  // in fact `schedule` is alrady a member of IBulletOptions, we just make it
+  // mandatory here, in the case of an event
   schedule: UnixTimestamp
 }
 

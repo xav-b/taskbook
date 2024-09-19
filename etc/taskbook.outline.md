@@ -1,28 +1,29 @@
 # Ship Taskbook
 
-I can actually comment as much as I want, this will be ignored, but can provide
-useful context
-
-Top levels are boards, under which we have (actual) tasks, and finally subtasks
-(as comments of the tasks).
-Task level supports the same syntax as the cli, i.e. priority, estimate, etc...
-
-- More versatile storage
-  - Have a `.getUnique` on the interface p:2
-  - Implement archive and bin at the storage level p:2
-  - Have a storage switch from config e:30
-  - storage to have their config space +foo +bar
-  - Implement more storages
-    - Implement SQLite
-    - Implement Redis
-    - Migration script
+- Tech debt
+  - Taskbook should only manipulate the catalog
+  - Implement commands
+  - Fix all commands and plugins
 - Packaging
   - Settle on a name and npm package
-  - Publish `@tasbook/core` and `@tasbook/cli`
-  - Package UDP and TCP servers as a standalone example of core package
-- Outline
-  - Implement subtask
+  - publish the npm package
+  - Test and improve initial setup
+- Open source
+  - Re-write the readme
+  - Have a documentation website
+  - Document cli usage
+  - Document core package
+- Multi-tenant
+  - Explore turso multi-tenancy
+  - Develop a compatible cli and web solution
+  - Have a cli authentication to the service for sync/backup
 - Go to market
-  - Setup jsoncrack and related services (clerk, supabase)
-  - Have key features
-  - Package Free and simple sync
+  - Landing page
+  - Stripe with Package Free (open core) and backup + machine sync
+  - Can I have an example of webapp with libsql?
+- Marketing
+  - Look through PR and issues of original project
+  - Email all stargazers of taskbook
+
+To do things right we should have a `@taskbook/core` and `@taskbook/cli`
+Package UDP and TCP servers as a standalone example of core package.

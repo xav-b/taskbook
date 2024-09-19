@@ -49,6 +49,13 @@ interface UserConfig extends JsonMap {
 type PluginConfig = Record<string, AnyJson>
 type AliasConfig = Record<string, string>
 
+interface TursoConfig {
+  url: string
+  authToken?: string
+}
+type Stores = 'turso'
+type StoreConfig = Record<Stores, TursoConfig>
+
 interface ThemeConfig {
   priorities: Record<Priority, chalk.Chalk>
   highlightTitle: chalk.Chalk
@@ -106,6 +113,11 @@ function ensureUserConfig(): void {
   // commented out
   const serialized = TOML.stringify({
     taskbook: userDefaults,
+    store: {
+      turso: {
+        url: `file:${userDefaults.taskbookDirectory}/tasbook.db`,
+      },
+    },
     // dummy examples
     plugin: { example: { key: 'value' } },
     alias: { subcommand: 'tb example' },
@@ -128,6 +140,7 @@ function ensureLocalState(): void {
 
 function parseUserlandConfig(): {
   local: UserConfig
+  store: StoreConfig
   plugins: Record<string, PluginConfig>
   aliases: AliasConfig
 } {
@@ -143,8 +156,10 @@ function parseUserlandConfig(): {
   const withDefaults = { ...userDefaults, ...(parsed.taskbook as UserConfig) }
   return {
     local: withDefaults,
-    plugins: parsed.plugin as Record<string, PluginConfig>,
+    // store: parsed.store as StoreConfig,
+    store: parsed.store as Record<Stores, Record<keyof TursoConfig, string>>,
     aliases: parsed.alias as AliasConfig,
+    plugins: parsed.plugin as Record<string, PluginConfig>,
   }
 }
 
@@ -167,6 +182,8 @@ export class IConfig {
 
   public aliases: AliasConfig
 
+  public store: StoreConfig
+
   public state: LocalState
 
   constructor() {
@@ -174,10 +191,11 @@ export class IConfig {
     ensureLocalState()
 
     const state = parseUserlandState()
-    const { local, plugins, aliases } = parseUserlandConfig()
+    const { local, store, plugins, aliases } = parseUserlandConfig()
 
     this.state = state
     this.local = local
+    this.store = store
     this.plugins = plugins
     this.aliases = aliases
     this.theme = defaultThemeConfig()

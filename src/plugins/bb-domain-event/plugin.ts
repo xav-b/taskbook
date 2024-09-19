@@ -49,7 +49,7 @@ export default class EventPlugin extends BulletBoardPlugin {
       .argument('time')
       .argument('estimate')
       .argument('<description...>')
-      .action((time, estimate, description) => {
+      .action(async (time, estimate, description) => {
         const estimateMs = parseDuration(estimate)
         if (!estimateMs) throw new Error(`failed to parse estimate: ${estimate}`)
 
@@ -57,7 +57,7 @@ export default class EventPlugin extends BulletBoardPlugin {
 
         // TODO: support `schedule` as a datetime, and trick the system of creation date
         // so by default will display today's events
-        commands.upsert(board, dt.getTime(), description, estimateMs)
+        await commands.upsert(board, dt.getTime(), description, estimateMs)
       })
 
     program
@@ -67,12 +67,12 @@ export default class EventPlugin extends BulletBoardPlugin {
         'name the calendar credentials that will be saved',
         'default'
       )
-      .action(async (opts) => commands.syncGCal(board, opts.calendar))
+      .action(async (opts) => await commands.syncGCal(board, opts.calendar))
 
     // NOTE: is it the best place to "garbage collect"? This could be done at
     // `tb clear` too, meaning developing a way to hook on that event, which
     // might be a nice idea. But this will remain uncheck until it runs, while
-    // here this will always be up to date, consenting a bit pf perf hit.
+    // here this will always be up to date, consenting a bit of perf hit.
     if (config.plugins?.calendar?.gc) {
       log.info('garbage collecting events')
 
@@ -81,7 +81,6 @@ export default class EventPlugin extends BulletBoardPlugin {
       if (checked.length > 0) {
         // update the catalog and database
         checked.forEach((each) => board.office.desk.set(each, each.id))
-        board.office.desk.flush()
 
         render.markComplete(checked)
       }

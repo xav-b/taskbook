@@ -1,15 +1,24 @@
+import { prompt } from 'enquirer'
 import later from '@breejs/later'
+import { eq, and, inArray } from 'drizzle-orm'
+import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql'
+import { createClient } from '@libsql/client'
 
+import * as schema from '../store/drizzle/schema'
 import IBullet, { IBulletOptions } from './ibullet'
 import Task from './task'
 import Note from '../domain/note'
 import CalendarEvent, { EventProperties } from '../plugins/bb-domain-event/event'
 import Goal from '../plugins/bb-domain-goal/goal'
 import Flashcard from '../plugins/bb-domain-card/card'
-import Storage, { RawIBullet, RawCatalog } from '../store'
+import Logger from '../shared/logger'
 import { hasTerms } from '../shared/parser'
 import { Maybe } from '../types'
 import config from '../config'
+
+const log = Logger('domain.catalog')
+
+type BulletRow = typeof schema.bullets.$inferInsert
 
 // base layout of items is { itemId: IBullet, .... }
 export type CatalogInnerData = Record<string, IBullet>
@@ -29,41 +38,74 @@ export interface CatalogStats {
   duration?: number
 }
 
-function parseRawItem(item: RawIBullet): IBullet {
-  if (item._type === 'task') return new Task(item as IBulletOptions)
-  else if (item._type === 'note') return new Note(item as IBulletOptions)
-  else if (item._type === 'event') return new CalendarEvent(item as EventProperties)
-  else if (item._type === 'goal') return new Goal(item as IBulletOptions)
-  else if (item._type === 'flashcard') return new Flashcard(item as IBulletOptions)
+export function parseRawItem(row: BulletRow): IBullet {
+  // 1. remap to IBulletOptions
+  const item: IBulletOptions = {
+    ...row,
+    id: row.ctx_id,
+    _uid: row.id,
+    _type: row.bulletType,
+    _createdAt: row.createdAt,
+  }
 
-  throw new Error(`[warning] unknown item type: ${item._type}`)
+  // 2. applythe right class
+  if (row.bulletType === 'task') return new Task(item as IBulletOptions)
+  else if (row.bulletType === 'note') return new Note(item as IBulletOptions)
+  else if (row.bulletType === 'event') return new CalendarEvent(item as EventProperties)
+  else if (row.bulletType === 'goal') return new Goal(item as IBulletOptions)
+  else if (row.bulletType === 'flashcard') return new Flashcard(item as IBulletOptions)
+
+  throw new Error(`[warning] unknown item type: ${row.bulletType}`)
 }
 
 // NOTE: it is not easy to type `any` because it should be the union of all the
 // possible type fields, which introduces a strong coupling... And since it
 // needs to be optional, it doesn't even bring much type safety.
-function mapFromJson(data: RawCatalog): CatalogInnerData {
+// TODO: remove the exprot, TMP
+export function mapFromJson(data: BulletRow[]): CatalogInnerData {
   const catalog: CatalogInnerData = {}
 
-  Object.values(data).forEach((each) => (catalog[each.id] = parseRawItem(each)))
+  Object.values(data).forEach((each) => (catalog[each.ctx_id] = parseRawItem(each)))
 
   return catalog
 }
 
 export default class Catalog {
-  bucket: string | undefined
-
-  protected store: Storage
+  context: string
+  bucket: string
+  db: LibSQLDatabase<typeof schema>
 
   // internal cache of all items
-  protected _items: CatalogInnerData | null
+  protected _items: CatalogInnerData
 
-  constructor(store: Storage, bucket?: string, items?: CatalogInnerData) {
-    this.store = store
-    this.bucket = bucket
-    // if not forced at initialisation, this will be lazy loaded on the next
-    // cache miss
-    this._items = items || null
+  constructor(context?: string, bucket?: string, items?: CatalogInnerData) {
+    // NOTE: both could also simply default to null, but it does make some
+    // querying simpler with drizzle
+    this.context = context || 'default'
+    this.bucket = bucket || 'desk'
+    // force an initialisation or initialise an empty cache
+    this._items = items || {}
+
+    log.info(`initialising Turso DB: ${config.store.turso.url}`)
+    const client = createClient(config.store.turso)
+
+    // this.db = drizzle(client, { schema })
+    this.db = drizzle(client, { logger: false })
+  }
+
+  // NOTE: maybe they should ints, we're talking about the ui ids
+  async loadCache(itemIds?: string[]) {
+    if (this._items.length) log.warn(`catalog cache will be overwritten by: ${itemIds || 'all'}`)
+
+    // TODO: if itemIds were provided, filter in the query
+    log.info(`loading catalog '${this.context}/${this.bucket}' cache: ${itemIds || 'all'}`)
+    const data = await this.db
+      .select()
+      .from(schema.bullets)
+      .where(and(eq(schema.bullets.context, this.context), eq(schema.bullets.bucket, this.bucket)))
+      .all()
+
+    this._items = mapFromJson(data)
   }
 
   /**
@@ -72,11 +114,11 @@ export default class Catalog {
    */
   public generateID(): number {
     const ids = this.ids().map((id) => parseInt(id, 10))
-    const max = Math.max(...ids)
 
     // THE first task
     if (ids.length === 0) return 1
 
+    const max = Math.max(...ids)
     // pick up the first available id. This allows to recycle ids that have
     // been moved to other buckets.
     for (let idx = 0; idx < max; idx++) {
@@ -90,13 +132,14 @@ export default class Catalog {
 
   /**
    * Unlike other methods, use the internal id to check for existence.
+   * TODO: support to look into
    */
   public exists(uid: string): boolean {
     // most common case, check item id
-    const doesExist = uid in this.ids()
+    const doesExist = this.ids().includes(uid)
     if (doesExist) return true
 
-    // else give a shot at the _uid
+    // else give a shot at the _uid (no use case though)
     return Object.values(this.all()).find((each) => each._uid === uid) !== undefined
   }
 
@@ -105,9 +148,7 @@ export default class Catalog {
   }
 
   all(): CatalogInnerData {
-    // cache miss
-    if (this._items === null) this._items = mapFromJson(this.store.all(this.bucket))
-
+    // TODO: cache miss
     return this._items
   }
 
@@ -121,9 +162,9 @@ export default class Catalog {
   public boards(): string[] {
     const boards = [config.local.defaultBoard]
 
-    this.ids().forEach((id: string) => {
-      boards.push(...this.get(id).boards.filter((x: string) => boards.indexOf(x) === -1))
-    })
+    for (const item of Object.values(this.all())) {
+      boards.push(...item.boards.filter((x: string) => boards.indexOf(x) === -1))
+    }
 
     return boards
   }
@@ -131,30 +172,76 @@ export default class Catalog {
   public tags() {
     const tags: string[] = []
 
-    this.ids().forEach((id) => {
-      // if (this.get(id).tags.length ) tags.push(...this.get(id).tags.filter((x) => tags.indexOf(x) === -1))
-      tags.push(...this.get(id).tags.filter((x) => tags.indexOf(x) === -1))
-    })
+    for (const item of Object.values(this.all())) {
+      tags.push(...item.tags.filter((x) => tags.indexOf(x) === -1))
+    }
 
     return tags
   }
 
-  public get(id: string): IBullet {
+  public async getMulti(ids: string[]): Promise<Array<IBullet | null>> {
+    // check the cache first
+    const cached: IBullet[] = []
+    for (const id of ids) if (id in this._items) cached.push(this._items[id])
+
+    // we found everything, that's it
+    if (ids.length === cached.length) return cached
+
+    const rows = await this.db
+      .select()
+      .from(schema.bullets)
+      .where(
+        and(
+          inArray(
+            schema.bullets.ctx_id,
+            ids.map((each) => parseInt(each, 10))
+          ),
+          eq(schema.bullets.context, this.context),
+          eq(schema.bullets.bucket, this.bucket)
+        )
+      )
+      .all()
+
+    return rows.map((each) => {
+      if (!each) return null
+      return parseRawItem(each)
+    })
+  }
+
+  // TODO: this could be undefined/null. In fact supporting this avoids to have
+  // to check the ids at the start everywhere
+  public async get(id: string): Promise<IBullet | null> {
     // if the whole dataset has been loaded already, it's faster to use the cached hashmap
-    if (this._items) return this._items[id]
+    if (id in this._items) return this._items[id]
 
-    // else ask the store
-    const item = this.store.get(id, this.bucket)
-    if (item === null) throw new Error(`failed to retrieve #${id} from store`)
+    // somehow this below doesn't works
+    // const row = await this.db.query.bullets.findFirst({
+    //   where: eq(schema.bullets.ctx_id, parseInt(id, 10)),
+    // })
+    // we also don't `limit(1)` so we can detect issues
+    const rows = await this.db
+      .select()
+      .from(schema.bullets)
+      .where(
+        and(
+          eq(schema.bullets.context, this.context),
+          eq(schema.bullets.bucket, this.bucket),
+          eq(schema.bullets.ctx_id, parseInt(id, 10))
+        )
+      )
 
-    return parseRawItem(item)
+    if (!rows) return null
+    if (rows.length !== 1) throw new Error(`fetching #${id} had unexpected results: ${rows.length}`)
+
+    return parseRawItem(rows[0])
   }
 
   public uget(uid: string): Maybe<IBullet> {
     return Object.values(this.all()).find((each) => each._uid === uid) || null
   }
 
-  set(data: IBullet, id = this.generateID()) {
+  // TODO: rename create/upsert
+  async set(data: IBullet, id = this.generateID()): Promise<number> {
     // we also overwrite the `id` as it might be coming from one bucket,
     // while here we might be saving it to another, having its own constraints
     // of ids. Obviously this is terrible design.
@@ -163,11 +250,50 @@ export default class Catalog {
     // if we have a valid cache, update it
     if (this._items) this._items[id] = item
 
-    this.store.upsert(item, undefined, this.bucket)
+    const toOverwrite: Partial<BulletRow> = {
+      isStarred: data.isStarred,
+      description: data.description,
+      comment: data.comment,
+      link: data.link,
+      priority: data.priority,
+      repeat: data.repeat,
+      schedule: data.schedule,
+
+      boards: data.boards,
+      tags: data.tags,
+
+      duration: data.duration,
+      estimate: data.estimate,
+    }
+    const bullet = {
+      id: data._uid,
+      ctx_id: id,
+
+      context: this.context,
+      bucket: this.bucket,
+
+      bulletType: data._type,
+      isTask: data.isTask,
+
+      ...toOverwrite,
+    } as BulletRow
+
+    await this.db
+      .insert(schema.bullets)
+      .values(bullet)
+      .onConflictDoUpdate({
+        target: [schema.bullets.bucket, schema.bullets.context, schema.bullets.ctx_id],
+        set: toOverwrite,
+      })
+
+    return id
   }
 
-  edit(itemId: string, properties: Record<string, any>): IBullet {
-    const item = this.get(itemId)
+  // FIXME: this only works if we provide the intersection of IBullet and
+  // BulletRow, otherwise the internal cache and db update will diverge
+  async edit(itemId: string, properties: Partial<BulletRow>): Promise<IBullet | null> {
+    const item = await this.get(itemId)
+    if (item === null) return null
 
     // update our internal data representation
     for (const [key, value] of Object.entries(properties)) {
@@ -176,49 +302,98 @@ export default class Catalog {
     }
 
     // and of course the DB
-    this.store.upsert(item, item.id.toString())
+    await this.db
+      .update(schema.bullets)
+      .set(properties)
+      .where(eq(schema.bullets.ctx_id, parseInt(itemId)))
 
     return item
   }
 
-  batchEdit(itemIds: string[], properties: Record<string, any>) {
-    const dirty: CatalogInnerData = {}
+  /**
+   * Run the same update across several ids, and update the cache.
+   *
+   * If an id is invalid though the update will just end up ignored (since IN
+   * (1, 3, ...) will simply not match). This means it's the caller
+   * responsability to detect first such issue and render it to the frontend.
+   */
+  async batchEdit(itemIds: string[], properties: Partial<BulletRow>) {
+    log.info(`batch editing ${itemIds.join(', ')}`, properties)
 
-    itemIds.forEach((id: string) => {
-      const item = this.get(id)
-      dirty[id] = item
-
+    for (const id of itemIds) {
       // update our internal data representation
       for (const [key, value] of Object.entries(properties)) {
         // @ts-ignore
-        item[key] = value
+        if (id in this._items) this._items[id][key] = value
       }
-      // and of course the DB
-      this.store.upsert(item, item.id.toString())
-    })
+    }
 
-    this.flush()
+    // and of course the DB
+    await this.db
+      .update(schema.bullets)
+      .set(properties)
+      .where(
+        and(
+          inArray(schema.bullets.ctx_id, itemIds.map(parseInt)),
+          eq(schema.bullets.context, this.context),
+          eq(schema.bullets.bucket, this.bucket)
+        )
+      )
   }
 
-  delete(id: number) {
+  async delete(id: number) {
     if (this._items) delete this._items[id]
 
-    this.store.delete(id.toString(), this.bucket)
+    await this.db.delete(schema.bullets).where(eq(schema.bullets.ctx_id, id))
   }
 
-  flush() {
-    this.store.commit(this.bucket)
+  async transfer(ids: number[], bucketTo: string) {
+    log.info(`transfering items from ${this.bucket} to ${bucketTo}`, ids)
+
+    const targetCatalog = new Catalog(this.context, bucketTo)
+    // we will need everything in memory to find the most suitable new IDs
+    await targetCatalog.loadCache()
+
+    for (const id of ids) {
+      // first we need a valid id in the new bucket
+      const targetId = targetCatalog.generateID()
+      log.info(`freeing id ${id} to the new ${targetId} in ${this.context}/${bucketTo}`)
+
+      // update target catallog internal cache
+      // FIXME: if this.loadCache() has not been called, it will not find it and crash
+      targetCatalog._items[targetId] = this._items[id.toString()]
+      targetCatalog._items[targetId].id = targetId
+      // and this one too
+      delete this._items[id]
+
+      // then we can transfer it
+      await this.db
+        .update(schema.bullets)
+        .set({
+          ctx_id: targetId,
+          bucket: bucketTo,
+        })
+        .where(
+          and(
+            eq(schema.bullets.context, this.context),
+            eq(schema.bullets.bucket, this.bucket),
+            eq(schema.bullets.ctx_id, id)
+          )
+        )
+    }
   }
 
-  task(id: string): Maybe<Task> {
-    if (this._items) {
+  /**
+   * Syntax sugar to validate the requested item is a task
+   */
+  async task(id: string): Promise<Maybe<Task>> {
+    if (id in this._items) {
       const { isTask } = this._items[id]
       return isTask ? (this._items[id] as Task) : null
     }
 
-    // cache miss
-    const item = this.store.get(id, this.bucket) as Task
-    return item.isTask ? (item as Task) : null
+    const item = await this.get(id)
+    return item?.isTask ? item : null
   }
 
   search(terms: string[]): Catalog {
@@ -237,10 +412,11 @@ export default class Catalog {
     const innerData: CatalogInnerData = {}
 
     Object.keys(items).forEach((id) => {
+      // @ts-ignore
       if (includeLogic(items[id])) innerData[id] = items[id]
     })
 
-    return new Catalog(this.store, this.bucket, innerData)
+    return new Catalog(this.context, this.bucket, innerData)
   }
 
   todayTasks(): Catalog {
@@ -293,24 +469,18 @@ export default class Catalog {
   public stats(): CatalogStats {
     let [complete, inProgress, pending, notes, estimate, duration] = [0, 0, 0, 0, 0, 0]
 
-    this.ids().forEach((id) => {
-      if (this.get(id).isTask) {
-        const task = this.task(id)
-
-        // given the first check it should never happen, so throw it if it does
-        // because it's a bug
-        if (task === null) throw new Error(`item #${id} is not a task`)
-
-        estimate += task.estimate || 0
-        duration += task.duration || 0
+    const library = this.all()
+    for (const item of Object.values(library)) {
+      if (item.isTask) {
+        estimate += item.estimate || 0
+        duration += item.duration || 0
 
         // we actually know it's a task thanks for the first condition
-        return task.isComplete ? complete++ : task.inProgress ? inProgress++ : pending++
+        item.isComplete ? complete++ : item.inProgress ? inProgress++ : pending++
+      } else {
+        notes++
       }
-
-      // else
-      return notes++
-    })
+    }
 
     return { complete, inProgress, pending, notes, estimate, duration }
   }
@@ -338,16 +508,16 @@ export default class Catalog {
     // something else
     if (boards.length === 0) boards = this.boards()
 
-    this.ids().forEach((id) => {
-      boards.forEach((board: string) => {
-        if (this.get(id).boards.includes(board) || this.get(id).tags?.includes(board)) {
+    for (const item of Object.values(this.all())) {
+      for (const board of boards) {
+        if (item.boards.includes(board) || item.tags?.includes(board)) {
           // we already have this board with items, append to it
-          if (Array.isArray(grouped[board])) grouped[board].push(this.get(id))
+          if (Array.isArray(grouped[board])) grouped[board].push(item)
           // initialise that `board` group
-          else grouped[board] = [this.get(id)]
+          else grouped[board] = [item]
         }
-      })
-    })
+      }
+    }
 
     // re-order the way `boards` were given
     const orderInit: Record<string, IBullet[]> = {}
@@ -362,6 +532,68 @@ export default class Catalog {
   public toJSON(): Record<string, any> {
     return Object.entries(this.all()).map(([, item]) => item.toJSON())
   }
+
+  async completeTask(
+    taskId: string,
+    tags?: string[],
+    duration?: Maybe<number>,
+    doneAt?: Maybe<Date>
+  ): Promise<Task | null> {
+    const task = await this.task(taskId)
+    if (task === null) return null
+
+    if (task.isComplete) task.uncheck()
+    else task.check(duration, tags)
+
+    // `check` method sets `updatedAt` to now. But if the task is
+    // complete and a `doneAt` was provided, overwrite it
+    if (task.isComplete && doneAt) task.updatedAt = doneAt.getTime()
+
+    // if duration is > {config number of hours}, ask confirmation
+    if (
+      task.isComplete &&
+      task.duration &&
+      // configured as hours so comapre this in ms
+      task.duration > config.local.suspiciousDuration * 60 * 60 * 1000
+    ) {
+      // @ts-ignore
+      const { isYes } = await prompt({
+        type: 'confirm',
+        name: 'isYes',
+        message: `Duration seems excessive: about ${Math.round(
+          task.duration / (60 * 60 * 1000)
+        )}h, is that correct`,
+      })
+      // offer to overwrite if that was a mistake
+      if (!isYes) {
+        // @ts-ignore
+        const { correct } = await prompt({
+          type: 'number',
+          name: 'correct',
+          message: 'How long did it take (in minutes)?',
+        })
+        task.duration = correct * 60 * 1000
+      }
+    }
+
+    log.debug(`updating cache and db of task #${task.id}`)
+    // update cache
+    this._items[task.id] = task
+
+    // update db
+    await this.db
+      .update(schema.bullets)
+      .set({
+        isComplete: task.isComplete,
+        inProgress: task.inProgress,
+        duration: task.duration,
+        tags: task.tags,
+        updatedAt: task.updatedAt,
+      })
+      .where(eq(schema.bullets.ctx_id, task.id))
+
+    return task
+  }
 }
 
 // NOTE: this could be made more generic by allowing to pick also `_startedAt`
@@ -369,14 +601,13 @@ export default class Catalog {
 export function groupByLastUpdateDay(data: Catalog) {
   const grouped: Record<string, IBullet[]> = {}
 
-  data.ids().forEach((id) => {
-    const item = data.get(id)
+  for (const item of Object.values(data.all())) {
     // format it as `DD/MM/YYYY`
     const dt = new Date(item.updatedAt).toLocaleDateString('en-UK')
 
     if (grouped.hasOwnProperty(dt)) grouped[dt].push(item)
     else grouped[dt] = [item]
-  })
+  }
 
   return grouped
 }

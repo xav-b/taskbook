@@ -1,7 +1,32 @@
 ## Things to build
 
-**New design**
-- What does it do after `global config ready`
+**Vrac**
+- [ ] FIXME I think I have `backlog` instead of `@backlog`
+- [ ] FEAT UDP monitor: task creation on boards displayed don't get stuff updated
+
+- [ ] FIXME: `done` stuff has the wrong length + event creation sometimes think it's a task
+- [ ] IDEA `tb log` to take the same parameters as `tb task` but mark it done
+- [ ] IDEA Develop a git-like system: every runs has a git commit - and tasks affected are cloned with that commit.
+  - Add an `execution/commit` id to everything done so it can be reverted. I should
+    store how every tasks look like before action, and the `revert` process is to
+    simply "undo" thoses tasks
+- [ ] IDEA Develop [machine fingerprinting](https://github.com/andsmedeiros/hw-fingerprint)
+- [ ] IDEA config could offer to ask questions. Or should this be login?
+- [ ] FIXME I think the pretty print of archived task is broken
+- [ ] IDEA The search could show a lot more stuff (starting with last edit/create)
+- [ ] FEAT Add deterministic `identity` to all notes (basically one should be
+           able to reproduce that secret key without explicit access/join on user tables)
+- [ ] FEAT Use zk as the note taker. Which will allows crazy stuff with the plugin
+- [ ] FEAT Outline: has an `outline` command that let you batch create the same way
+- [ ] TECH `getMulti` is nice but we don't know what works and dwhat didn't
+
+- [ ] FIXME where possible migrate to seconds instead of ms
+- [ ] TECH `id` being sometimes int, sometimes string, is absurd? Use string everywhere,
+           and potentially move to 2 letters. Or use int once and for all
+- [ ] TECH BulletRow and IBulletOptions have a pretty bad relationship
+- [ ] DOC [skiplibcheck in tsconfig](https://github.com/drizzle-team/drizzle-orm/issues/1207) seems pretty bad
+- [ ] TECH validate id is useless, just communicate when the `.get` fail
+- [ ] TECH Speed: What does it do after `global config ready`
 
 - There is a very common pattern where we grab an item and do some changes
   using that item own domain (so we don't want to depart from that). But to
@@ -10,7 +35,8 @@
   between atomic update or batch commit (or both, like for sql `commit()`)
   Maybe `Catalog` could track tasks that have changed, and `flush()` would
   first `.set()` all of them.
-- the super recurrent `desk.set(item, item.id)` is also silly
+- [ ] TECH the super recurrent `desk.set(item, item.id)` is also silly
+- [ ] TECH Try bun and bun:sqlite
 
 ### Next
 
@@ -248,6 +274,10 @@ premium gets you cloud features.
 
 Guide: https://developers.google.com/calendar/api/quickstart/nodejs?authuser=1
 Download `gapi-token.json` from https://console.cloud.google.com/apis/credentials?authuser=1&project=your-project
+
+## Dev
+
+`brew install tursodatabase/tap/turso`
 
 ## Resources
 

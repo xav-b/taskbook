@@ -30,7 +30,7 @@ async function todayEvents(auth: any) {
 
 // TODO: also capture the calendar description and enable comment and `--notebook`
 // pending implementation of non-vim input
-function upsert(
+async function upsert(
   board: Taskbook,
   schedule: UnixTimestamp,
   desc: string[],
@@ -51,8 +51,7 @@ function upsert(
 
   if (existing) log.info(`updating event ${id} (${existing._uid})`)
   else log.info(`creating event ${id}`, event)
-  board.office.desk.set(event, id)
-  board.office.desk.flush()
+  await board.office.desk.set(event, id)
 
   if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 
@@ -84,14 +83,9 @@ async function syncGCal(board: Taskbook, name?: string | null) {
       idsToDelete.push(String(each.id))
     }
   })
-  if (idsToDelete.length > 0) {
-    board.deleteItems(idsToDelete)
-    // if there are no further events to process, this is our only chance to
-    // commit the deletions
-    if (events.length === 0) board.office.desk.flush()
-  }
+  if (idsToDelete.length > 0) board.deleteItems(idsToDelete)
 
-  events.forEach((calEvent) => {
+  for (const calEvent of events) {
     const schedule = calEvent?.startTime.getTime()
     if (schedule === undefined) throw new Error(`invalid event start time: ${calEvent?.startTime}`)
 
@@ -99,14 +93,14 @@ async function syncGCal(board: Taskbook, name?: string | null) {
     const systemTags = [`cal.${name}`].map((each: string) => `+${each}`)
     // NOTE: we could also pass additional tags from CLI, like `+pro`
 
-    upsert(
+    await upsert(
       board,
       schedule,
       desc.concat(systemTags),
       calEvent?.duration || DEFAULT_EVENT_DURATION_MS,
       calEvent?.id || undefined
     )
-  })
+  }
 }
 
 export default { upsert, syncGCal }

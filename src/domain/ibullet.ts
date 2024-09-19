@@ -17,24 +17,26 @@ export enum Priority {
 // since we load all properties as json and initialising task with it,
 // all Item props need to be supported, albeit mostly optional
 export interface IBulletOptions {
+  // TODO: remap `id` ot the `uid` and `_uid` to `ctxId` (get it closer to db)
   id: number
   _type?: string
   _uid?: string
   _createdAt?: UnixTimestamp
   description: string
-  comment?: string
-  isStarred?: boolean
-  boards?: string[]
-  tags?: string[]
-  link?: string
-  updatedAt?: UnixTimestamp
-  duration?: number
-  estimate?: number
-  isComplete?: boolean
-  inProgress?: boolean
+  comment?: string | null
+  isStarred?: boolean | null
+  boards?: string[] | null
+  tags?: string[] | null
+  link?: string | null
+  updatedAt?: UnixTimestamp | null
+  duration?: number | null
+  estimate?: number | null
+  isComplete?: boolean | null
+  inProgress?: boolean | null
   priority?: Priority
-  repeat?: string
-  _startedAt?: UnixTimestamp
+  repeat?: string | null
+  _startedAt?: UnixTimestamp | null
+  schedule?: UnixTimestamp | null
 }
 
 /**
@@ -94,6 +96,8 @@ export default interface IBullet {
   priority: Priority
 
   repeat: Maybe<string>
+
+  schedule: Maybe<UnixTimestamp>
 
   /** ----------------------------------------------------------------------------------
    * Methods
@@ -175,6 +179,8 @@ export abstract class BasicBullet implements IBullet {
 
   repeat: Maybe<string>
 
+  schedule: Maybe<UnixTimestamp>
+
   constructor(options: IBulletOptions) {
     const now = new Date()
 
@@ -217,6 +223,7 @@ export abstract class BasicBullet implements IBullet {
     // their parsing.
     this.repeat = options.repeat || null
     this.estimate = options.estimate || null
+    this.schedule = options.schedule || null
   }
 
   public age(): number {

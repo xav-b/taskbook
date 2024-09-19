@@ -1,11 +1,8 @@
 import { Signale } from 'signale'
-import { prompt } from 'enquirer'
 import clipboardy from 'clipboardy'
 
 import { Maybe } from '~/types'
-import Storage from '~/store'
 import cacheStorage from '../store/localcache'
-import LocalStorage from '../store/localjson'
 import { help, goodDay } from '../interfaces/text'
 import render from '../interfaces/render'
 import { removeDuplicates } from '../shared/utils'
@@ -29,21 +26,21 @@ interface Office {
 
 class Taskbook {
   isNewDay: boolean
+  context: string
 
-  protected _store: Storage
   // plugins are expected to access it, and anyway catalog is an abstraction
   // meant to be used
   office: Office
 
   constructor(context = config.state.currentContext) {
-    log.info('initialising taskbook')
-
-    log.info(`initialising storage (ctx ${context})`)
-    this._store = new LocalStorage(context)
+    log.info(`initialising taskbook (ctx ${context})`)
+    this.context = context
+    // note that instanciating the catalogs don't load any data in them. You
+    // will need to call `desk.loadCache(['1234'])` or `archive.loadCache()`
     this.office = {
-      desk: new Catalog(this._store),
-      archive: new Catalog(this._store, 'archive'),
-      bin: new Catalog(this._store, 'bin'),
+      desk: new Catalog(context),
+      archive: new Catalog(context, 'archive'),
+      bin: new Catalog(context, 'bin'),
     }
 
     // determine if this is the first run of the day
@@ -59,14 +56,14 @@ class Taskbook {
     cache.set('root.lastOpen', new Date().toLocaleString())
   }
 
-  hello() {
+  async hello() {
     if (this.isNewDay && config.local.greetings) {
       goodDay()
     }
 
     log.debug('checking recurrent tasks')
     // the operation is idempotent
-    this.scheduleRecurrentTasks()
+    await this.scheduleRecurrentTasks()
   }
 
   _validateIDs(inputIDs: string[], data: Catalog = this.office.desk): void {
@@ -91,34 +88,32 @@ class Taskbook {
    *  - and they don't exist yet
    * Then create a new task
    */
-  scheduleRecurrentTasks() {
+  async scheduleRecurrentTasks() {
     log.info('scheduling today recurrent tasks')
     const today = new Date()
 
     // 1. look for all archived task having `repeat`
+    await this.office.archive.loadCache()
     const recurrents = this.office.archive.todayTasks()
     log.debug(`found ${recurrents.length} tasks to repeat today`)
 
     const added: string[] = []
-    recurrents.ids().forEach((taskId) => {
-      const task = recurrents.task(taskId)
-      if (task === null)
-        throw new Error(`impossible, this should be a task, but typescript disagrees`)
+    for (const task of Object.values(recurrents.all())) {
       if (added.includes(task.description))
         // very much expected since each completion will add a new instance of
         // that same task that will be picked up. Hacky design...
-        return log.debug(`task ${taskId} already added ${task.description}`)
+        return log.debug(`task ${task.id} already added ${task.description}`)
 
       const existing = this.office.desk.search([task.description])
-      if (existing.ids().length > 0) return log.debug(`task id:${taskId} already scheduled`)
+      if (existing.ids().length > 0) return log.debug(`task id:${task.id} already scheduled`)
       // Check we also didn't check it today already. This is normally guarded
       // because this function only runs the first time of the day, but this is
       // done outside and so it should not matter here.
       // (and anyway this helps with idempotency)
       if (new Date(task.updatedAt).getDate() === today.getDate())
-        log.debug(`task id:${taskId} already completed today`)
+        log.debug(`task id:${task.id} already completed today`)
       else {
-        log.info(`rescheduling recurrent task id:${taskId} (${task.repeat})`)
+        log.info(`rescheduling recurrent task id:${task.id} (${task.repeat})`)
         // very much a new task
         const todayTask = new Task({
           id: this.office.desk.generateID(),
@@ -138,24 +133,23 @@ class Taskbook {
 
         render.successCreate(todayTask, true)
       }
-    })
-
-    log.info(`done - comitting new recurrent tasks`)
-    this.office.desk.flush()
+    }
+    log.info(`done`)
   }
 
-  tagItem(desc: string[]) {
+  async tagItem(desc: string[]) {
     const { description, tags } = parseOptions(desc)
     const ids = description.split(' ')
 
-    ids
-      .map((each) => this.office.desk.get(each))
-      .forEach((item: IBullet) => {
-        item.tags = removeDuplicates(tags.concat(item.tags || []))
-        this.office.desk.set(item, item.id)
-      })
+    const items = await this.office.desk.getMulti(ids)
+    for (const item of items) {
+      // FIXME: the order _should be_ preserved... find a better way
+      if (item === null) continue
 
-    this.office.desk.flush()
+      item.tags = removeDuplicates(tags.concat(item.tags || []))
+      this.office.desk.set(item, item.id)
+    }
+
     render.successEdit(ids.join(', '))
   }
 
@@ -178,7 +172,6 @@ class Taskbook {
     })
 
     this.office.desk.set(note, id)
-    this.office.desk.flush()
 
     if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 
@@ -187,10 +180,14 @@ class Taskbook {
     if (notebook) this.comment(String(id))
   }
 
-  copyToClipboard(itemId: string) {
-    this._validateIDs([itemId])
+  async copyToClipboard(itemId: string) {
+    const item = await this.office.desk.get(itemId)
+    if (item === null) {
+      render.invalidID(itemId)
+      process.exit(0)
+    }
 
-    clipboardy.writeSync(this.office.desk.get(itemId).description)
+    clipboardy.writeSync(item.description)
 
     render.successCopyToClipboard([itemId])
   }
@@ -198,67 +195,29 @@ class Taskbook {
   async checkTasks(ids: string[], duration: Maybe<number>, doneAt: Maybe<Date>) {
     log.info(`striking tasks ${ids.join(', ')}`)
 
+    // TODO: implement `.get` fetching from DB and remove it
+    await this.office.desk.loadCache()
+
     // another gymnastics to allow tags in the list of ids
-    const { description, tags } = parseOptions(ids, {
+    const { description: parsedIds, tags } = parseOptions(ids, {
       defaultBoard: config.local.defaultBoard,
     })
-    this._validateIDs(description.split(' '))
+    // this._validateIDs(parsedIds.split(' '))
 
     const checked: Task[] = []
     const unchecked: Task[] = []
 
     await Promise.all(
-      ids.map(async (id) => {
-        if (this.office.desk.get(id).isTask) {
-          const task = this.office.desk.task(id)
-          if (task === null) throw new Error(`task ${id} is not a task`)
-
-          if (task.isComplete) task.uncheck()
-          else task.check(duration, tags)
-
-          // `check` method sets `updatedAt` to now. But if the task is
-          // complete and a `doneAt` was provided, overwrite it
-          if (task.isComplete && doneAt) task.updatedAt = doneAt.getTime()
-
-          // if duration is > {config number of hours}, ask confirmation
-          if (
-            task.isComplete &&
-            task.duration &&
-            // configured as hours so comapre this in ms
-            task.duration > config.local.suspiciousDuration * 60 * 60 * 1000
-          ) {
-            // @ts-ignore
-            const { isYes } = await prompt({
-              type: 'confirm',
-              name: 'isYes',
-              message: `Duration seems excessive: about ${Math.round(
-                task.duration / (60 * 60 * 1000)
-              )}h, is that correct`,
-            })
-            // offer to overwrite if that was a mistake
-            if (!isYes) {
-              // @ts-ignore
-              const { correct } = await prompt({
-                type: 'number',
-                name: 'correct',
-                message: 'How long did it take (in minutes)?',
-              })
-              task.duration = correct * 60 * 1000
-            }
-          }
-
-          this.office.desk.set(task, task.id)
-
-          return task.isComplete ? checked.push(task) : unchecked.push(task)
+      parsedIds.split(' ').map(async (id) => {
+        const task = await this.office.desk.completeTask(id, tags, duration, doneAt)
+        if (task === null) {
+          render.invalidID(id)
+          return
         }
 
-        // else invalid item id
-        // TODO: log and print something
-        return null
+        return task.isComplete ? checked.push(task) : unchecked.push(task)
       })
     )
-
-    this.office.desk.flush()
 
     // fire events
     for (const t of checked) {
@@ -275,14 +234,17 @@ class Taskbook {
     events.close()
   }
 
-  createTask(
+  async createTask(
     desc: string[],
     comment?: string,
     cliEstimate?: number,
     link?: string,
     notebook?: boolean,
     repeat?: string
-  ): Task[] {
+  ): Promise<Task[]> {
+    // we need the whole dataset to find out the new task ID
+    await this.office.desk.loadCache()
+
     const created: Task[] = []
     const { boards, tags, description, priority, estimate } = parseOptions(desc, {
       defaultBoard: config.local.defaultBoard,
@@ -295,7 +257,8 @@ class Taskbook {
     // we support multi-line strings to batch create multiple tasks
     const lines = description.split('\n')
     const isMultiple = lines.length > 1
-    lines.forEach((line: string) => {
+    // lines.forEach(async (line: string) => {
+    for (const line of lines) {
       const id = this.office.desk.generateID()
       const task = new Task({
         id,
@@ -311,27 +274,27 @@ class Taskbook {
       if (comment) task.writeComment(comment)
       else if (notebook) task.writeCommentInEditor(config.local.editor)
 
-      this.office.desk.set(task, id)
+      await this.office.desk.set(task, id)
 
       if (config.local.enableCopyID && !isMultiple) clipboardy.writeSync(String(id))
 
       created.push(task)
-    })
-
-    this.office.desk.flush()
+    }
 
     return created
   }
 
-  transfer(items: IBullet[], targetBucket?: string, fromBucket?: string) {
+  async transfer(items: IBullet[], targetBucket?: string, fromBucket?: string) {
     if (targetBucket === undefined && fromBucket === undefined)
       throw new Error('cant transfer if both storages are missing')
 
     const fromCatalog =
-      fromBucket === undefined ? this.office.desk : new Catalog(this._store, fromBucket)
+      fromBucket === undefined ? this.office.desk : new Catalog(this.context, fromBucket)
     const targetCatalog =
-      targetBucket === undefined ? this.office.desk : new Catalog(this._store, targetBucket)
+      targetBucket === undefined ? this.office.desk : new Catalog(this.context, targetBucket)
 
+    await fromCatalog.loadCache()
+    await targetCatalog.loadCache()
     this._validateIDs(items.map((each) => each.id.toString(), fromCatalog))
 
     items.forEach((each) => {
@@ -343,15 +306,12 @@ class Taskbook {
       // transfer done, delete the original
       fromCatalog.delete(each.id)
     })
-
-    // indicate to catalog and storage we're done with updates
-    targetCatalog.flush()
-    fromCatalog.flush()
   }
 
-  deleteItems(ids: string[], toTrash = false) {
-    this.transfer(
-      ids.map((each) => this.office.desk.get(each)),
+  async deleteItems(ids: string[], toTrash = false) {
+    await this.office.desk.loadCache()
+    await this.office.desk.transfer(
+      ids.map((each) => parseInt(each, 10)),
       toTrash ? 'bin' : 'archive'
     )
   }
@@ -360,8 +320,10 @@ class Taskbook {
    * Pull all archived items, group them by dates of last update, order it, and
    * display wher the date is the board.
    */
-  displayArchive() {
+  async displayArchive() {
     log.info('displaying the whole archive, by dates ASC')
+
+    await this.office.archive.loadCache()
 
     // first we want to group items by day, in a way that can be the ordered
     // (so don't go to UI-friendly yet)
@@ -379,9 +341,7 @@ class Taskbook {
     render.displayStats(this.office.desk.stats())
   }
 
-  editItemProperty(itemId: string, property: string, input: string[]) {
-    this._validateIDs([itemId])
-
+  async editItemProperty(itemId: string, property: string, input: string[]) {
     // TODO: parse input to allow boards, tags, etc...
 
     if (input.length === 0) {
@@ -389,7 +349,12 @@ class Taskbook {
       process.exit(1)
     }
 
-    const item = this.office.desk.get(itemId)
+    const item = await this.office.desk.get(itemId)
+    if (item === null) {
+      render.invalidID(itemId)
+      process.exit(0)
+    }
+
     // TODO: display something if property is none of those fields
     // TODO: validate `input[0]` depending on the cases
     if (property === 'description') item.description = input.join(' ')
@@ -399,21 +364,22 @@ class Taskbook {
     else if (property === 'duration') item.duration = parseInt(input[0], 10) * 60 * 1000
 
     this.office.desk.set(item, item.id)
-    this.office.desk.flush()
 
     render.successEdit(itemId)
   }
 
-  findItems(terms: string[], inArchive: Maybe<boolean>) {
+  async findItems(terms: string[], inArchive: Maybe<boolean>) {
+    const catalog = new Catalog(this.context, inArchive ? 'archive' : 'desk')
+    await catalog.loadCache()
+    const results = catalog.search(terms)
+
     if (inArchive) {
-      const result = new Catalog(this._store, 'archive').search(terms)
       // searching through archive makes more sense to display by date
       // (we are sure about the type given the `else` above)
-      const groups = groupByLastUpdateDay(result as Catalog)
+      const groups = groupByLastUpdateDay(results)
       render.displayByDate(groups)
     } else {
-      const result = this.office.desk.search(terms)
-      const groups = result.groupByBoards()
+      const groups = results.groupByBoards()
       render.displayByBoard(groups)
     }
   }
@@ -422,7 +388,9 @@ class Taskbook {
    * Detect tags, boards or pre-defined "statuses" to filter (as AND) the whole
    * board and nicely display by boards.
    */
-  listByAttributes(terms: string[]): { data: Catalog; groups?: string[] } {
+  async listByAttributes(terms: string[]): Promise<{ data: Catalog; groups?: string[] }> {
+    await this.office.desk.loadCache()
+
     let boards: string[] = []
     let tags: string[] = []
     let attributes: string[] = []
@@ -480,13 +448,10 @@ class Taskbook {
       process.exit(1)
     }
 
+    await this.office.desk.loadCache()
     this._validateIDs(ids)
 
-    ids.forEach((id) => {
-      this.office.desk.edit(id, { boards })
-    })
-
-    this.office.desk.flush()
+    for (const id of ids) await this.office.desk.edit(id, { boards })
 
     render.successMove(ids.join(', '), boards)
 
@@ -495,45 +460,61 @@ class Taskbook {
     events.close()
   }
 
-  restoreItems(ids: string[]) {
-    this.transfer(
-      ids.map((each) => this.office.desk.get(each)),
-      undefined,
-      'archive'
-    )
+  async restoreItems(ids: string[]) {
+    const items = await Promise.all(ids.map(async (id) => await this.office.desk.get(id)))
+    const validItems = items.filter((each, idx) => {
+      if (each === null) {
+        render.invalidID(ids[idx])
+        return false
+      }
+
+      return true
+    })
+
+    this.transfer(validItems as IBullet[], undefined, 'archive')
   }
 
-  starItems(ids: string[]) {
-    this._validateIDs(ids)
-
+  async starItems(ids: string[]) {
     const starred: string[] = []
     const unstarred: string[] = []
 
-    ids.forEach((id) => {
-      // toggle it
-      const item = this.office.desk.get(id)
-      item.isStarred = !item.isStarred
-      this.office.desk.set(item, item.id)
-      return item.isStarred ? starred.push(id) : unstarred.push(id)
-    })
+    await Promise.all(
+      ids.map(async (id) => {
+        // alternative we could fetch them together, but this approach allows
+        // us to nicely render a missing id. A nice approach could be to load
+        // all those ids in cache first, amd this `.get` ends up a hashmap
+        // lookup, bringing the best of both worlds
+        const item = await this.office.desk.get(id)
+        if (item === null) {
+          render.invalidID(id)
+          return
+        }
 
-    this.office.desk.flush()
+        // toggle it
+        item.isStarred = !item.isStarred
+        return item.isStarred ? starred.push(id) : unstarred.push(id)
+      })
+    )
 
-    render.markStarred(starred)
-    render.markUnstarred(unstarred)
+    if (starred.length > 0) {
+      await this.office.desk.batchEdit(starred, { isStarred: true })
+      render.markStarred(starred)
+    }
+    if (unstarred.length > 0) {
+      await this.office.desk.batchEdit(unstarred, { isStarred: false })
+      render.markUnstarred(unstarred)
+    }
   }
 
-  estimateWork(taskid: string, estimate: number) {
-    this._validateIDs([taskid])
-
-    const task = this.office.desk.task(taskid)
-
-    if (task === null) throw new Error(`item ${taskid} is not a task`)
+  async estimateWork(taskid: string, estimate: number) {
+    const task = await this.office.desk.task(taskid)
+    if (task === null) {
+      render.invalidID(taskid)
+      process.exit(0)
+    }
 
     task.setEstimate(estimate, config.local.tshirtSizes)
-    this.office.desk.set(task, task.id)
-
-    this.office.desk.flush()
+    await this.office.desk.edit(taskid, { estimate, tags: task.tags })
 
     render.successEdit(taskid)
   }
@@ -546,32 +527,34 @@ class Taskbook {
     render.successPriority(taskids.join(', '), priority)
   }
 
-  clear(alsoNotes = true) {
+  async clear(alsoNotes = true) {
     const ids: string[] = []
 
-    this.office.desk.ids().forEach((id) => {
-      const item = this.office.desk.get(id)
+    await this.office.desk.loadCache()
 
+    for (const [id, item] of Object.entries(this.office.desk.all())) {
       if (item instanceof Task && item.isComplete) ids.push(id)
       else if (item instanceof Note && alsoNotes) ids.push(id)
       // else not something we want to clear
-    })
+    }
 
     if (ids.length === 0) return
 
-    this.deleteItems(ids)
+    await this.deleteItems(ids)
     render.successDelete(ids)
   }
 
   // FIXME: doesn't have to be a task, works for any ibullet
   async printTask(taskId: string, format: string, useArchive = false) {
-    const catalog = useArchive ? new Catalog(this._store, 'archive') : this.office.desk
+    const catalog = useArchive ? new Catalog(this.context, 'archive') : this.office.desk
 
-    this._validateIDs([taskId], catalog)
+    log.info(`${taskId} to print from ${useArchive ? 'archive' : 'desk'})`)
 
-    log.info(`will focus on task ${taskId} (from ${useArchive ? 'archive' : 'default'})`)
-
-    const task = catalog.get(taskId)
+    const task = await catalog.get(taskId)
+    if (task === null) {
+      render.invalidID(taskId)
+      process.exit(0)
+    }
 
     // TODO: html
     if (format === 'markdown') task.toMarkdown()
@@ -584,95 +567,96 @@ class Taskbook {
     else throw new Error(`unsupported export format: ${format}`)
   }
 
-  beginTask(id: string, useTimer: boolean) {
-    this._validateIDs([id])
-
-    // blocking logger to record steps of the timer
-    const interactive = new Signale({ interactive: true, scope: 'task.timer' })
-
+  async beginTask(id: string, useTimer: boolean) {
     const started: string[] = []
     const paused: string[] = []
 
     // TODO: else render error
-    if (this.office.desk.get(id).isTask) {
-      const task = this.office.desk.task(id)
-      // TODO: handle the UI of it
-      if (task === null) throw new Error(`item ${id} is not a task`)
+    const task = await this.office.desk.get(id)
+    if (task === null) {
+      render.invalidID(id)
+      process.exit(0)
+    }
 
-      task.begin()
+    if (!task.isTask) {
+      // TODO: render something more specific
+      render.invalidID(id)
+      process.exit(0)
+    }
+    task.begin()
 
-      if (task.inProgress) started.push(id)
-      else paused.push(id)
+    if (task.inProgress) started.push(id)
+    else paused.push(id)
 
-      this.office.desk.set(task, task.id)
-      this.office.desk.flush()
+    this.office.desk.set(task, task.id)
 
-      if (started.length > 0) render.markStarted(started)
-      if (paused.length > 0) render.markPaused(paused)
+    if (started.length > 0) render.markStarted(started)
+    if (paused.length > 0) render.markPaused(paused)
 
-      // this only makes sense when starting to work
-      if (useTimer && started.length > 0) {
-        // first estimate how long we will block
-        // TODO: take into account what has been worked on already (`task.duration`?)
-        // TODO: make the tick configurable
-        const estimate = task.estimate
-          ? task.estimate / 1000 / 60
-          : config.local.defaultTaskEstimate
-        const msg = `working on: ${task.description} (#${task.id})`
+    // this only makes sense when starting to work
+    if (useTimer && started.length > 0) {
+      // blocking logger to record steps of the timer
+      const interactive = new Signale({ interactive: true, scope: 'task.timer' })
 
-        // capture CTRL-C to gracefully handle it
-        process.on('SIGINT', () => {
-          // console.log('Caught interrupt signal')
+      // first estimate how long we will block
+      // TODO: take into account what has been worked on already (`task.duration`?)
+      // TODO: make the tick configurable
+      const estimate = task.estimate ? task.estimate / 1000 / 60 : config.local.defaultTaskEstimate
+      const msg = `working on: ${task.description} (#${task.id})`
 
-          // TODO: change back the task status to stopped
-          // TODO: capture how long has elapsed and update task worked on
-          interactive.success(`[timer] interrupted, wrapping up`)
-          events.close()
+      // capture CTRL-C to gracefully handle it
+      process.on('SIGINT', () => {
+        // console.log('Caught interrupt signal')
 
-          // NOTE: should i cleanup timeouts?
-          process.exit(0)
-        })
+        // TODO: change back the task status to stopped
+        // TODO: capture how long has elapsed and update task worked on
+        interactive.success(`[timer] interrupted, wrapping up`)
+        events.close()
 
-        // each minute we will update the display
-        interactive.await(`[%d/${estimate}] - ${msg}`, 0)
-        for (let i = 0; i < estimate; i++) {
-          setTimeout(
-            () => {
-              interactive.await(`[%d/${estimate}] - ${msg}`, i + 1)
+        // NOTE: should i cleanup timeouts?
+        process.exit(0)
+      })
 
-              // publish vent
-              const payload = { command: 'begin', msg, args: { i, estimate } }
-              events.fire('task timer updated', payload)
+      // each minute we will update the display
+      interactive.await(`[%d/${estimate}] - ${msg}`, 0)
+      for (let i = 0; i < estimate; i++) {
+        setTimeout(
+          () => {
+            interactive.await(`[%d/${estimate}] - ${msg}`, i + 1)
 
-              if (i >= estimate) {
-                interactive.success(`[${estimate}/${estimate}] - completed`)
+            // publish vent
+            const payload = { command: 'begin', msg, args: { i, estimate } }
+            events.fire('task timer updated', payload)
 
-                // TODO: ask if the task was completed or if more time is needed
+            if (i >= estimate) {
+              interactive.success(`[${estimate}/${estimate}] - completed`)
 
-                // while udp is connection-less, it seems necessary to close
-                // the event loop
-                events.close()
-              }
-            },
-            // wait for a minute before next tick
-            i * 1000 * 60
-          )
-        }
+              // TODO: ask if the task was completed or if more time is needed
+
+              // while udp is connection-less, it seems necessary to close
+              // the event loop
+              events.close()
+            }
+          },
+          // wait for a minute before next tick
+          i * 1000 * 60
+        )
       }
     }
   }
 
-  comment(itemId: string) {
-    this._validateIDs([itemId])
-
+  async comment(itemId: string) {
     const { editor } = config.local
 
-    const item = this.office.desk.get(itemId)
+    const item = await this.office.desk.get(itemId)
+    if (item === null) {
+      render.invalidID(itemId)
+      process.exit(0)
+    }
 
     item.writeCommentInEditor(editor)
 
-    this.office.desk.set(item, item.id)
-    this.office.desk.flush()
+    await this.office.desk.set(item, item.id)
 
     render.successEdit(itemId)
   }
@@ -684,8 +668,6 @@ class Taskbook {
     // this.office.desk.ids().forEach((id) => {
     // if (!_data.get(id)._uid) _data.get(id)._uid = nanoid()
     // })
-
-    this.office.desk.flush()
   }
 }
 

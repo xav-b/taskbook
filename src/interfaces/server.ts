@@ -24,14 +24,14 @@ interface TBCommand {
   arguments?: Record<string, string>
 }
 
-function displayBoard(attributes: string[]) {
+async function displayBoard(attributes: string[]) {
   // could be headless
   if (attributes.length === 0) return
 
   // TODO: clear the screen
 
   // pull the relevant data
-  const { data, groups } = taskbook.listByAttributes(attributes)
+  const { data, groups } = await taskbook.listByAttributes(attributes)
   const stats = data.stats()
   const tasksGrouped = data.groupByBoards(groups)
 
@@ -46,11 +46,11 @@ program
   .description(pkg.description)
   .argument('[attributes...]')
   .version(pkg.version)
-  .action((attributes: string[]) => {
+  .action(async (attributes: string[]) => {
     const server = net.createServer()
 
     // display the initial version
-    displayBoard(attributes)
+    await displayBoard(attributes)
 
     server.on('connection', (conn) => {
       log.info(`connection established from ${conn.remoteAddress}:${conn.remotePort}`)
@@ -59,7 +59,7 @@ program
       conn.on('close', () => log.info('connection closed'))
       conn.on('error', (err) => log.error(`handler failed: ${err.message}`))
 
-      conn.on('data', (message) => {
+      conn.on('data', async (message) => {
         const msg: TBCommand = JSON.parse(message.toString())
         log.debug('received command:', msg.command, msg.itemIds)
 
@@ -68,7 +68,7 @@ program
           conn.write('pong')
         } else if (['list', 'ls', 'l'].includes(msg.command)) {
           const attributes = (msg.arguments?.attributes || ['all']) as string[]
-          const { data, groups } = taskbook.listByAttributes(attributes)
+          const { data, groups } = await taskbook.listByAttributes(attributes)
 
           conn.write(JSON.stringify({ catalog: data.toJSON(), groups }))
         }

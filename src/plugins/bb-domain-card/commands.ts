@@ -44,8 +44,6 @@ function createCard(board: Taskbook, front: string[], link?: string) {
 
   board.office.desk.set(flashcard, id)
 
-  board.office.desk.flush()
-
   render.successCreate(flashcard)
 
   if (config.local.enableCopyID) clipboardy.writeSync(String(id))

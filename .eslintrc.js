@@ -23,7 +23,6 @@ module.exports = {
     'key-spacing': 0,
     'no-multi-spaces': 0,
     'no-param-reassign': 0,
-    'no-underscore-dangle': 0,
     '@typescript-eslint/no-explicit-any': 'warn',
     // 'import/no-extraneous-dependencies': 'warn',
     '@typescript-eslint/triple-slash-reference': 'warn',

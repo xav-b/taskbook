@@ -80,7 +80,7 @@ class OutlineParserState {
     else log.debug(`ignoring line: ${line}`)
   }
 
-  generate() {
+  async generate() {
     const board = new Taskbook(this.context)
 
     for (const t of Object.values(this.tasks)) {
@@ -91,22 +91,23 @@ class OutlineParserState {
         comment = `# task ${t.uid} - ${t.raw}\n\n`
         for (const sub of t.subtasks) comment += `- [ ] ${sub}\n`
       }
-      board.createTask(t.description, comment)
+      await board.createTask(t.description, comment)
     }
 
     // debug
-    console.log(board.listByAttributes(['all']))
+    console.log(await board.listByAttributes(['all']))
   }
 }
 
 program
   .name('outline parser')
   .description('Parse an outline within a markdown file')
-  .version('0.1.0')
+  .version('0.1.1')
   .argument('[outline]')
-  .action((outline) => {
+  .action(async (outline) => {
     const state = new OutlineParserState()
 
+    // TODO: if no outline is passed, open an editor
     log.info(`parsing outline file: ${outline}`)
     const lineReader = require('readline').createInterface({
       input: require('fs').createReadStream(outline),
@@ -116,10 +117,9 @@ program
       state.processLine(line)
     })
 
-    lineReader.on('close', function () {
+    lineReader.on('close', async function () {
       console.log('all done, son')
-      // console.log(state)
-      console.log(state.generate())
+      await state.generate()
     })
   })
 

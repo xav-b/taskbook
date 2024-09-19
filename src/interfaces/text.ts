@@ -33,7 +33,7 @@ export const help = `
     $ \`tb event 02:30pm 1h Meet at the coffee\`
     $ \`tb list calendar\`
     $ \`tb tag 2 +demo +help\`
-    $ \`tb focus 1\`
+    $ \`tb print 1\`
 `
 
 export function goodDay() {

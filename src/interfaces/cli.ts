@@ -38,7 +38,7 @@ program
   .command('hello')
   .alias('bonjour')
   .description('Initialise your day')
-  .action(() => taskbook.hello())
+  .action(async () => await taskbook.hello())
 
 // visualise tasks ---------------------------------------------------------------------
 
@@ -48,8 +48,8 @@ program
   .alias('ls')
   .description('List items by attributes')
   .argument('[attributes...]')
-  .action((attributes) => {
-    const { data, groups } = taskbook.listByAttributes(attributes)
+  .action(async (attributes) => {
+    const { data, groups } = await taskbook.listByAttributes(attributes)
 
     const showTasks = attributes.length > 0
     const stats = data.stats()
@@ -67,7 +67,7 @@ program
   .command('archive')
   .alias('a')
   .description('display archived items')
-  .action(() => taskbook.displayArchive())
+  .action(async () => await taskbook.displayArchive())
 
 program
   .command('timeline')
@@ -85,7 +85,7 @@ program
   .description('Search for items')
   .argument('<terms...>')
   .option('-a, --archive', 'look into archive')
-  .action((terms, opts) => taskbook.findItems(terms, opts.archive))
+  .action(async (terms, opts) => await taskbook.findItems(terms, opts.archive))
 
 // Tasks create ------------------------------------------------------------------------
 
@@ -108,12 +108,12 @@ program
   .option('-j, --json', 'JSON output instead of console rendering')
   .option('-r, --repeat [repeat]', 'Make the task recurrent')
   .option('--on [date]', 'Schedule the task for later')
-  .action((description, options) => {
+  .action(async (description, options) => {
     const estimate = parseDuration(options.estimate)
     // the `undefined` trick just avoids the function to manage both null and
     // undefined and keep a clean signature
     // TODO: at this point pass a `TaskCreateOptions`
-    const tasks = taskbook.createTask(
+    const tasks = await taskbook.createTask(
       description,
       undefined,
       estimate || undefined,
@@ -151,8 +151,8 @@ program
   .command('tag')
   .description('Add a tag to an item')
   .argument('<description...>')
-  .action((description) => {
-    taskbook.tagItem(description)
+  .action(async (description) => {
+    await taskbook.tagItem(description)
   })
 
 program
@@ -162,8 +162,8 @@ program
   .description('Delete items')
   .option('-t, --trash', 'send to trash bin instead of archive')
   .argument('<items...>')
-  .action((items, options) => {
-    taskbook.deleteItems(items, options.trash)
+  .action(async (items, options) => {
+    await taskbook.deleteItems(items, options.trash)
     render.successDelete(items)
   })
 
@@ -174,10 +174,10 @@ program
   .argument('<tasks...>')
   .option('-d, --duration [duration]', 'time to complete, in minutes')
   .option('--on [completion]', 'Overwrite completion date')
-  .action((tasks, options) => {
+  .action(async (tasks, options) => {
     const duration = parseDuration(options.duration)
     const doneAt = options.on && parseDate(options.on)
-    taskbook.checkTasks(tasks, duration, doneAt)
+    await taskbook.checkTasks(tasks, duration, doneAt)
   })
 
 program
@@ -185,7 +185,7 @@ program
   .alias('s')
   .description('Star/unstar items')
   .argument('<items...>')
-  .action((items) => taskbook.starItems(items))
+  .action(async (items) => await taskbook.starItems(items))
 
 program
   .command('estimate')
@@ -193,11 +193,11 @@ program
   .description('Set task estimate in minutes')
   .argument('taskid')
   .argument('estimate')
-  .action((taskid, estimate) => {
+  .action(async (taskid, estimate) => {
     const estimateMs = parseDuration(estimate)
     if (!estimateMs) throw new Error(`failed to parse estimate: ${estimate}`)
 
-    taskbook.estimateWork(taskid, estimateMs)
+    await taskbook.estimateWork(taskid, estimateMs)
   })
 
 program
@@ -252,7 +252,7 @@ program
   .argument('task')
   .option('-f, --format [format]', 'output format', 'markdown')
   .option('-a, --archive', 'use achive instead of normal storage')
-  .action((task, opts) => taskbook.printTask(task, opts.format, opts.archive))
+  .action(async (task, opts) => await taskbook.printTask(task, opts.format, opts.archive))
 
 program
   .command('begin')
@@ -284,7 +284,7 @@ program
 program
   .command('clear')
   .description('Archive all checked items')
-  .action(() => taskbook.clear(config.local.clearNotes))
+  .action(async () => await taskbook.clear(config.local.clearNotes))
 
 // default handler called when the command is not recognised
 program

@@ -14,7 +14,7 @@ const EVENTS_NEED_REFRESH = ['task checked', 'tasks moved']
 const program = new Command()
 const log = Logger('ui.server.events', true)
 
-function displayBoard(attributes: string[]) {
+async function displayBoard(attributes: string[]) {
   // could be headless
   if (attributes.length === 0) return
 
@@ -26,7 +26,7 @@ function displayBoard(attributes: string[]) {
   // TODO: clear the screen
 
   // pull the relevant data
-  const { data, groups } = taskbook.listByAttributes(attributes)
+  const { data, groups } = await taskbook.listByAttributes(attributes)
   const stats = data.stats()
   const tasksGrouped = data.groupByBoards(groups)
 
@@ -71,7 +71,7 @@ program
   .description('Taskbook UDP Server')
   .version('0.1.0')
   .argument('[attributes...]')
-  .action((attributes) => {
+  .action(async (attributes) => {
     const server = udp.createSocket('udp4')
 
     server.on('listening', () => {
@@ -80,7 +80,7 @@ program
     })
 
     // initial display
-    displayBoard(attributes)
+    await displayBoard(attributes)
 
     server.on('message', (message: Buffer, remote: RemoteInfo) => {
       log.debug(`${remote.size}b message received from ${remote.address}:${remote.port}`)

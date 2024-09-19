@@ -1,9 +1,9 @@
 {
   "name": "taskbook",
   "productName": "Taskbook",
-  "version": "0.15.2",
+  "version": "0.18.0",
   "description": "Tasks, boards & notes for the command-line habitat",
-  "repository": "klaussinani/taskbook",
+  "repository": "xav-b/taskbook",
   "license": "MIT",
   "author": {
     "name": "Xavier Bruhiere",
@@ -14,12 +14,14 @@
     "tb": "dist/src/interfaces/cli.js",
     "tb-serve": "dist/src/interfaces/server.js"
   },
-  "engines": {
-    "node": ">=10"
-  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
-    "src"
+    "/dist"
   ],
+  "engines": {
+    "node": ">=18"
+  },
   "keywords": [
     "task",
     "board",
@@ -29,8 +31,14 @@
     "console",
     "cli"
   ],
+  "packageManager": "pnpm@9.1.2",
   "scripts": {
+    "db:generate": "drizzle-kit generate --config src/store/drizzle/drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config src/store/drizzle/drizzle.config.ts",
+    "db:studio": "drizzle-kit studio --config src/store/drizzle/drizzle.config.ts",
+    "db:init": "pnpm run db:generate && pnpm run db:migrate",
     "build": "npx tsc",
+    "build:esm": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "npx tsc --watch",
     "test": "vitest"
   },
@@ -38,10 +46,12 @@
     "@breejs/later": "^4.2.0",
     "@google-cloud/local-auth": "2.1.0",
     "@iarna/toml": "^2.2.5",
+    "@libsql/client": "^0.5.3",
     "chalk": "4.1.0",
     "clipboardy": "2.3.0",
     "commander": "^12.0.0",
     "date-fns": "^3.6.0",
+    "drizzle-orm": "^0.33.0",
     "enquirer": "^2.4.1",
     "googleapis": "105",
     "nanoid": "3",
@@ -54,13 +64,13 @@
   "devDependencies": {
     "@types/breejs__later": "^4",
     "@types/chalk": "^2.2.0",
-    "@types/lodash": "^4.17.0",
     "@types/node": "^20.11.30",
     "@types/signale": "^1.4.7",
     "@types/tmp": "^0.2.6",
     "@types/update-notifier": "^6.0.8",
     "@typescript-eslint/eslint-plugin": "^7.3.1",
     "@typescript-eslint/parser": "^7.3.1",
+    "drizzle-kit": "^0.24.2",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-formatter-pretty": "^6.0.1",
@@ -70,10 +80,10 @@
     "prettier": "^3.2.5",
     "semver": "^7.6.0",
     "ts-node": "^10.9.2",
+    "tsup": "^8.3.0",
     "vitest": "^1.4.0"
   },
   "xo": {
     "space": 2
-  },
-  "packageManager": "yarn@4.0.2"
+  }
 }
