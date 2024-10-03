@@ -1,10 +1,10 @@
 import { prompt } from 'enquirer'
 import later from '@breejs/later'
 import { eq, and, inArray } from 'drizzle-orm'
-import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql'
-import { createClient } from '@libsql/client'
+import { type LibSQLDatabase } from 'drizzle-orm/libsql'
 
 import * as schema from '../store/drizzle/schema'
+import db from '../store/drizzle/db'
 import IBullet, { IBulletOptions } from './ibullet'
 import Task from './task'
 import Note from '../domain/note'
@@ -86,11 +86,7 @@ export default class Catalog {
     // force an initialisation or initialise an empty cache
     this._items = items || {}
 
-    log.info(`initialising Turso DB: ${config.store.turso.url}`)
-    const client = createClient(config.store.turso)
-
-    // this.db = drizzle(client, { schema })
-    this.db = drizzle(client, { logger: false })
+    this.db = db.connect({ logger: process.env.TB_DEBUG === 'true' })
   }
 
   // NOTE: maybe they should ints, we're talking about the ui ids
@@ -249,6 +245,7 @@ export default class Catalog {
 
     // if we have a valid cache, update it
     if (this._items) this._items[id] = item
+    console.log('DEBUG', 'UPDATED CACHE', id)
 
     const toOverwrite: Partial<BulletRow> = {
       isStarred: data.isStarred,

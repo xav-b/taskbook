@@ -43,11 +43,20 @@ async function upsert(
   })
 
   const existing = eventID !== undefined ? board.office.desk.uget(eventID) : null
-  // if the item already exists, we will attempt to overwrite everything with the data fetched
+  // if the item already exists, we will attempt to overwrite everything with
+  // the data fetched
   const id = existing?.id ?? board.office.desk.generateID()
 
   log.debug(`initialising event ${id}`)
-  const event = new EventTask({ id, _uid: eventID, description, boards, tags, schedule, estimate })
+  const event = new EventTask({
+    id,
+    _uid: eventID,
+    description,
+    boards,
+    tags,
+    schedule,
+    estimate,
+  })
 
   if (existing) log.info(`updating event ${id} (${existing._uid})`)
   else log.info(`creating event ${id}`, event)
@@ -59,10 +68,12 @@ async function upsert(
   else render.successCreate(event, true)
 }
 
-// FIXME: don't recreate events if running twice
 async function syncGCal(board: Taskbook, name?: string | null) {
   const auth = await gcal.authorize(name)
   const events = await todayEvents(auth)
+
+  if (events.length > 0) board.office.desk.loadCache()
+  else return
 
   // now we want to:
   // - create new events
@@ -70,8 +81,8 @@ async function syncGCal(board: Taskbook, name?: string | null) {
   // - delete events that got removed from calendar
 
   // first pull existing events we have
-  // TODO: `@calendar` from config or constants
-  const todayExistingEvents = Object.values(board.office.desk.all()).filter((each) =>
+  const allItems = board.office.desk.all()
+  const todayExistingEvents = Object.values(allItems).filter((each) =>
     each.boards.includes(`@${config.local.defaultBoard}`)
   )
 
@@ -83,7 +94,8 @@ async function syncGCal(board: Taskbook, name?: string | null) {
       idsToDelete.push(String(each.id))
     }
   })
-  if (idsToDelete.length > 0) board.deleteItems(idsToDelete)
+
+  if (idsToDelete.length > 0) await board.deleteItems(idsToDelete)
 
   for (const calEvent of events) {
     const schedule = calEvent?.startTime.getTime()

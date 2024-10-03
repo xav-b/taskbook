@@ -8,7 +8,8 @@ import render from '../interfaces/render'
 import { removeDuplicates } from '../shared/utils'
 import { parseOptions, isBoardOpt } from '../shared/parser'
 import Catalog, { groupByLastUpdateDay, filterByAttributes } from '../domain/catalog'
-import IBullet, { Priority } from '../domain/ibullet'
+import IBullet from '../domain/ibullet'
+import Priority from '../domain/priority'
 import Task from '../domain/task'
 import Note from '../domain/note'
 import Logger from '../shared/logger'
@@ -128,7 +129,7 @@ class Taskbook {
           // property a) is correct and b) enables the `repeat` visual hint
           repeat: task.repeat || undefined,
         })
-        this.office.desk.set(todayTask, todayTask.id)
+        await this.office.desk.set(todayTask, todayTask.id)
         added.push(task.description)
 
         render.successCreate(todayTask, true)
@@ -153,7 +154,10 @@ class Taskbook {
     render.successEdit(ids.join(', '))
   }
 
-  createNote(desc: string[], notebook?: boolean) {
+  async createNote(desc: string[], notebook?: boolean) {
+    // we need the whole dataset to find out the new task ID
+    await this.office.desk.loadCache()
+
     const storedBoards = this.office.desk.boards()
     const storedTags = this.office.desk.tags()
 
@@ -171,13 +175,14 @@ class Taskbook {
       if (!storedBoards.includes(b)) render.warning(note.id, `new board: ${b}`)
     })
 
-    this.office.desk.set(note, id)
+    if (notebook) note.writeComment()
+    // if (notebook) editors.vim.write(note)
+
+    await this.office.desk.set(note, id)
 
     if (config.local.enableCopyID) clipboardy.writeSync(String(id))
 
     render.successCreate(note)
-
-    if (notebook) this.comment(String(id))
   }
 
   async copyToClipboard(itemId: string) {
@@ -272,7 +277,7 @@ class Taskbook {
       })
 
       if (comment) task.writeComment(comment)
-      else if (notebook) task.writeCommentInEditor(config.local.editor)
+      else if (notebook) task.writeComment()
 
       await this.office.desk.set(task, id)
 
@@ -646,15 +651,13 @@ class Taskbook {
   }
 
   async comment(itemId: string) {
-    const { editor } = config.local
-
     const item = await this.office.desk.get(itemId)
     if (item === null) {
       render.invalidID(itemId)
       process.exit(0)
     }
 
-    item.writeCommentInEditor(editor)
+    item.writeComment()
 
     await this.office.desk.set(item, item.id)
 

@@ -95,7 +95,7 @@ program
   .description('Create note')
   .argument('<description...>')
   .option('-n, --notebook', 'Open editor to also insert a comment')
-  .action((description, options) => taskbook.createNote(description, options.notebook))
+  .action(async (description, options) => await taskbook.createNote(description, options.notebook))
 
 program
   .command('task')

@@ -1,5 +1,5 @@
 import { set, addDays } from 'date-fns'
-import { Priority } from '../domain/ibullet'
+import Priority from '../domain/priority'
 import { Maybe } from '../types'
 
 const DEFAULT_TASK_PRIORITY = 1

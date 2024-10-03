@@ -1,18 +1,18 @@
-import fs from 'fs'
-import childProcess from 'child_process'
-import tmp from 'tmp'
 import { formatDistance } from 'date-fns'
 import { nanoid } from 'nanoid'
 import { SignaleLogConfig } from '../interfaces/printer'
 import { Maybe, UnixTimestamp } from '../types'
+import editors from '../modules/editors'
+import Priority from './priority'
+import config from '../config'
 
 const MS_IN_DAY = 24 * 60 * 60 * 1000
-
-export enum Priority {
-  Normal = 1,
-  Medium = 2,
-  High = 3,
-}
+// NOTE: this would make more sense to have it as a property of iBullet since
+// it would achieve the same, but avoid work in global namespace, and offer to
+// use it when having an item instance. But this breaks `structuredClone` used
+// for task creation, and in general the flat data structure of the IBullet
+// object.
+const editor = editors[config.local.editor]
 
 // since we load all properties as json and initialising task with it,
 // all Item props need to be supported, albeit mostly optional
@@ -111,9 +111,7 @@ export default interface IBullet {
 
   decodeComment: () => Maybe<string>
 
-  writeCommentInEditor: (editor: string) => void
-
-  writeComment: (content: string) => void
+  writeComment: (content?: string) => void
 
   toJSON: () => Record<string, any>
 
@@ -244,34 +242,9 @@ export abstract class BasicBullet implements IBullet {
     return Buffer.from(this.comment, 'base64').toString('ascii')
   }
 
-  // TODO: this would be just a lot easier to have 1 `writeComment` and open
-  // the editor if no content is passed. But importing the config here creates
-  // a circular dependency we need to fix first
-  public writeCommentInEditor(editor: string) {
-    const tmpFile = tmp.fileSync({ mode: 0o644, prefix: 'taskbook-', postfix: '.md' })
-
-    let initContent = `# ID ${this.id} - ${this.description}
-
-> _write content here..._
-`
-    if (this.link) initContent += `\n🔗 [Resource](${this.link})\n`
-
-    if (this.comment)
-      // initialise the file with the existing comment
-      initContent = Buffer.from(this.comment as string, 'base64').toString('ascii')
-    fs.writeFileSync(tmpFile.fd, initContent)
-
-    childProcess.spawnSync(editor, [`${tmpFile.name}`], { stdio: 'inherit' })
-    // TODO: handle child error
-    const comment = fs.readFileSync(tmpFile.name, 'utf8').trim()
-
-    this.writeComment(comment)
-  }
-
-  public writeComment(content: string) {
-    const encoded = Buffer.from(content).toString('base64')
-
-    this.comment = encoded
+  // TODO: now we can delete that
+  public writeComment(content?: string) {
+    this.comment = editor.write(this, content)
   }
 
   public toJSON(): Record<string, any> {
@@ -294,7 +267,7 @@ export abstract class BasicBullet implements IBullet {
    * Display task details in markdown format.
    */
   public toMarkdown() {
-    const comment = this.decodeComment()
+    const comment = editor.read(this)
     const ago = formatDistance(new Date(this._createdAt), new Date(), { addSuffix: true })
     // saving an interesting past feature, pulling tasks from the comments
     // const subtasksDone = (decoded.match(/\[x\]/g) || []).length

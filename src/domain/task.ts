@@ -1,5 +1,6 @@
 import { formatDistance } from 'date-fns'
-import IBullet, { BasicBullet, IBulletOptions, Priority } from './ibullet'
+import IBullet, { BasicBullet, IBulletOptions } from './ibullet'
+import Priority from './priority'
 import { Maybe, UnixTimestamp } from '../types'
 import { msToMinutes } from '../shared/utils'
 import { SignaleLogConfig, wait, success, pending } from '../interfaces/printer'

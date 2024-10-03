@@ -1,7 +1,7 @@
 {
   "name": "taskbook",
   "productName": "Taskbook",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "description": "Tasks, boards & notes for the command-line habitat",
   "repository": "xav-b/taskbook",
   "license": "MIT",
@@ -11,8 +11,7 @@
     "url": "https://xavierbruhiere.com"
   },
   "bin": {
-    "tb": "dist/src/interfaces/cli.js",
-    "tb-serve": "dist/src/interfaces/server.js"
+    "tb": "./dist/src/interfaces/cli.js"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -40,13 +39,17 @@
     "build": "npx tsc",
     "build:esm": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "npx tsc --watch",
+    "dev:esm": "tsup src/index.ts --format cjs,esm --dts --watch",
     "test": "vitest"
   },
   "dependencies": {
     "@breejs/later": "^4.2.0",
     "@google-cloud/local-auth": "2.1.0",
     "@iarna/toml": "^2.2.5",
-    "@libsql/client": "^0.5.3",
+    "@libsql/client": "^0.14.0",
+    "@tursodatabase/api": "^1.8.1",
+    "@types/better-sqlite3": "^7.6.11",
+    "better-sqlite3": "^11.3.0",
     "chalk": "4.1.0",
     "clipboardy": "2.3.0",
     "commander": "^12.0.0",
@@ -85,5 +88,8 @@
   },
   "xo": {
     "space": 2
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
   }
 }

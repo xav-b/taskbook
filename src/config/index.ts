@@ -4,7 +4,7 @@ import path from 'path'
 
 import chalk from 'chalk'
 import TOML, { AnyJson, JsonMap } from '@iarna/toml'
-import { Priority } from '../domain/ibullet'
+import Priority from '../domain/priority'
 import Logger from '../shared/logger'
 import PKG from '../../package.json'
 
@@ -19,6 +19,8 @@ interface LocalState extends JsonMap {
   currentContext: string
 }
 
+type SupportedEditors = 'vim'
+
 /**
  * User facing configuration.
  * Global config minus any code-side manipulations and, mostly actually,
@@ -31,7 +33,8 @@ interface UserConfig extends JsonMap {
   displayWarnings: boolean
   enableCopyID: boolean
   defaultBoard: string
-  editor: string
+  editor: SupportedEditors
+  editorCommand: string
   suspiciousDuration: number
   tshirtSizes: boolean
   plannedHoursWarn: number
@@ -49,9 +52,11 @@ interface UserConfig extends JsonMap {
 type PluginConfig = Record<string, AnyJson>
 type AliasConfig = Record<string, string>
 
+// TODO: there must be a way to extract it from turso itself
 interface TursoConfig {
   url: string
   authToken?: string
+  syncUrl?: string
 }
 type Stores = 'turso'
 type StoreConfig = Record<Stores, TursoConfig>
@@ -85,7 +90,8 @@ const userDefaults: UserConfig = {
   // `myboard` that ultimately we could try to support (slugify for
   // storage)
   defaultBoard: 'backlog',
-  editor: process.env.EDITOR || 'vi',
+  editor: 'vim',
+  editorCommand: process.env.EDITOR || 'vi',
   suspiciousDuration: 3 /* hours */,
   tshirtSizes: true,
   plannedHoursWarn: 6,

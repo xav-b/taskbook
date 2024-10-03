@@ -2,7 +2,8 @@ import chalk from 'chalk'
 import { parse, compareAsc } from 'date-fns'
 
 import { msToMinutes } from '../shared/utils'
-import IBullet, { Priority } from '../domain/ibullet'
+import IBullet from '../domain/ibullet'
+import Priority from '../domain/priority'
 import Task from '../domain/task'
 import { CatalogStats } from '../domain/catalog'
 import { error, log, success, warn } from './printer'
@@ -195,22 +196,31 @@ class Render {
     const scopeOffset = toHighlight.length === 1 ? toHighlight[0].length : 0
     // @ts-ignore
     descCol = descCol - (offsets[item._type] || 0) - scopeOffset
-    if (message.length > descCol) message = message.slice(0, descCol - 3) + '...'
-    // FIXME: I think emojis mess it up
-    else message += grey(` ${'.'.repeat(descCol - item.description.length - 1)}`)
+    if (item.description.length > descCol) {
+      message = item.description.slice(0, descCol - 5) + ' [..]'
+      // FIXME: re-gray-it is not really elegant
+      if (item.isComplete) message = grey(message)
+      // FIXME: I think emojis mess it up
+    } else message += grey(` ${'.'.repeat(descCol - item.description.length - 1)}`)
 
-    if (age !== 0 && config.local.showAge) suffix.push(grey(`${age}d`))
-    if (star) suffix.push(star)
-    if (link) suffix.push(link)
-    if (repeat) suffix.push(repeat)
-    if (comment.length > 0) suffix.push(comment)
+    /*
+     * Build the suffix ----------------------------------------------------------------
+     */
 
+    // TODO: support a flag here - many may prefer to just have the size tag
+    // the most common suffix should be estimate
     const { duration, estimate, isComplete } = item
     if (duration && duration > 0 && isComplete) {
       suffix.push(grey(msToMinutes(duration)))
     } else if (estimate) {
       suffix.push(grey(msToMinutes(estimate)))
     }
+
+    if (age !== 0 && config.local.showAge) suffix.push(grey(`${age}d`))
+    if (star) suffix.push(star)
+    if (link) suffix.push(link)
+    if (repeat) suffix.push(repeat)
+    if (comment.length > 0) suffix.push(comment)
 
     if (item.tags?.length > 0) suffix.push(grey(item.tags.join(' ')))
 

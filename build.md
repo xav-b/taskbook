@@ -1,15 +1,40 @@
 ## Things to build
 
-**Vrac**
-- [ ] FIXME I think I have `backlog` instead of `@backlog`
-- [ ] FEAT UDP monitor: task creation on boards displayed don't get stuff updated
+**Ideas**
 
-- [ ] FIXME: `done` stuff has the wrong length + event creation sometimes think it's a task
-- [ ] IDEA `tb log` to take the same parameters as `tb task` but mark it done
+Create true notebooks (fork `srcbook`?) which are outline documents connected
+to the taskbook storage (+AI, of course). You can of course edit from the web,
+of locally from taskbook, and everyhing works.
+
+This can be shared, with your team, with your family (flightrules).
+
+**Architecture**
+
+Concept of "syncing" todos from somewhere (2 ways): `tb cx --from "..."`.
+Where `from` could be a txt outline, or a github repository (pulling issues and
+PRs).
+Alternatively I need to resurrect the modular storage, and indeed `git`, and
+`github` are just another place to set, update etc... the content.
+
 - [ ] IDEA Develop a git-like system: every runs has a git commit - and tasks affected are cloned with that commit.
   - Add an `execution/commit` id to everything done so it can be reverted. I should
     store how every tasks look like before action, and the `revert` process is to
     simply "undo" thoses tasks
+
+**Vrac**
+- [ ] FIXME calendar import
+    - ids are being overwritten
+    - I can't import twice the same event in a different context because we use the event id
+- [ ] IDEA Have a `log` flag to pass inline task logs (like `tb mv 23 @ blocked --log "I need to be home to work on it"`)
+- [ ] IDEA Have a 'bulk edit' that let you quickly edit any property
+- [ ] TECH Have a UI section in configuration
+- [ ] FIXME `tb estimate` probably doesn't work
+- [ ] FIXME `tb hello` created events and long `_uid`, overwrite stuff in deck and save in stash
+- [ ] IDEA auto-activation of context. For example `--trigger "directory:$PWD"`
+- [ ] FIXME [TO TEST] I think I have `backlog` instead of `@backlog`
+- [ ] FEAT UDP monitor: task creation on boards displayed don't get stuff updated
+
+- [ ] IDEA `tb log` to take the same parameters as `tb task` but mark it done
 - [ ] IDEA Develop [machine fingerprinting](https://github.com/andsmedeiros/hw-fingerprint)
 - [ ] IDEA config could offer to ask questions. Or should this be login?
 - [ ] FIXME I think the pretty print of archived task is broken
@@ -262,7 +287,7 @@ premium gets you cloud features.
     - This would need an assignment too. Other tight integrations could be to
       have tasks completions linked to PR/commits
 - Event hooks (integrate with IFTT/Zapier)
-- Analytics/Reporting/Advanced search
+- Analytics/Reporting
 - Habits, tasks, scheduling, 2 ways sync with google calendar, time boxing
 - Mobile
 - Support for backends: github, jira (boards are context, status are boards, etc...)
@@ -284,3 +309,23 @@ Download `gapi-token.json` from https://console.cloud.google.com/apis/credential
 - [Taskline](https://github.com/perryrh0dan/taskline#configuration)
 - Can we integrate the idea (or even base the project) on [outline speedrunning](https://learnhowtolearn.org/how-to-build-extremely-quickly/)
   Maybe just show how this can be used by using a board or tag and priorities
+
+---
+
+## Turso multi-tenant setup
+
+```console
+turso db create taskbook-template --type schema --group taskbook
+turso db shell taskbook-template
+# use ./src/store/drizzle/migrations/* to initialise the database schema
+# this should be the case for subsequent DML
+```
+
+Then the flow:
+- User sign-up
+  - A user id and subsequently database name is created
+  - The database is created with this name
+  - A database JWT as well
+  - Both handed over to the user
+- The user should use them in the config file
+- [TODO] Then a local database needs to be created `client.sync()` if it doesn't exist

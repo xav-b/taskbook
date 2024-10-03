@@ -26,3 +26,7 @@ snap
 # google api secrets
 token.json
 gapi-*.json
+
+bun.lockb
+
+.env
